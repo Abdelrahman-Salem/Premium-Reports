@@ -1,11 +1,5 @@
 import { request } from 'node:https';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
