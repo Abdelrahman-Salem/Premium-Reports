@@ -35,14 +35,14 @@
     <div class="nav-divider"></div>
     <div class="nav-label">Session</div>
     <nav class="nav">
-      <button class="nav-item nav-button" type="button" (click)="openTraacsLogin()">
+      <a class="nav-item nav-button" [href]="traacsLoginUrl()" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
           <path d="M10 17l5-5-5-5" />
           <path d="M15 12H3" />
         </svg>
         {{ t('openTraacs') }}
-      </button>
+      </a>
       <button class="nav-item nav-button" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M20 6 9 17l-5-5" />
@@ -93,9 +93,9 @@
       </div>
       <p>{{ t('sessionHint') }}</p>
       <div class="auth-actions">
-        <button class="light-btn" type="button" (click)="openTraacsLogin()">
+        <a class="light-btn" [href]="traacsLoginUrl()" target="_blank" rel="noopener noreferrer">
           {{ t('openTraacs') }}
-        </button>
+        </a>
         <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
           {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
         </button>

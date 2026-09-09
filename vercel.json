@@ -27,6 +27,10 @@
       "destination": "/api/proxy?path=/css/:path*"
     },
     {
+      "source": "/theme/:path*",
+      "destination": "/api/proxy?path=/theme/:path*"
+    },
+    {
       "source": "/js/:path*",
       "destination": "/api/proxy?path=/js/:path*"
     },
@@ -45,6 +49,14 @@
     {
       "source": "/plugins/:path*",
       "destination": "/api/proxy?path=/plugins/:path*"
+    },
+    {
+      "source": "/font/:path*",
+      "destination": "/api/proxy?path=/font/:path*"
+    },
+    {
+      "source": "/fonts/:path*",
+      "destination": "/api/proxy?path=/fonts/:path*"
     }
   ]
 }
