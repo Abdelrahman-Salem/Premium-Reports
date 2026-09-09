@@ -93,7 +93,7 @@ function collectBody(req) {
   }
 
   if (req.body && typeof req.body === 'object') {
-    return Promise.resolve(JSON.stringify(req.body));
+    return Promise.resolve(new URLSearchParams(req.body).toString());
   }
 
   return new Promise((resolve, reject) => {
@@ -114,6 +114,10 @@ function localOrigin(req) {
   return `${proto}://${host}`;
 }
 
+function targetOrigin() {
+  return `https://${targetHost}:9191`;
+}
+
 function replaceAll(value, search, replacement) {
   return String(value).split(search).join(replacement);
 }
@@ -125,6 +129,15 @@ function rewriteTargetUrls(value, origin) {
     `https://${targetHost}`,
     `http://${targetHost}`,
   ].reduce((nextValue, search) => replaceAll(nextValue, search, origin), String(value));
+}
+
+function rewriteProxyUrlsToTarget(value, req) {
+  const host = req.headers.host || '';
+  return [
+    localOrigin(req),
+    `https://${host}`,
+    `http://${host}`,
+  ].reduce((nextValue, search) => (search ? replaceAll(nextValue, search, targetOrigin()) : nextValue), String(value));
 }
 
 function getQueryValue(value) {
@@ -195,7 +208,7 @@ async function proxyTraacsRequest(req, res, upstreamPath) {
     Accept: req.headers.accept ?? '*/*',
     'Accept-Encoding': 'identity',
     Host: `${targetHost}:9191`,
-    Origin: `https://${targetHost}:9191`,
+    Origin: targetOrigin(),
   };
 
   delete headers.connection;
@@ -207,6 +220,12 @@ async function proxyTraacsRequest(req, res, upstreamPath) {
 
   if (cookie) {
     headers.Cookie = cookie;
+  }
+
+  if (req.headers.referer) {
+    headers.Referer = rewriteProxyUrlsToTarget(req.headers.referer, req);
+  } else if (hasBody) {
+    headers.Referer = `${targetOrigin()}${upstreamPath.split('?')[0]}`;
   }
 
   if (hasBody) {
