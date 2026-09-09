@@ -33,10 +33,6 @@
     {
       "source": "/plugins/:path*",
       "destination": "/api/plugins/:path*"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/index.html"
     }
   ]
 }
