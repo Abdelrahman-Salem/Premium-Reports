@@ -5,7 +5,6 @@ const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
-const appApiRoots = new Set(['session', 'reports']);
 let runtimeCookie = '';
 const cookieJar = new Map();
 
@@ -128,31 +127,23 @@ function rewriteTargetUrls(value, origin) {
   ].reduce((nextValue, search) => replaceAll(nextValue, search, origin), String(value));
 }
 
-function getPathSegments(req) {
-  const queryPath = req.query?.path;
-
-  if (Array.isArray(queryPath)) {
-    return queryPath;
+function getQueryValue(value) {
+  if (Array.isArray(value)) {
+    return value[0] ?? '';
   }
 
-  if (typeof queryPath === 'string') {
-    return queryPath.split('/').filter(Boolean);
-  }
-
-  return new URL(req.url, `https://${req.headers.host || 'localhost'}`).pathname
-    .replace(/^\/api\/?/, '')
-    .split('/')
-    .filter(Boolean);
+  return typeof value === 'string' ? value : '';
 }
 
-function getLogicalUrl(req) {
+function getProxyPath(req) {
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
-  const segments = getPathSegments(req);
-  const firstSegment = segments[0] ?? '';
-  const pathPrefix = appApiRoots.has(firstSegment) ? '/api' : '';
-  const pathname = `${pathPrefix}/${segments.join('/')}`.replace(/\/$/, '') || '/';
+  const queryPath = getQueryValue(req.query?.path || url.searchParams.get('path'));
 
-  return `${pathname}${url.search}`;
+  if (queryPath) {
+    return queryPath.startsWith('/') ? queryPath : `/${queryPath}`;
+  }
+
+  return '/';
 }
 
 function writeJson(res, statusCode, payload) {
@@ -325,8 +316,9 @@ async function proxyReportRequest(req, res) {
 }
 
 export default async function handler(req, res) {
-  const logicalUrl = getLogicalUrl(req);
-  const pathname = logicalUrl.split('?')[0];
+  const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
+  const action = getQueryValue(req.query?.action || url.searchParams.get('action'));
+  const proxyPath = getProxyPath(req);
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -334,12 +326,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (pathname === '/api/session/status' && req.method === 'GET') {
+  if (action === 'session-status' && req.method === 'GET') {
     writeJson(res, 200, { hasCookie: Boolean(resolveCookie(req)), loginUrl: `${localOrigin(req)}${loginPagePath}` });
     return;
   }
 
-  if (pathname === '/api/session/cookie' && req.method === 'POST') {
+  if (action === 'session-cookie' && req.method === 'POST') {
     try {
       const body = await collectBody(req);
       const parsedBody = JSON.parse(body || '{}');
@@ -360,15 +352,15 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (pathname === '/api/reports/sales/dsr' && req.method === 'POST') {
+  if (action === 'report' && req.method === 'POST') {
     await proxyReportRequest(req, res);
     return;
   }
 
-  if (pathname.startsWith('/api/')) {
+  if (action) {
     writeJson(res, 404, { message: 'Route not found.' });
     return;
   }
 
-  await proxyTraacsRequest(req, res, logicalUrl);
+  await proxyTraacsRequest(req, res, proxyPath);
 }

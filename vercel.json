@@ -3,36 +3,48 @@
   "outputDirectory": "dist/prim_reports/browser",
   "rewrites": [
     {
+      "source": "/api/session/status",
+      "destination": "/api/proxy?action=session-status"
+    },
+    {
+      "source": "/api/session/cookie",
+      "destination": "/api/proxy?action=session-cookie"
+    },
+    {
+      "source": "/api/reports/sales/dsr",
+      "destination": "/api/proxy?action=report"
+    },
+    {
       "source": "/traacs/:path*",
-      "destination": "/api/traacs/:path*"
+      "destination": "/api/proxy?path=/traacs/:path*"
     },
     {
       "source": "/nucorelib/:path*",
-      "destination": "/api/nucorelib/:path*"
+      "destination": "/api/proxy?path=/nucorelib/:path*"
     },
     {
       "source": "/css/:path*",
-      "destination": "/api/css/:path*"
+      "destination": "/api/proxy?path=/css/:path*"
     },
     {
       "source": "/js/:path*",
-      "destination": "/api/js/:path*"
+      "destination": "/api/proxy?path=/js/:path*"
     },
     {
       "source": "/script/:path*",
-      "destination": "/api/script/:path*"
+      "destination": "/api/proxy?path=/script/:path*"
     },
     {
       "source": "/images/:path*",
-      "destination": "/api/images/:path*"
+      "destination": "/api/proxy?path=/images/:path*"
     },
     {
       "source": "/img/:path*",
-      "destination": "/api/img/:path*"
+      "destination": "/api/proxy?path=/img/:path*"
     },
     {
       "source": "/plugins/:path*",
-      "destination": "/api/plugins/:path*"
+      "destination": "/api/proxy?path=/plugins/:path*"
     }
   ]
 }
