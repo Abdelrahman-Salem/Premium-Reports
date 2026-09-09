@@ -5,6 +5,8 @@ const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
+let runtimeCookie = '';
+const cookieJar = new Map();
 
 function normalizeCookie(rawCookie) {
   const trimmedCookie = String(rawCookie ?? '').trim();
@@ -21,7 +23,31 @@ function resolveCookie(req) {
     return req.headers.cookie;
   }
 
-  return normalizeCookie(process.env.TRAACS_COOKIE);
+  if (cookieJar.size > 0) {
+    return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+  }
+
+  return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
+}
+
+function captureSetCookies(setCookieHeaders) {
+  const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+
+  for (const header of headers) {
+    const [cookiePair] = String(header).split(';');
+    const separatorIndex = cookiePair.indexOf('=');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const name = cookiePair.slice(0, separatorIndex).trim();
+    const value = cookiePair.slice(separatorIndex + 1).trim();
+
+    if (name && value) {
+      cookieJar.set(name, value);
+    }
+  }
 }
 
 function rewriteSetCookieHeaders(setCookieHeaders) {
@@ -161,7 +187,6 @@ function sanitizeResponseHeaders(headers, req) {
   delete responseHeaders['content-length'];
   delete responseHeaders['set-cookie'];
   delete responseHeaders['transfer-encoding'];
-  responseHeaders['cache-control'] = 'private, no-store, max-age=0';
 
   if (responseHeaders.location) {
     responseHeaders.location = rewriteLocation(responseHeaders.location, req);
@@ -216,6 +241,7 @@ async function proxyTraacsRequest(req, res, upstreamPath) {
       headers,
     },
     (upstreamRes) => {
+      captureSetCookies(upstreamRes.headers['set-cookie']);
       const responseHeaders = sanitizeResponseHeaders(upstreamRes.headers, req);
 
       if (!shouldRewriteBody(responseHeaders)) {
@@ -335,7 +361,8 @@ export default async function handler(req, res) {
         return;
       }
 
-      res.setHeader('Set-Cookie', rewriteSetCookieHeaders(nextCookie));
+      runtimeCookie = nextCookie;
+      captureSetCookies(nextCookie);
       writeJson(res, 200, { hasCookie: true });
     } catch {
       writeJson(res, 400, { message: 'Invalid request body.' });
