@@ -1,0 +1,42 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/prim_reports/browser",
+  "rewrites": [
+    {
+      "source": "/traacs/:path*",
+      "destination": "/api/traacs/:path*"
+    },
+    {
+      "source": "/nucorelib/:path*",
+      "destination": "/api/nucorelib/:path*"
+    },
+    {
+      "source": "/css/:path*",
+      "destination": "/api/css/:path*"
+    },
+    {
+      "source": "/js/:path*",
+      "destination": "/api/js/:path*"
+    },
+    {
+      "source": "/script/:path*",
+      "destination": "/api/script/:path*"
+    },
+    {
+      "source": "/images/:path*",
+      "destination": "/api/images/:path*"
+    },
+    {
+      "source": "/img/:path*",
+      "destination": "/api/img/:path*"
+    },
+    {
+      "source": "/plugins/:path*",
+      "destination": "/api/plugins/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
