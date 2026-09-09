@@ -1,0 +1,580 @@
+<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">PR</div>
+      <div>
+        <div class="brand-name">Premium Reports</div>
+        <div class="brand-sub">{{ t('analytics') }}</div>
+      </div>
+    </div>
+
+    <div class="nav-label">{{ t('reportSections') }}</div>
+    <nav class="nav">
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 19V5a1 1 0 0 1 1-1h9l6 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" />
+          <path d="M9 13h6M9 17h6M9 9h2" />
+        </svg>
+        {{ t('salesDsr') }}
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 12h4l3 8 4-16 3 8h4" />
+        </svg>
+        {{ t('finance') }}
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v4l3 2" />
+        </svg>
+        {{ t('operations') }}
+      </div>
+    </nav>
+
+    <div class="nav-divider"></div>
+    <div class="nav-label">Session</div>
+    <nav class="nav">
+      <button class="nav-item nav-button" type="button" (click)="openTraacsLogin()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+          <path d="M10 17l5-5-5-5" />
+          <path d="M15 12H3" />
+        </svg>
+        {{ t('openTraacs') }}
+      </button>
+      <button class="nav-item nav-button" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="period">{{ language() === 'ar' ? 'الفترة المعروضة' : 'Visible period' }}</div>
+      <div class="period"><strong>{{ periodLabel() }}</strong></div>
+      <div class="session-state" [class.ready]="sessionReady()">
+        <span class="session-dot"></span>
+        <span>{{ sessionMessage() || t('sessionMissing') }}</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div>
+        <div class="eyebrow-row">{{ t('salesReport') }}</div>
+        <div class="title">{{ t('title') }}</div>
+        <p class="subtitle">{{ t('subtitle') }}</p>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="light-btn" type="button" (click)="toggleLanguage()">{{ t('language') }}</button>
+        @if (report()) {
+          <span class="live-pill">{{ sourceLabel() }}</span>
+        }
+        <button class="export-btn" type="button" (click)="exportReport()" [disabled]="!report()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3v13m0 0-4-4m4 4 4-4M4 19h16" />
+          </svg>
+          {{ t('exportReport') }}
+        </button>
+      </div>
+    </div>
+
+    <section class="auth-panel" [class.ready]="sessionReady()">
+      <div class="auth-status">
+        <span class="session-dot"></span>
+        <div>
+          <strong>{{ t('sessionTitle') }}</strong>
+          <span>{{ sessionMessage() || t('sessionMissing') }}</span>
+        </div>
+      </div>
+      <p>{{ t('sessionHint') }}</p>
+      <div class="auth-actions">
+        <button class="light-btn" type="button" (click)="openTraacsLogin()">
+          {{ t('openTraacs') }}
+        </button>
+        <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
+          {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
+        </button>
+      </div>
+    </section>
+
+    <div class="filters">
+      <div class="field">
+        <label>{{ t('from') }}</label>
+        <input type="date" [ngModel]="filters().fromDate" (ngModelChange)="updateFilter('fromDate', $event)" />
+      </div>
+
+      <div class="field">
+        <label>{{ t('to') }}</label>
+        <input type="date" [ngModel]="filters().toDate" (ngModelChange)="updateFilter('toDate', $event)" />
+      </div>
+
+      <div class="field">
+        <label>{{ t('dateType') }}</label>
+        <select [ngModel]="filters().dateType" (ngModelChange)="updateFilter('dateType', $event)">
+          <option value="DOCUMENT">{{ t('document') }}</option>
+          <option value="SERVICE">{{ t('service') }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>{{ t('currency') }}</label>
+        <select [ngModel]="filters().currency" (ngModelChange)="updateFilter('currency', $event)">
+          <option value="SAR">SAR</option>
+          <option value="Base">Base</option>
+        </select>
+      </div>
+
+      <div class="field cost-centre-field">
+        <label>{{ t('costCentre') }}</label>
+        <button class="select-trigger" type="button" (click)="toggleCostCentreDropdown()">
+          <span>{{ selectedCostCentreLabel() }}</span>
+          <span class="chevron">v</span>
+        </button>
+
+        @if (costCentreOpen()) {
+          <div class="multi-menu">
+            <label class="menu-option">
+              <input
+                type="checkbox"
+                [ngModel]="isAllCostCentresSelected()"
+                (ngModelChange)="toggleAllCostCentres($event)"
+              />
+              {{ t('allSelected') }}
+            </label>
+
+            @for (option of costCentreOptions; track option.id) {
+              <label class="menu-option">
+                <input
+                  type="checkbox"
+                  [ngModel]="isCostCentreSelected(option.id)"
+                  (ngModelChange)="toggleCostCentre(option.id, $event)"
+                />
+                {{ option.label }}
+              </label>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="checks">
+        <label class="check">
+          <input type="checkbox" [ngModel]="filters().showSales" (ngModelChange)="updateFilter('showSales', $event)" />
+          {{ t('sales') }}
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            [ngModel]="filters().showRefunds"
+            (ngModelChange)="updateFilter('showRefunds', $event)"
+          />
+          {{ t('refunds') }}
+        </label>
+      </div>
+
+      <button class="search-btn" type="button" (click)="refreshReport()" [disabled]="loading()">
+        {{ loading() ? t('searching') : t('search') }}
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="notice" role="status">{{ error() }}</div>
+    }
+
+    @if (loading() && !dashboard()) {
+      <section class="loading-grid" [attr.aria-label]="t('loadingReport')">
+        @for (item of [1, 2, 3, 4]; track item) {
+          <div class="skeleton"></div>
+        }
+      </section>
+    }
+
+    @if (!loading() && !dashboard() && !hasSearched()) {
+      <section class="empty-card">
+        <h2>{{ t('noReportTitle') }}</h2>
+        <p>{{ t('noReportSubtitle') }}</p>
+      </section>
+    }
+
+    @if (dashboard(); as view) {
+      <div class="kpi-grid">
+        @for (card of view.metricCards; track trackByLabel($index, card)) {
+          <div
+            class="kpi-card"
+            [class.tone-net]="card.tone === 'net'"
+            [class.tone-sale]="card.tone === 'sale'"
+            [class.tone-refund]="card.tone === 'refund'"
+            [class.tone-profit]="card.tone === 'profit'"
+          >
+            <div class="kpi-stub">
+              @switch (card.icon) {
+                @case ('refund') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M3 7v6h6" />
+                    <path d="M3 13a9 9 0 1 0 2.6-6.4L3 9" />
+                  </svg>
+                }
+                @case ('sale') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M21 7v6h-6" />
+                    <path d="M21 13a9 9 0 1 1-2.6-6.4L21 9" />
+                  </svg>
+                }
+                @case ('tax') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M4 4h16v16H4z" />
+                    <path d="M8 9h8M8 13h5" />
+                  </svg>
+                }
+                @case ('discount') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7" />
+                    <path d="M3 8h18v4H3z" />
+                    <path d="M12 8v12" />
+                  </svg>
+                }
+                @case ('fee') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                }
+                @case ('supplier') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M3 21V9l9-6 9 6v12" />
+                    <path d="M9 21v-6h6v6" />
+                  </svg>
+                }
+                @default {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M3 12h4l3-7 4 14 3-7h4" />
+                  </svg>
+                }
+              }
+            </div>
+            <div class="kpi-divider"></div>
+            <div class="kpi-body">
+              <div class="kpi-label">{{ card.label }}</div>
+              <div class="kpi-amount" [class.negative]="card.value < 0">
+                <span class="currency-code">{{ displayCurrency() }}</span>
+                <span>{{ card.value | number: '1.0-2' }}</span>
+              </div>
+              <div class="kpi-foot" [class.pos]="card.tone === 'net' || card.tone === 'profit'">{{ card.helper }}</div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="chart-row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('movementTitle') }}</div>
+            <div class="panel-meta">{{ periodLabel() }}</div>
+          </div>
+          <div class="comparison-chart">
+            @for (row of view.comparisonRows; track trackByLabel($index, row)) {
+              <div class="comparison-row">
+                <span>{{ row.label }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" [class.negative]="row.value < 0" [style.width]="barWidth(row.value)"></div>
+                </div>
+                <b>{{ row.value | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('profitConcentration') }}</div>
+          </div>
+          <div class="gauge-wrap">
+            <div
+              class="gauge-ring"
+              [style.background]="
+                'conic-gradient(from 270deg, var(--net) 0deg ' +
+                gaugeDegrees(view.profitMargin) +
+                'deg, #EDEFF4 ' +
+                gaugeDegrees(view.profitMargin) +
+                'deg 180deg, transparent 180deg 360deg)'
+              "
+            ></div>
+            <div class="gauge-value">{{ view.profitMargin | percent: '1.1-1' }}</div>
+            <p class="gauge-caption">{{ t('marginDescription') }}</p>
+            <div class="gauge-stats">
+              <div class="gauge-stat">
+                <b>{{ view.saleCount | number }}</b>
+                <span>{{ t('saleDocuments') }}</span>
+              </div>
+              <div class="gauge-stat">
+                <b>{{ view.refundCount | number }}</b>
+                <span>{{ t('refundDocuments') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'overview'" (click)="setSection('overview')">
+          {{ t('overview') }}
+        </button>
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'profit'" (click)="setSection('profit')">
+          {{ t('profitBreakdown') }}
+        </button>
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'type'" (click)="setSection('type')">
+          {{ t('type') }}
+        </button>
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'payment'" (click)="setSection('payment')">
+          {{ t('payment') }}
+        </button>
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'payable'" (click)="setSection('payable')">
+          {{ t('payable') }}
+        </button>
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'expense'" (click)="setSection('expense')">
+          {{ t('expense') }}
+        </button>
+        <button class="tab-btn" type="button" [class.active]="activeSection() === 'raw'" (click)="setSection('raw')">
+          {{ t('raw') }}
+        </button>
+      </div>
+
+      @if (activeSection() === 'overview') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('summaryDetails') }}</div>
+            <div class="panel-meta">{{ displayCurrency() }}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="dsr">
+              <thead>
+                <tr>
+                  <th>{{ t('metric') }}</th>
+                  <th class="num">{{ t('sale') }}</th>
+                  <th class="num">{{ t('refund') }}</th>
+                  <th class="num">{{ t('net') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of view.summaryRows; track row.label) {
+                  <tr>
+                    <td class="label">{{ row.label }}</td>
+                    <td class="num" [class.neg]="row.sale < 0" [class.dim]="row.sale === 0">{{ row.sale | number: '1.0-2' }}</td>
+                    <td class="num" [class.neg]="row.refund < 0" [class.dim]="row.refund === 0">{{ row.refund | number: '1.0-2' }}</td>
+                    <td class="num" [class.neg]="row.net < 0" [class.dim]="row.net === 0">{{ row.net | number: '1.0-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (activeSection() === 'profit') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('profitBreakdown') }}</div>
+            <div class="panel-meta">{{ displayCurrency() }}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="dsr">
+              <thead>
+                <tr>
+                  <th>{{ t('metric') }}</th>
+                  <th class="num">{{ t('sale') }}</th>
+                  <th class="num">{{ t('refund') }}</th>
+                  <th class="num">{{ t('net') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of view.profitSummaryRows; track row.label) {
+                  <tr>
+                    <td class="label">{{ row.label }}</td>
+                    <td class="num" [class.neg]="row.sale < 0" [class.dim]="row.sale === 0">{{ row.sale | number: '1.0-2' }}</td>
+                    <td class="num" [class.neg]="row.refund < 0" [class.dim]="row.refund === 0">{{ row.refund | number: '1.0-2' }}</td>
+                    <td class="num" [class.neg]="row.net < 0" [class.dim]="row.net === 0">{{ row.net | number: '1.0-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (activeSection() === 'type') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('type') }}</div>
+            <div class="panel-meta">{{ displayCurrency() }}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="dsr">
+              <thead>
+                <tr>
+                  <th>{{ t('type') }}</th>
+                  <th class="num">{{ language() === 'ar' ? 'عدد المستندات' : 'Documents' }}</th>
+                  <th>{{ language() === 'ar' ? 'قيمة المبيعات' : 'Sales amount' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of view.typeOfSaleRows; track row.label) {
+                  <tr>
+                    <td class="label">{{ row.label }}</td>
+                    <td class="num" [class.dim]="row.count === 0">{{ row.count || '-' }}</td>
+                    <td>
+                      @if (row.amount !== 0) {
+                        <div class="bar-cell">
+                          <span class="num amount-cell">{{ row.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-2' }}</span>
+                          <div class="bar-track"><div class="bar-fill sale-fill" [style.width]="typeBarWidth(row.amount)"></div></div>
+                        </div>
+                      } @else {
+                        <span class="dim">{{ language() === 'ar' ? 'لا توجد بيانات لهذا النوع خلال الفترة' : 'No data for this type in the period' }}</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (activeSection() === 'payment') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('paymentModeSummary') }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'عدد المستندات والقيمة' : 'Documents and value' }}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="dsr">
+              <thead>
+                <tr>
+                  <th>{{ language() === 'ar' ? 'الفئة' : 'Category' }}</th>
+                  <th class="num">{{ language() === 'ar' ? 'عدد المستندات' : 'Documents' }}</th>
+                  <th class="num">{{ language() === 'ar' ? 'إجمالي القيمة' : 'Total value' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of view.paymentSummaryRows; track row.label) {
+                  <tr>
+                    <td class="label">
+                      <span
+                        class="swatch"
+                        [class.swatch-sale]="row.tone === 'sale'"
+                        [class.swatch-refund]="row.tone === 'refund'"
+                        [class.swatch-net]="row.tone === 'net'"
+                        [class.swatch-profit]="row.tone === 'profit'"
+                      ></span>
+                      {{ row.label }}
+                    </td>
+                    <td class="num" [class.dim]="row.count === null">{{ row.count === null ? '-' : (row.count | number) }}</td>
+                    <td class="num" [class.neg]="row.amount < 0" [class.dim]="row.amount === 0">{{ row.amount | number: '1.0-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (activeSection() === 'payable') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('payableSummary') }}</div>
+            <div class="panel-meta">{{ displayCurrency() }}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="dsr">
+              <thead>
+                <tr>
+                  <th>{{ language() === 'ar' ? 'الفئة' : 'Category' }}</th>
+                  <th class="num">{{ language() === 'ar' ? 'قيمة التكلفة' : 'Cost amount' }}</th>
+                  <th class="num">{{ language() === 'ar' ? 'قيمة المورد' : 'Supplier amount' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of view.payableSummaryRows; track row.label) {
+                  <tr>
+                    <td class="label">
+                      <span
+                        class="swatch"
+                        [class.swatch-sale]="row.tone === 'sale'"
+                        [class.swatch-refund]="row.tone === 'refund'"
+                        [class.swatch-net]="row.tone === 'net'"
+                        [class.swatch-profit]="row.tone === 'profit'"
+                      ></span>
+                      {{ row.label }}
+                    </td>
+                    <td class="num" [class.neg]="row.cost < 0" [class.dim]="row.cost === 0">{{ row.cost | number: '1.0-2' }}</td>
+                    <td class="num" [class.neg]="row.supplier < 0" [class.dim]="row.supplier === 0">{{ row.supplier | number: '1.0-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (activeSection() === 'expense') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'ملخص المصروفات' : 'Expense summary' }}</div>
+            <div class="panel-meta">{{ displayCurrency() }}</div>
+          </div>
+          @if (view.hasExpenses) {
+            <div class="table-wrap">
+              <table class="dsr">
+                <thead>
+                  <tr>
+                    <th>{{ t('metric') }}</th>
+                    <th class="num">{{ t('sale') }}</th>
+                    <th class="num">{{ t('refund') }}</th>
+                    <th class="num">{{ t('net') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of view.expenseRows; track row.label) {
+                    <tr>
+                      <td class="label">{{ row.label }}</td>
+                      <td class="num" [class.neg]="row.sale < 0" [class.dim]="row.sale === 0">{{ row.sale | number: '1.0-2' }}</td>
+                      <td class="num" [class.neg]="row.refund < 0" [class.dim]="row.refund === 0">{{ row.refund | number: '1.0-2' }}</td>
+                      <td class="num" [class.neg]="row.net < 0" [class.dim]="row.net === 0">{{ row.net | number: '1.0-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 4h16v16H4z" />
+                <path d="M9 9h6M9 13h6M9 17h3" />
+              </svg>
+              <p>
+                {{
+                  language() === 'ar'
+                    ? 'لم يتم تسجيل أي ضرائب مصروفات أو رسوم بنكية خلال هذه الفترة.'
+                    : 'No expense tax or bank charges were recorded in this period.'
+                }}
+              </p>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeSection() === 'raw') {
+        <div class="panel tab-panel active">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('normalizedResponse') }}</div>
+            <div class="panel-meta">arrDsrDetailsSummaryDataPhpKey</div>
+          </div>
+          <pre class="json-viewer">{{ view.rawPreview }}</pre>
+        </div>
+      }
+    }
+  </main>
+</div>
