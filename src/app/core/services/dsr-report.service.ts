@@ -6,6 +6,9 @@ import {
   DsrBucket,
   DsrDashboardView,
   DsrFilters,
+  DsrDetailAggregateRow,
+  DsrDetailAnalyticsView,
+  DsrDetailDocumentRow,
   DsrMetricGroup,
   DsrMetricRow,
   DsrPayableRow,
@@ -13,8 +16,15 @@ import {
   DsrReportResponse,
   DsrReportResult,
   DsrSummaryRow,
+  DsrTicketRawRow,
   DsrTypeOfSaleRow,
   MetricCard,
+  MonthlySaleDashboardView,
+  MonthlySaleFilters,
+  MonthlySaleMonthMetric,
+  MonthlySaleRawRow,
+  MonthlySaleReportResponse,
+  MonthlySaleServiceRow,
 } from '../../models/dsr-report.models';
 
 type DashboardLanguage = 'en' | 'ar';
@@ -80,6 +90,7 @@ export class DsrReportService {
   private readonly loginPagePath = '/nucorelib/basic_users/login';
   private readonly apiOrigin = this.resolveApiOrigin();
   private readonly endpoint = `${this.apiOrigin}/api/reports/sales/dsr`;
+  private readonly monthlySaleEndpoint = `${this.apiOrigin}/api/reports/sales/monthly-service`;
 
   updateSessionCookie(cookie: string): Observable<void> {
     return this.http.post<void>(`${this.apiOrigin}/api/session/cookie`, { cookie });
@@ -113,7 +124,25 @@ export class DsrReportService {
     );
   }
 
+  getMonthlySaleReport(filters: MonthlySaleFilters): Observable<MonthlySaleReportResponse> {
+    const body = new URLSearchParams();
+    body.set('intPerPageAjxKey', '50');
+    body.set('intOffsetAjxKey', '0');
+    body.set('arrSearchValueAjxKey', JSON.stringify(this.buildMonthlySaleSearchPayload(filters)));
+
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      Accept: '*/*',
+      'X-Requested-With': 'XMLHttpRequest',
+    });
+
+    return this.http
+      .post(this.monthlySaleEndpoint, body.toString(), { headers, responseType: 'text' })
+      .pipe(map((response) => this.parseMonthlySaleResponse(response)));
+  }
+
   toDashboardView(response: DsrReportResponse, language: DashboardLanguage): DsrDashboardView {
+    const detailAnalytics = this.buildDsrDetailAnalytics(response);
     const summary = response.arrDsrDetailsSummaryDataPhpKey ?? {};
     const description = summary.arrDsrDetailsSummaryDesPhpKey ?? {};
     const payment = summary.arrDsrDetailsSummaryMopPhpKey ?? {};
@@ -122,12 +151,12 @@ export class DsrReportService {
     const profit = summary.arrDsrDetailsSummaryProfitPhpKey ?? {};
     const expense = summary.arrDsrDetailsSummaryExpensePhpKey ?? {};
 
-    const saleTotal = this.valueOf(description, 'Sale', 'dblTotal');
+    const saleTotal = this.valueOf(description, 'Sale', 'dblTotal') || Math.max(detailAnalytics?.totalSelling ?? 0, 0);
     const refundTotal = this.valueOf(description, 'Refund', 'dblTotal');
-    const netTotal = this.valueOf(description, 'Net', 'dblTotal');
-    const netProfit = this.valueOf(description, 'Net', 'dblProfit');
-    const billingTax = this.valueOf(description, 'Net', 'dblBillingTax');
-    const saleCount = this.valueOf(payment, 'Sale', 'intCreditCount');
+    const netTotal = this.valueOf(description, 'Net', 'dblTotal') || detailAnalytics?.totalSelling || 0;
+    const netProfit = this.valueOf(description, 'Net', 'dblProfit') || detailAnalytics?.totalProfit || 0;
+    const billingTax = this.valueOf(description, 'Net', 'dblBillingTax') || detailAnalytics?.totalTax || 0;
+    const saleCount = this.valueOf(payment, 'Sale', 'intCreditCount') || detailAnalytics?.totalDocumentCount || 0;
     const refundCount = Math.abs(this.valueOf(payment, 'Refund', 'intCreditCount'));
     const profitMargin = netTotal === 0 ? 0 : netProfit / netTotal;
 
@@ -230,6 +259,230 @@ export class DsrReportService {
       saleCount,
       refundCount,
       profitMargin,
+      detailAnalytics,
+      rawPreview: JSON.stringify(response, null, 2),
+    };
+  }
+
+  private buildDsrDetailAnalytics(response: DsrReportResponse): DsrDetailAnalyticsView | null {
+    const rows = response.arrDsrTicketsPhpKey ?? [];
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return null;
+    }
+
+    const totalDetails = response.arrDsrDetailsCountPhpKey?.arrTotalDetailsTicketPhpKey;
+    const rowTotals = this.aggregateDsrRows(rows);
+    const totalSelling = this.toNumber(totalDetails?.dblSellingPriceSumPhpKey) || rowTotals.amount;
+    const totalProfit = this.toNumber(totalDetails?.dblProfitSumPhpKey) || rowTotals.profit;
+    const totalTax = this.toNumber(totalDetails?.dblCustomerTaxSumPhpKey) || rowTotals.tax;
+    const totalCost = this.toNumber(totalDetails?.dblCostAmtSumPhpKey) || rowTotals.cost;
+    const totalDocumentCount =
+      this.toNumber(totalDetails?.intCountPhpKey) ||
+      this.toNumber(response.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey) ||
+      rows.length;
+    const documents = rows.slice(0, 80).map((row) => this.toDsrDocumentRow(row));
+    const services = this.groupDsrRows(rows, (row) => row.strServiceName || row.strSectorPhpKey || 'Unclassified service');
+    const customers = this.groupDsrRows(rows, (row) => row.strCustomerNamePhpKey || 'Unclassified customer').slice(0, 12);
+    const costCenters = this.groupDsrRows(rows, (row) => row.strCostCenterNamePhpKey || 'Unclassified cost center');
+    const agents = this.groupDsrRows(rows, (row) => row.strBookingStaffName || row.strAgentNamePhpKey || 'Unassigned');
+    const taxRegions = this.groupDsrRows(rows, (row) => row.strTaxRegionPhpKey || 'No tax region');
+    const saleRefundRows = this.groupDsrRows(rows, (row) => row.strSalesRefundsTypePhpKey || 'Unknown');
+    const months = this.groupDsrRows(rows, (row) => this.monthLabelFromDsrDate(row.datDatePhpKey || row.datIssueDatePhpKey || ''));
+
+    return {
+      hasDetails: true,
+      rowCount: rows.length,
+      totalDocumentCount,
+      totalSelling,
+      totalProfit,
+      totalTax,
+      totalCost,
+      profitMargin: totalSelling === 0 ? 0 : totalProfit / totalSelling,
+      avgDocumentValue: totalDocumentCount === 0 ? 0 : totalSelling / totalDocumentCount,
+      taxableShare: totalSelling === 0 ? 0 : totalTax / totalSelling,
+      services,
+      customers,
+      costCenters,
+      agents,
+      taxRegions,
+      saleRefundRows,
+      months,
+      documents,
+      maxServiceAmount: Math.max(...services.map((row) => Math.abs(row.amount)), 1),
+      maxCustomerAmount: Math.max(...customers.map((row) => Math.abs(row.amount)), 1),
+      maxCostCenterAmount: Math.max(...costCenters.map((row) => Math.abs(row.amount)), 1),
+      maxMonthAmount: Math.max(...months.map((row) => Math.abs(row.amount)), 1),
+    };
+  }
+
+  private groupDsrRows(rows: DsrTicketRawRow[], labelOf: (row: DsrTicketRawRow) => string): DsrDetailAggregateRow[] {
+    const groups = new Map<string, DsrDetailAggregateRow>();
+
+    for (const row of rows) {
+      const label = labelOf(row).trim() || 'Unclassified';
+      const current =
+        groups.get(label) ??
+        ({
+          label,
+          amount: 0,
+          profit: 0,
+          tax: 0,
+          cost: 0,
+          count: 0,
+          saleCount: 0,
+          refundCount: 0,
+          margin: 0,
+          share: 0,
+        } satisfies DsrDetailAggregateRow);
+      const sign = this.isDsrRefund(row) ? -1 : 1;
+
+      current.amount += sign * Math.abs(this.toNumber(row.dblSellingAmtPhpKey));
+      current.profit += sign * Math.abs(this.toNumber(row.dblProfitAmtPhpKey));
+      current.tax += sign * Math.abs(this.toNumber(row.dblCustomerTaxPhpKey));
+      current.cost += sign * Math.abs(this.toNumber(row.dblCostAmtPhpKey));
+      current.count += sign;
+
+      if (sign < 0) {
+        current.refundCount += 1;
+      } else {
+        current.saleCount += 1;
+      }
+
+      groups.set(label, current);
+    }
+
+    const groupRows = [...groups.values()];
+    const totalAmount = groupRows.reduce((total, row) => total + row.amount, 0);
+
+    return groupRows
+      .map((row) => ({
+        ...row,
+        margin: row.amount === 0 ? 0 : row.profit / row.amount,
+        share: totalAmount === 0 ? 0 : row.amount / totalAmount,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  }
+
+  private aggregateDsrRows(rows: DsrTicketRawRow[]): DsrDetailAggregateRow {
+    return this.groupDsrRows(rows, () => 'Total')[0];
+  }
+
+  private toDsrDocumentRow(row: DsrTicketRawRow): DsrDetailDocumentRow {
+    const sign = this.isDsrRefund(row) ? -1 : 1;
+    const amount = sign * Math.abs(this.toNumber(row.dblSellingAmtPhpKey));
+    const profit = sign * Math.abs(this.toNumber(row.dblProfitAmtPhpKey));
+    const tax = sign * Math.abs(this.toNumber(row.dblCustomerTaxPhpKey));
+
+    return {
+      date: String(row.datDatePhpKey || row.datIssueDatePhpKey || ''),
+      documentNo: String(row.strDocumentNoPhpKey || '-'),
+      ticketNo: String(row.strTicketPhpKey || '-'),
+      service: String(row.strServiceName || row.strSectorPhpKey || '-'),
+      customer: String(row.strCustomerNamePhpKey || '-'),
+      costCenter: String(row.strCostCenterNamePhpKey || '-'),
+      agent: String(row.strBookingStaffName || row.strAgentNamePhpKey || '-'),
+      type: String(row.strSalesRefundsTypePhpKey || '-'),
+      amount,
+      profit,
+      tax,
+      margin: amount === 0 ? 0 : profit / amount,
+    };
+  }
+
+  private isDsrRefund(row: DsrTicketRawRow): boolean {
+    return /refund/i.test(String(row.strSalesRefundsTypePhpKey || row.strSaleRefundTypePhpKey || ''));
+  }
+
+  private monthLabelFromDsrDate(value: string): string {
+    const [day, month, year] = String(value).split('/');
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+
+    if (Number.isNaN(date.getTime())) {
+      return value || 'Unknown month';
+    }
+
+    return date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  toMonthlySaleDashboardView(response: MonthlySaleReportResponse): MonthlySaleDashboardView {
+    const periods = response.arrTimePeriodePhpKey ?? [];
+    const labels = periods.map((period, index) => ({
+      label: period.strColumnHeading || `Month ${index + 1}`,
+      fromDate: period.datFromDate || '',
+      toDate: period.datToDate || '',
+    }));
+    const monthCount = Math.max(labels.length, this.detectMonthCount(response.arrSupplierMonthlySaleReportPhpKey ?? []));
+    const monthLabels = Array.from({ length: monthCount }, (_, index) => labels[index] ?? {
+      label: `Month ${index + 1}`,
+      fromDate: '',
+      toDate: '',
+    });
+    const services = this.buildMonthlyServiceRows(response.arrSupplierMonthlySaleReportPhpKey ?? [], monthLabels);
+    const months = monthLabels.map((period, index) => {
+      const amount = services.reduce((total, service) => total + service.months[index].amount, 0);
+      const profit = services.reduce((total, service) => total + service.months[index].profit, 0);
+      const count = services.reduce((total, service) => total + service.months[index].count, 0);
+      const saleCount = services.reduce((total, service) => total + service.months[index].saleCount, 0);
+      const refundCount = services.reduce((total, service) => total + service.months[index].refundCount, 0);
+      const previousAmount =
+        index === 0 ? null : services.reduce((total, service) => total + service.months[index - 1].amount, 0);
+
+      return {
+        ...period,
+        amount,
+        profit,
+        count,
+        saleCount,
+        refundCount,
+        margin: amount === 0 ? 0 : profit / amount,
+        change: previousAmount === null || previousAmount === 0 ? null : (amount - previousAmount) / Math.abs(previousAmount),
+      };
+    });
+    const totalAmount = months.reduce((total, month) => total + month.amount, 0);
+    const totalProfit = months.reduce((total, month) => total + month.profit, 0);
+    const totalCount = months.reduce((total, month) => total + month.count, 0);
+    const totalSaleCount = months.reduce((total, month) => total + month.saleCount, 0);
+    const totalRefundCount = months.reduce((total, month) => total + month.refundCount, 0);
+    const topServices = services.slice(0, 5);
+    const bestMonth = months.reduce<MonthlySaleMonthMetric | null>(
+      (best, month) => (!best || month.amount > best.amount ? month : best),
+      null,
+    );
+    const weakestMonth = months.reduce<MonthlySaleMonthMetric | null>(
+      (weakest, month) => (!weakest || month.amount < weakest.amount ? month : weakest),
+      null,
+    );
+
+    return {
+      months,
+      services,
+      topServices,
+      totalAmount,
+      totalProfit,
+      totalCount,
+      grossMargin: totalAmount === 0 ? 0 : totalProfit / totalAmount,
+      avgMonthlyAmount: months.length === 0 ? 0 : totalAmount / months.length,
+      avgTicket: totalCount === 0 ? 0 : totalAmount / totalCount,
+      bestMonth,
+      weakestMonth,
+      topService: topServices[0] ?? null,
+      growthRate:
+        months.length < 2 || months[0].amount === 0
+          ? null
+          : (months[months.length - 1].amount - months[0].amount) / Math.abs(months[0].amount),
+      activeServiceCount: services.filter((service) => service.amount > 0).length,
+      totalSaleCount,
+      totalRefundCount,
+      maxMonthlyAmount: Math.max(...months.map((month) => Math.abs(month.amount)), 1),
+      maxServiceAmount: Math.max(...services.map((service) => Math.abs(service.amount)), 1),
+      maxServiceProfit: Math.max(...services.map((service) => Math.abs(service.profit)), 1),
+      maxServiceCount: Math.max(...services.map((service) => Math.abs(service.count)), 1),
+      maxServiceMargin: Math.max(...services.map((service) => Math.abs(service.margin)), 1),
+      maxHeatAmount: Math.max(...services.flatMap((service) => service.months.map((month) => Math.abs(month.amount))), 1),
+      amountTrendPoints: this.toTrendPoints(months.map((month) => month.amount)),
+      profitTrendPoints: this.toTrendPoints(months.map((month) => month.profit)),
+      periodLabel: `${months[0]?.label ?? ''} - ${months[months.length - 1]?.label ?? ''}`,
       rawPreview: JSON.stringify(response, null, 2),
     };
   }
@@ -242,6 +495,120 @@ export class DsrReportService {
     }
 
     return parsed as DsrReportResponse;
+  }
+
+  private parseMonthlySaleResponse(response: string): MonthlySaleReportResponse {
+    const parsed = JSON.parse(response.trim()) as unknown;
+
+    if (!this.isObject(parsed)) {
+      throw new Error('Monthly sale response is not an object.');
+    }
+
+    return parsed as MonthlySaleReportResponse;
+  }
+
+  private buildMonthlyServiceRows(
+    rows: MonthlySaleRawRow[],
+    monthLabels: Array<{ label: string; fromDate: string; toDate: string }>,
+  ): MonthlySaleServiceRow[] {
+    const serviceMap = new Map<string, MonthlySaleServiceRow>();
+
+    for (const row of rows) {
+      const code = String(row.vchr_account_code || row.pk_bint_service_id || row.fk_bint_service_id || 'NA');
+      const name = String(row.vchr_account_name || 'Unclassified service');
+      const id = `${code}-${name}`;
+      const current =
+        serviceMap.get(id) ??
+        ({
+          id,
+          code,
+          name,
+          amount: 0,
+          profit: 0,
+          count: 0,
+          margin: 0,
+          share: 0,
+          avgTicket: 0,
+          maxMonthAmount: 0,
+          months: monthLabels.map((period) => ({
+            ...period,
+            amount: 0,
+            profit: 0,
+            count: 0,
+            saleCount: 0,
+            refundCount: 0,
+            margin: 0,
+            change: null,
+          })),
+        } satisfies MonthlySaleServiceRow);
+
+      monthLabels.forEach((_, index) => {
+        const count = this.toNumber(row[`dblCount${index}`] as number | string | undefined);
+        current.months[index].amount += this.toNumber(row[`dblSUMAmt${index}`] as number | string | undefined);
+        current.months[index].profit += this.toNumber(row[`dblSUMProfit${index}`] as number | string | undefined);
+        current.months[index].count += count;
+
+        if (count < 0) {
+          current.months[index].refundCount += Math.abs(count);
+        } else {
+          current.months[index].saleCount += count;
+        }
+      });
+
+      serviceMap.set(id, current);
+    }
+
+    const services = [...serviceMap.values()].map((service) => {
+      service.months = service.months.map((month, index, months) => {
+        const previous = index === 0 ? null : months[index - 1].amount;
+        return {
+          ...month,
+          margin: month.amount === 0 ? 0 : month.profit / month.amount,
+          change: previous === null || previous === 0 ? null : (month.amount - previous) / Math.abs(previous),
+        };
+      });
+      service.amount = service.months.reduce((total, month) => total + month.amount, 0);
+      service.profit = service.months.reduce((total, month) => total + month.profit, 0);
+      service.count = service.months.reduce((total, month) => total + month.count, 0);
+      service.margin = service.amount === 0 ? 0 : service.profit / service.amount;
+      service.avgTicket = service.count === 0 ? 0 : service.amount / service.count;
+      service.maxMonthAmount = Math.max(...service.months.map((month) => Math.abs(month.amount)), 0);
+      return service;
+    });
+    const grandTotal = services.reduce((total, service) => total + service.amount, 0);
+
+    return services
+      .map((service) => ({ ...service, share: grandTotal === 0 ? 0 : service.amount / grandTotal }))
+      .sort((a, b) => b.amount - a.amount);
+  }
+
+  private detectMonthCount(rows: MonthlySaleRawRow[]): number {
+    return rows.reduce((max, row) => {
+      const monthIndexes = Object.keys(row)
+        .map((key) => /^dblSUMAmt(\d+)$/.exec(key)?.[1])
+        .filter((value): value is string => Boolean(value))
+        .map((value) => Number(value) + 1);
+
+      return Math.max(max, ...monthIndexes, 0);
+    }, 0);
+  }
+
+  private toTrendPoints(values: number[]): string {
+    if (values.length === 0) {
+      return '';
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    return values
+      .map((value, index) => {
+        const x = values.length === 1 ? 50 : (index / (values.length - 1)) * 100;
+        const y = 88 - ((value - min) / range) * 76;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      })
+      .join(' ');
   }
 
   private buildSummaryRows(
@@ -340,7 +707,7 @@ export class DsrReportService {
     return this.toNumber(group[bucket]?.[metric]);
   }
 
-  private toNumber(value: number | string | undefined): number {
+  private toNumber(value: number | string | null | undefined): number {
     const numberValue = typeof value === 'number' ? value : Number(value ?? 0);
     return Number.isFinite(numberValue) ? numberValue : 0;
   }
@@ -436,6 +803,30 @@ export class DsrReportService {
       intDsrDetailSalesManIdAjxKey: '',
       strDsrDetailSalesManNameAjxKey: '',
       blnRefundUnderIssuingStaff: false,
+    };
+  }
+
+  private buildMonthlySaleSearchPayload(filters: MonthlySaleFilters): Record<string, unknown> {
+    return {
+      datFromMonthAjxKey: filters.fromMonth,
+      intFromYearAjxKey: filters.fromYear,
+      datToMonthAjxKey: filters.toMonth,
+      intToYearAjxKey: filters.toYear,
+      strServiceIdAjxKey: 'Service',
+      strTypeAjxKey: 'service type',
+      strCurrencyAjxKey: filters.currency === 'Base' ? 'SAR' : filters.currency,
+      intCostCentreAjxKey: '',
+      intDeptAjxKey: '1',
+      strCostCentreNameAjxKey: 'ALL',
+      strDepartmentNameAjxKey: 'Default',
+      blnShowProfitAjxKey: filters.showProfit,
+      blnShowCountAjxKey: filters.showCount,
+      strAmountAjxKey: '2',
+      strDateTypeAjxKey: filters.dateType,
+      strGroupingAjxKey: 'service',
+      strGroupingNameAjxKey: 'Service',
+      strServiceAjxKey: 'Service',
+      strServiceTypeAjxKey: 'Service Type',
     };
   }
 

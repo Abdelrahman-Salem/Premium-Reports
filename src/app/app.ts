@@ -10,9 +10,13 @@ import {
   DsrMetricRow,
   DsrReportResult,
   MetricCard,
+  MonthlySaleDashboardView,
+  MonthlySaleFilters,
+  MonthlySaleServiceRow,
 } from './models/dsr-report.models';
 
 type Language = 'en' | 'ar';
+type ReportMode = 'monthly' | 'dsr';
 type ReportSection = 'overview' | 'profit' | 'type' | 'payment' | 'payable' | 'expense' | 'raw';
 
 const TRANSLATIONS = {
@@ -22,6 +26,22 @@ const TRANSLATIONS = {
     finance: 'Finance',
     operations: 'Operations',
     salesReport: 'Sales report',
+    monthlyReport: 'Monthly service sales',
+    dsrReport: 'DSR details',
+    revenue: 'Revenue',
+    grossProfit: 'Gross profit',
+    grossMargin: 'Gross margin',
+    documents: 'Documents',
+    avgMonthlyRevenue: 'Avg monthly revenue',
+    avgTicket: 'Avg ticket',
+    bestMonth: 'Best month',
+    topService: 'Top service',
+    monthlyTrend: 'Monthly trend',
+    serviceMix: 'Service mix',
+    serviceRanking: 'Service ranking',
+    revenueHeatmap: 'Revenue heatmap',
+    profitVsRevenue: 'Profit vs revenue',
+    monthlyServiceTable: 'Monthly service table',
     title: 'DSR Details Dashboard',
     subtitle: 'Daily sales report summary for sale, refund, net, profit, tax, and payment movement.',
     liveApi: 'Live API',
@@ -91,6 +111,22 @@ const TRANSLATIONS = {
     finance: 'المالية',
     operations: 'العمليات',
     salesReport: 'تقرير المبيعات',
+    monthlyReport: 'مبيعات الخدمات الشهرية',
+    dsrReport: 'تفاصيل DSR',
+    revenue: 'الإيراد',
+    grossProfit: 'مجمل الربح',
+    grossMargin: 'هامش الربح',
+    documents: 'المستندات',
+    avgMonthlyRevenue: 'متوسط الإيراد الشهري',
+    avgTicket: 'متوسط المستند',
+    bestMonth: 'أفضل شهر',
+    topService: 'أعلى خدمة',
+    monthlyTrend: 'اتجاه الشهور',
+    serviceMix: 'توزيع الخدمات',
+    serviceRanking: 'ترتيب الخدمات',
+    revenueHeatmap: 'خريطة الإيراد الحرارية',
+    profitVsRevenue: 'الربح مقابل الإيراد',
+    monthlyServiceTable: 'جدول الخدمات الشهري',
     title: 'لوحة تفاصيل DSR',
     subtitle: 'ملخص يومي للمبيعات والمرتجعات والصافي والأرباح والضرائب وحركة الدفع.',
     liveApi: 'بيانات مباشرة',
@@ -164,7 +200,9 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 })
 export class App {
   private readonly dsrReportService = inject(DsrReportService);
+  private readonly chartColors = ['#2e6f73', '#c77b32', '#6c5b9e', '#4c7fae', '#9b9483', '#b14b4e', '#4f9d6e', '#1e8f6f'];
 
+  protected readonly reportMode = signal<ReportMode>('monthly');
   protected readonly language = signal<Language>('ar');
   protected readonly costCentreOpen = signal(false);
   protected readonly hasSearched = signal(false);
@@ -189,8 +227,19 @@ export class App {
     showSales: true,
     showRefunds: true,
   });
+  protected readonly monthlyFilters = signal<MonthlySaleFilters>({
+    fromMonth: '1',
+    fromYear: '2026',
+    toMonth: '6',
+    toYear: '2026',
+    currency: 'SAR',
+    dateType: 'Document Date',
+    showProfit: true,
+    showCount: true,
+  });
 
   protected readonly report = signal<DsrReportResult | null>(null);
+  protected readonly monthlyReport = signal<MonthlySaleDashboardView | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly activeSection = signal<ReportSection>('overview');
@@ -199,6 +248,7 @@ export class App {
     const report = this.report();
     return report ? this.dsrReportService.toDashboardView(report.data, this.language()) : null;
   });
+  protected readonly monthlyDashboard = computed<MonthlySaleDashboardView | null>(() => this.monthlyReport());
 
   protected readonly metricCards = computed<MetricCard[]>(() => this.dashboard()?.metricCards ?? []);
   protected readonly comparisonRows = computed<DsrMetricRow[]>(() => this.dashboard()?.comparisonRows ?? []);
@@ -207,12 +257,18 @@ export class App {
   protected readonly payableRows = computed<DsrMetricRow[]>(() => this.dashboard()?.payableRows ?? []);
   protected readonly totalVolume = computed(() => this.dashboard()?.totalVolume ?? 0);
   protected readonly displayCurrency = computed(() => (this.filters().currency === 'Base' ? 'SAR' : this.filters().currency));
+  protected readonly monthlyDisplayCurrency = computed(() =>
+    this.monthlyFilters().currency === 'Base' ? 'SAR' : this.monthlyFilters().currency,
+  );
   protected readonly sourceLabel = computed(() => this.t('liveApi'));
   protected readonly direction = computed(() => (this.language() === 'ar' ? 'rtl' : 'ltr'));
   protected readonly typeOfSaleMax = computed(() =>
     Math.max(...(this.dashboard()?.typeOfSaleRows.map((row) => Math.abs(row.amount)) ?? [0]), 1),
   );
   protected readonly periodLabel = computed(() => `${this.filters().fromDate} - ${this.filters().toDate}`);
+  protected readonly monthlyPeriodLabel = computed(
+    () => `${this.monthlyFilters().fromMonth}/${this.monthlyFilters().fromYear} - ${this.monthlyFilters().toMonth}/${this.monthlyFilters().toYear}`,
+  );
 
   protected readonly selectedCostCentreLabel = computed(() => {
     const selected = this.filters().costCenters;
@@ -279,6 +335,41 @@ export class App {
     });
   }
 
+  protected refreshMonthlyReport(): void {
+    if (!this.sessionReady()) {
+      this.hasSearched.set(true);
+      this.monthlyReport.set(null);
+      this.error.set(this.t('signInFirst'));
+      this.checkSession();
+      return;
+    }
+
+    this.hasSearched.set(true);
+    this.loading.set(true);
+    this.error.set(null);
+    this.monthlyReport.set(null);
+
+    this.dsrReportService.getMonthlySaleReport(this.monthlyFilters()).subscribe({
+      next: (response) => {
+        const view = this.dsrReportService.toMonthlySaleDashboardView(response);
+        if (view.services.length === 0) {
+          this.error.set(this.t('noDataOrSession'));
+          this.loading.set(false);
+          return;
+        }
+
+        this.monthlyReport.set(view);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.sessionReady.set(false);
+        this.error.set(this.t('signInFirst'));
+        this.checkSession();
+      },
+    });
+  }
+
   protected openTraacsLogin(): void {
     window.open(this.traacsLoginUrl(), '_blank', 'noopener');
   }
@@ -309,6 +400,15 @@ export class App {
 
   protected updateFilter<K extends keyof DsrFilters>(key: K, value: DsrFilters[K]): void {
     this.filters.update((current) => ({ ...current, [key]: value }));
+  }
+
+  protected updateMonthlyFilter<K extends keyof MonthlySaleFilters>(key: K, value: MonthlySaleFilters[K]): void {
+    this.monthlyFilters.update((current) => ({ ...current, [key]: value }));
+  }
+
+  protected setReportMode(mode: ReportMode): void {
+    this.reportMode.set(mode);
+    this.error.set(null);
   }
 
   protected toggleLanguage(): void {
@@ -346,6 +446,69 @@ export class App {
     return `${Math.min((Math.abs(value) / max) * 100, 100)}%`;
   }
 
+  protected monthlyBarWidth(value: number, max: number): string {
+    return `${Math.min((Math.abs(value) / Math.max(max, 1)) * 100, 100)}%`;
+  }
+
+  protected monthlyBarHeight(value: number, max: number): string {
+    return `${Math.max(Math.min((Math.abs(value) / Math.max(max, 1)) * 100, 100), value === 0 ? 0 : 4)}%`;
+  }
+
+  protected heatOpacity(value: number, max: number): number {
+    return Math.max(0.08, Math.min(Math.abs(value) / Math.max(max, 1), 1));
+  }
+
+  protected normalizedWidth(value: number, max: number): string {
+    return `${Math.min((Math.abs(value) / Math.max(max, 1)) * 100, 100)}%`;
+  }
+
+  protected compactMoney(value: number): string {
+    const absValue = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+
+    if (absValue >= 1_000_000) {
+      return `${sign}${(absValue / 1_000_000).toFixed(absValue >= 10_000_000 ? 0 : 2)}M`;
+    }
+
+    if (absValue >= 1_000) {
+      return `${sign}${(absValue / 1_000).toFixed(absValue >= 100_000 ? 0 : 1)}K`;
+    }
+
+    return `${value.toFixed(0)}`;
+  }
+
+  protected heatmapColumns(monthCount: number): string {
+    return `minmax(220px, 280px) repeat(${monthCount}, minmax(96px, 1fr))`;
+  }
+
+  protected serviceColor(index: number): string {
+    return this.chartColors[index % this.chartColors.length];
+  }
+
+  protected shareDonutGradient(services: MonthlySaleServiceRow[]): string {
+    let start = 0;
+    const segments = services.map((service, index) => {
+      const end = start + Math.max(service.share, 0) * 360;
+      const segment = `${this.serviceColor(index)} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+      start = end;
+      return segment;
+    });
+
+    return `conic-gradient(${segments.join(', ')})`;
+  }
+
+  protected serviceBubbleLeft(service: MonthlySaleServiceRow): number {
+    return 12 + Math.max(0, Math.min(service.share, 0.42)) / 0.42 * 76;
+  }
+
+  protected serviceBubbleTop(service: MonthlySaleServiceRow): number {
+    return 86 - Math.max(0, Math.min(service.margin, 1)) * 68;
+  }
+
+  protected serviceBubbleSize(service: MonthlySaleServiceRow, maxAmount: number): number {
+    return 18 + Math.min(Math.sqrt(Math.abs(service.amount) / Math.max(maxAmount, 1)), 1) * 22;
+  }
+
   protected typeBarWidth(value: number): string {
     return `${Math.min((Math.abs(value) / this.typeOfSaleMax()) * 100, 100)}%`;
   }
@@ -377,11 +540,29 @@ export class App {
     URL.revokeObjectURL(url);
   }
 
+  protected exportMonthlyReport(): void {
+    const report = this.monthlyReport();
+    if (!report) {
+      return;
+    }
+
+    const blob = new Blob([report.rawPreview], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `monthly-service-sales-${this.monthlyFilters().fromYear}-${this.monthlyFilters().fromMonth}-${this.monthlyFilters().toMonth}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   protected trackByLabel(_: number, row: DsrMetricRow | MetricCard): string {
     return row.label;
   }
 
   private hasReportData(result: DsrReportResult): boolean {
-    return Boolean(result.data.arrDsrDetailsSummaryDataPhpKey?.arrDsrDetailsSummaryDesPhpKey);
+    return Boolean(
+      result.data.arrDsrDetailsSummaryDataPhpKey?.arrDsrDetailsSummaryDesPhpKey ||
+        result.data.arrDsrTicketsPhpKey?.length,
+    );
   }
 }

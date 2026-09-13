@@ -15,6 +15,10 @@
       "destination": "/api/proxy?action=report"
     },
     {
+      "source": "/api/reports/sales/monthly-service",
+      "destination": "/api/proxy?action=monthly-service-report"
+    },
+    {
       "source": "/traacs/:path*",
       "destination": "/api/proxy?path=/traacs/:path*"
     },

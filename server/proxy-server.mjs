@@ -4,7 +4,10 @@ import { request } from 'node:https';
 const port = Number(process.env.PORT ?? 3333);
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
+const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
+const monthlySaleReportPagePath =
+  '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/servicemonthlysalereport/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
 let runtimeCookie = '';
@@ -209,7 +212,13 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.url !== '/api/reports/sales/dsr' || req.method !== 'POST') {
+  const reportRoutes = new Map([
+    ['/api/reports/sales/dsr', { path: targetPath, referer: reportPagePath }],
+    ['/api/reports/sales/monthly-service', { path: monthlySaleTargetPath, referer: monthlySaleReportPagePath }],
+  ]);
+  const reportRoute = reportRoutes.get(req.url ?? '');
+
+  if (!reportRoute || req.method !== 'POST') {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'Route not found.' }));
     return;
@@ -228,7 +237,7 @@ const server = createServer(async (req, res) => {
       {
         hostname: targetHost,
         port: 9191,
-        path: targetPath,
+        path: reportRoute.path,
         method: 'POST',
         headers: {
           Accept: '*/*',
@@ -238,7 +247,7 @@ const server = createServer(async (req, res) => {
           Cookie: cookie,
           Host: `${targetHost}:9191`,
           Origin: `https://${targetHost}:9191`,
-          Referer: `https://${targetHost}:9191${reportPagePath}`,
+          Referer: `https://${targetHost}:9191${reportRoute.referer}`,
           'User-Agent': 'Mozilla/5.0 PremiumReportsProxy/1.0',
           'X-Requested-With': 'XMLHttpRequest',
         },
