@@ -23,59 +23,37 @@ function normalizeCookie(rawCookie) {
   return trimmedCookie.includes('=') ? trimmedCookie : `${sessionCookieName}=${trimmedCookie}`;
 }
 
-function getSessionCookieValue(cookie) {
-  const sessionCookie = String(cookie || '')
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${sessionCookieName}=`));
-
-  if (!sessionCookie) {
-    return '';
-  }
-
-  return sessionCookie.slice(sessionCookieName.length + 1).trim();
-}
-
 function hasSessionCookie(cookie) {
-  return getSessionCookieValue(cookie).length > 0;
+  return String(cookie || '')
+    .split(';')
+    .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
 }
 
 function serializeCookieJar() {
   return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
 }
 
-function mergeCookies(requestCookie, jarCookie) {
-  const jarCookieNames = new Set(
-    String(jarCookie || '')
-      .split(';')
-      .map((part) => part.trim().split('=')[0])
-      .filter(Boolean),
-  );
-  const requestCookies = String(requestCookie || '')
-    .split(';')
-    .map((part) => part.trim())
-    .filter((part) => part && !jarCookieNames.has(part.split('=')[0]));
-
-  return [...requestCookies, jarCookie].filter(Boolean).join('; ');
-}
-
 function resolveCookie(req) {
-  const requestCookie = req?.headers.cookie || '';
   const jarCookie = serializeCookieJar();
 
   if (hasSessionCookie(jarCookie)) {
-    return mergeCookies(requestCookie, jarCookie);
+    return jarCookie;
   }
 
-  if (hasSessionCookie(requestCookie)) {
-    return requestCookie;
+  if (hasSessionCookie(req?.headers.cookie)) {
+    return req.headers.cookie;
+  }
+
+  if (req?.headers.cookie) {
+    return req.headers.cookie;
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
 }
 
-function rewriteSetCookieHeaders(setCookieHeaders) {
+function rewriteSetCookieHeaders(setCookieHeaders, req) {
   const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+  const isLocalHttp = localOrigin(req).startsWith('http://');
 
   return headers.map((header) => {
     const parts = String(header).split(';').map((part) => part.trim()).filter(Boolean);
@@ -85,6 +63,10 @@ function rewriteSetCookieHeaders(setCookieHeaders) {
 
     for (const attribute of attributes) {
       if (/^domain=/i.test(attribute)) {
+        continue;
+      }
+
+      if (isLocalHttp && /^secure$/i.test(attribute)) {
         continue;
       }
 
@@ -105,15 +87,6 @@ function rewriteSetCookieHeaders(setCookieHeaders) {
 
     return [cookiePair, ...nextAttributes].join('; ');
   });
-}
-
-function clearSessionState() {
-  runtimeCookie = '';
-  cookieJar.clear();
-}
-
-function expiredSessionCookieHeader() {
-  return `${sessionCookieName}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
 
 function validateTraacsSession(cookie) {
@@ -180,8 +153,6 @@ function captureSetCookies(setCookieHeaders) {
 
     if (name && value) {
       cookieJar.set(name, value);
-    } else if (name) {
-      cookieJar.delete(name);
     }
   }
 }
@@ -274,7 +245,7 @@ function proxyTraacsRequest(req, res) {
       captureSetCookies(upstreamRes.headers['set-cookie']);
 
       const responseHeaders = { ...upstreamRes.headers };
-      const rewrittenCookies = rewriteSetCookieHeaders(responseHeaders['set-cookie']);
+      const rewrittenCookies = rewriteSetCookieHeaders(responseHeaders['set-cookie'], req);
       delete responseHeaders['set-cookie'];
       if (responseHeaders.location) {
         responseHeaders.location = rewriteLocation(responseHeaders.location, req);
@@ -350,16 +321,6 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ message: 'Invalid request body.' }));
     }
 
-    return;
-  }
-
-  if (req.url === '/api/session/clear' && req.method === 'POST') {
-    clearSessionState();
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Set-Cookie': expiredSessionCookieHeader(),
-    });
-    res.end(JSON.stringify({ hasCookie: false }));
     return;
   }
 

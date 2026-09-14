@@ -122,26 +122,6 @@
       </div>
     </section>
 
-    @if (loginPanelOpen()) {
-      <section class="login-panel">
-        <div class="login-panel-head">
-          <div>
-            <strong>{{ t('openTraacs') }}</strong>
-            <span>{{ language() === 'ar' ? 'سجل الدخول هنا، وبعد ما تخلص اقفل النافذة وافحص الجلسة.' : 'Sign in here, then close this panel and check the session.' }}</span>
-          </div>
-          <div class="login-panel-actions">
-            <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
-              {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
-            </button>
-            <button class="light-btn" type="button" (click)="closeTraacsLogin()">
-              {{ language() === 'ar' ? 'إغلاق' : 'Close' }}
-            </button>
-          </div>
-        </div>
-        <iframe class="login-frame" [src]="safeTraacsLoginUrl()" title="TRAACS login"></iframe>
-      </section>
-    }
-
     <div class="filters">
       @if (reportMode() === 'monthly') {
         <div class="field">

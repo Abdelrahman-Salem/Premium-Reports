@@ -351,62 +351,6 @@ button:disabled {
   background: rgb(255 255 255 / 72%);
 }
 
-.login-panel {
-  overflow: hidden;
-  margin-bottom: 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
-}
-
-.login-panel-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper);
-}
-
-.login-panel-head strong,
-.login-panel-head span {
-  display: block;
-}
-
-.login-panel-head strong {
-  color: var(--ink);
-  font-size: 14px;
-}
-
-.login-panel-head span {
-  margin-top: 3px;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.login-panel-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.login-panel-actions .light-btn {
-  min-height: 36px;
-}
-
-.login-frame {
-  display: block;
-  width: 100%;
-  height: min(72vh, 760px);
-  min-height: 520px;
-  border: 0;
-  background: #ffffff;
-}
-
 .filters {
   display: flex;
   flex-wrap: wrap;
