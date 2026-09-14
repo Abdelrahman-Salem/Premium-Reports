@@ -21,13 +21,52 @@ function normalizeCookie(rawCookie) {
   return trimmedCookie.includes('=') ? trimmedCookie : `${sessionCookieName}=${trimmedCookie}`;
 }
 
-function resolveCookie(req) {
-  if (req.headers.cookie) {
-    return req.headers.cookie;
+function getSessionCookieValue(cookie) {
+  const sessionCookie = String(cookie || '')
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${sessionCookieName}=`));
+
+  if (!sessionCookie) {
+    return '';
   }
 
-  if (cookieJar.size > 0) {
-    return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+  return sessionCookie.slice(sessionCookieName.length + 1).trim();
+}
+
+function hasSessionCookie(cookie) {
+  return getSessionCookieValue(cookie).length > 0;
+}
+
+function serializeCookieJar() {
+  return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+}
+
+function mergeCookies(requestCookie, jarCookie) {
+  const jarCookieNames = new Set(
+    String(jarCookie || '')
+      .split(';')
+      .map((part) => part.trim().split('=')[0])
+      .filter(Boolean),
+  );
+  const requestCookies = String(requestCookie || '')
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => part && !jarCookieNames.has(part.split('=')[0]));
+
+  return [...requestCookies, jarCookie].filter(Boolean).join('; ');
+}
+
+function resolveCookie(req) {
+  const requestCookie = req.headers.cookie || '';
+  const jarCookie = serializeCookieJar();
+
+  if (hasSessionCookie(jarCookie)) {
+    return mergeCookies(requestCookie, jarCookie);
+  }
+
+  if (hasSessionCookie(requestCookie)) {
+    return requestCookie;
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
@@ -49,6 +88,8 @@ function captureSetCookies(setCookieHeaders) {
 
     if (name && value) {
       cookieJar.set(name, value);
+    } else if (name) {
+      cookieJar.delete(name);
     }
   }
 }
@@ -84,12 +125,6 @@ function rewriteSetCookieHeaders(setCookieHeaders) {
 
     return [cookiePair, ...nextAttributes].join('; ');
   });
-}
-
-function hasSessionCookie(cookie) {
-  return String(cookie || '')
-    .split(';')
-    .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
 }
 
 function clearSessionState() {
@@ -420,7 +455,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
-    const hasCookie = await validateTraacsSession(req.headers.cookie || '');
+    const hasCookie = await validateTraacsSession(resolveCookie(req));
     writeJson(res, 200, { hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` });
     return;
   }
