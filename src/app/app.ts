@@ -1,7 +1,6 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer } from '@angular/platform-browser';
 
 import { DsrReportService } from './core/services/dsr-report.service';
 import {
@@ -201,7 +200,6 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 })
 export class App {
   private readonly dsrReportService = inject(DsrReportService);
-  private readonly sanitizer = inject(DomSanitizer);
   private readonly chartColors = ['#2e6f73', '#c77b32', '#6c5b9e', '#4c7fae', '#9b9483', '#b14b4e', '#4f9d6e', '#1e8f6f'];
 
   protected readonly reportMode = signal<ReportMode>('monthly');
@@ -210,8 +208,6 @@ export class App {
   protected readonly hasSearched = signal(false);
   protected readonly sessionChecking = signal(false);
   protected readonly sessionReady = signal(false);
-  protected readonly loginPanelOpen = signal(false);
-  protected readonly traacsLoginUrl = signal(this.dsrReportService.getTraacsLoginUrl());
   protected readonly sessionMessage = signal<string | null>(null);
   protected readonly costCentreOptions: CostCentreOption[] = [
     { id: '1', label: '100 - Head Quarter' },
@@ -271,9 +267,6 @@ export class App {
   protected readonly periodLabel = computed(() => `${this.filters().fromDate} - ${this.filters().toDate}`);
   protected readonly monthlyPeriodLabel = computed(
     () => `${this.monthlyFilters().fromMonth}/${this.monthlyFilters().fromYear} - ${this.monthlyFilters().toMonth}/${this.monthlyFilters().toYear}`,
-  );
-  protected readonly safeTraacsLoginUrl = computed(() =>
-    this.sanitizer.bypassSecurityTrustResourceUrl(this.traacsLoginUrl()),
   );
 
   protected readonly selectedCostCentreLabel = computed(() => {
@@ -377,33 +370,7 @@ export class App {
   }
 
   protected openTraacsLogin(): void {
-    this.loginPanelOpen.set(false);
-    this.sessionChecking.set(true);
-
-    this.dsrReportService.clearSession().subscribe({
-      next: () => {
-        this.sessionChecking.set(false);
-        this.sessionReady.set(false);
-        this.sessionMessage.set(this.t('sessionMissing'));
-        this.showTraacsLoginPanel();
-      },
-      error: () => {
-        this.sessionChecking.set(false);
-        this.showTraacsLoginPanel();
-      },
-    });
-  }
-
-  private showTraacsLoginPanel(): void {
-    const loginUrl = this.dsrReportService.getTraacsLoginUrl();
-    const separator = loginUrl.includes('?') ? '&' : '?';
-    this.traacsLoginUrl.set(`${loginUrl}${separator}_=${Date.now()}`);
-    this.loginPanelOpen.set(true);
-  }
-
-  protected closeTraacsLogin(): void {
-    this.loginPanelOpen.set(false);
-    this.checkSession();
+    window.open(this.dsrReportService.getTraacsLoginUrl(), '_blank', 'noopener,noreferrer');
   }
 
   protected checkSession(): void {
@@ -414,13 +381,11 @@ export class App {
       next: (status) => {
         this.sessionChecking.set(false);
         this.sessionReady.set(status.hasCookie);
-        this.traacsLoginUrl.set(this.dsrReportService.getTraacsLoginUrl());
         this.sessionMessage.set(status.hasCookie ? this.t('sessionReady') : this.t('sessionMissing'));
       },
       error: () => {
         this.sessionChecking.set(false);
         this.sessionReady.set(false);
-        this.traacsLoginUrl.set(this.dsrReportService.getTraacsLoginUrl());
         this.sessionMessage.set(this.t('proxyMissing'));
       },
     });

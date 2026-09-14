@@ -11,10 +11,6 @@
       "destination": "/api/proxy?action=session-cookie"
     },
     {
-      "source": "/api/session/clear",
-      "destination": "/api/proxy?action=session-clear"
-    },
-    {
       "source": "/api/reports/sales/dsr",
       "destination": "/api/proxy?action=report"
     },
