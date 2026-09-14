@@ -101,7 +101,8 @@ export class DsrReportService {
   }
 
   getTraacsLoginUrl(): string {
-    return `${this.apiOrigin || window.location.origin}${this.loginPagePath}`;
+    const loginOrigin = ['4200', '4201'].includes(window.location.port) ? window.location.origin : this.apiOrigin || window.location.origin;
+    return `${loginOrigin}${this.loginPagePath}`;
   }
 
   getDsrReport(filters: DsrFilters): Observable<DsrReportResult> {
