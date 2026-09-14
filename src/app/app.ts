@@ -377,6 +377,27 @@ export class App {
   }
 
   protected openTraacsLogin(): void {
+    this.loginPanelOpen.set(false);
+    this.sessionChecking.set(true);
+
+    this.dsrReportService.clearSession().subscribe({
+      next: () => {
+        this.sessionChecking.set(false);
+        this.sessionReady.set(false);
+        this.sessionMessage.set(this.t('sessionMissing'));
+        this.showTraacsLoginPanel();
+      },
+      error: () => {
+        this.sessionChecking.set(false);
+        this.showTraacsLoginPanel();
+      },
+    });
+  }
+
+  private showTraacsLoginPanel(): void {
+    const loginUrl = this.dsrReportService.getTraacsLoginUrl();
+    const separator = loginUrl.includes('?') ? '&' : '?';
+    this.traacsLoginUrl.set(`${loginUrl}${separator}_=${Date.now()}`);
     this.loginPanelOpen.set(true);
   }
 
@@ -385,11 +406,7 @@ export class App {
     this.checkSession();
   }
 
-  protected onTraacsLoginFrameLoad(): void {
-    this.checkSession(true);
-  }
-
-  protected checkSession(closeLoginOnSuccess = false): void {
+  protected checkSession(): void {
     this.sessionChecking.set(true);
     this.sessionMessage.set(null);
 
@@ -399,10 +416,6 @@ export class App {
         this.sessionReady.set(status.hasCookie);
         this.traacsLoginUrl.set(this.dsrReportService.getTraacsLoginUrl());
         this.sessionMessage.set(status.hasCookie ? this.t('sessionReady') : this.t('sessionMissing'));
-
-        if (status.hasCookie && closeLoginOnSuccess) {
-          this.loginPanelOpen.set(false);
-        }
       },
       error: () => {
         this.sessionChecking.set(false);

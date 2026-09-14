@@ -96,6 +96,10 @@ export class DsrReportService {
     return this.http.post<void>(`${this.apiOrigin}/api/session/cookie`, { cookie });
   }
 
+  clearSession(): Observable<{ hasCookie: boolean }> {
+    return this.http.post<{ hasCookie: boolean }>(`${this.apiOrigin}/api/session/clear`, {});
+  }
+
   getSessionStatus(): Observable<{ hasCookie: boolean; loginUrl: string }> {
     return this.http.get<{ hasCookie: boolean; loginUrl: string }>(`${this.apiOrigin}/api/session/status`);
   }

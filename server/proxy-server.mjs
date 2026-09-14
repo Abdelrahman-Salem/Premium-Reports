@@ -74,6 +74,15 @@ function hasSessionCookie(cookie) {
     .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
 }
 
+function clearSessionState() {
+  runtimeCookie = '';
+  cookieJar.clear();
+}
+
+function expiredSessionCookieHeader() {
+  return `${sessionCookieName}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+}
+
 function validateTraacsSession(cookie) {
   if (!hasSessionCookie(cookie)) {
     return Promise.resolve(false);
@@ -207,7 +216,11 @@ function proxyTraacsRequest(req, res) {
   };
 
   delete headers.connection;
+  delete headers.host;
   delete headers['proxy-connection'];
+  delete headers['x-forwarded-for'];
+  delete headers['x-forwarded-host'];
+  delete headers['x-forwarded-proto'];
 
   if (cookie) {
     delete headers.cookie;
@@ -302,6 +315,16 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ message: 'Invalid request body.' }));
     }
 
+    return;
+  }
+
+  if (req.url === '/api/session/clear' && req.method === 'POST') {
+    clearSessionState();
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Set-Cookie': expiredSessionCookieHeader(),
+    });
+    res.end(JSON.stringify({ hasCookie: false }));
     return;
   }
 
