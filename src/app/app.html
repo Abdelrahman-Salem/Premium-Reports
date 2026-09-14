@@ -127,7 +127,7 @@
         <div class="login-panel-head">
           <div>
             <strong>{{ t('openTraacs') }}</strong>
-            <span>{{ language() === 'ar' ? 'سجل الدخول هنا ثم اضغط فحص الجلسة.' : 'Sign in here, then check the session.' }}</span>
+            <span>{{ language() === 'ar' ? 'سجل الدخول هنا، وبعد ما تخلص اقفل النافذة وافحص الجلسة.' : 'Sign in here, then close this panel and check the session.' }}</span>
           </div>
           <div class="login-panel-actions">
             <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
@@ -138,12 +138,7 @@
             </button>
           </div>
         </div>
-        <iframe
-          class="login-frame"
-          [src]="safeTraacsLoginUrl()"
-          title="TRAACS login"
-          (load)="onTraacsLoginFrameLoad()"
-        ></iframe>
+        <iframe class="login-frame" [src]="safeTraacsLoginUrl()" title="TRAACS login"></iframe>
       </section>
     }
 

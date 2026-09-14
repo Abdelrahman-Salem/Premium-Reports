@@ -92,6 +92,15 @@ function hasSessionCookie(cookie) {
     .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
 }
 
+function clearSessionState() {
+  runtimeCookie = '';
+  cookieJar.clear();
+}
+
+function expiredSessionCookieHeader() {
+  return `${sessionCookieName}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+}
+
 function validateTraacsSession(cookie) {
   if (!hasSessionCookie(cookie)) {
     return Promise.resolve(false);
@@ -220,6 +229,14 @@ function writeJson(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(payload));
+}
+
+function writeClearSessionResponse(res) {
+  clearSessionState();
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Set-Cookie', expiredSessionCookieHeader());
+  res.end(JSON.stringify({ hasCookie: false }));
 }
 
 function rewriteLocation(locationHeader, req) {
@@ -426,6 +443,11 @@ export default async function handler(req, res) {
       writeJson(res, 400, { message: 'Invalid request body.' });
     }
 
+    return;
+  }
+
+  if (action === 'session-clear' && req.method === 'POST') {
+    writeClearSessionResponse(res);
     return;
   }
 
