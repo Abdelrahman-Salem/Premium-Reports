@@ -86,6 +86,60 @@ function rewriteSetCookieHeaders(setCookieHeaders) {
   });
 }
 
+function hasSessionCookie(cookie) {
+  return String(cookie || '')
+    .split(';')
+    .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
+}
+
+function validateTraacsSession(cookie) {
+  if (!hasSessionCookie(cookie)) {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    const upstreamReq = request(
+      {
+        hostname: targetHost,
+        port: 9191,
+        path: reportPagePath,
+        method: 'GET',
+        headers: {
+          Accept: 'text/html,*/*',
+          'Accept-Encoding': 'identity',
+          Cookie: cookie,
+          Host: `${targetHost}:9191`,
+          'User-Agent': 'Mozilla/5.0 PremiumReportsProxy/1.0',
+        },
+      },
+      (upstreamRes) => {
+        const location = String(upstreamRes.headers.location || '');
+        const chunks = [];
+
+        if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode ?? 0) && /login/i.test(location)) {
+          upstreamRes.resume();
+          resolve(false);
+          return;
+        }
+
+        upstreamRes.on('data', (chunk) => {
+          if (chunks.reduce((total, item) => total + item.length, 0) < 12000) {
+            chunks.push(chunk);
+          }
+        });
+        upstreamRes.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8');
+          const looksLikeLogin = /basic_users\/login|name=["']?password|type=["']password|login/i.test(body);
+          resolve((upstreamRes.statusCode ?? 500) < 400 && !looksLikeLogin);
+        });
+      },
+    );
+
+    upstreamReq.on('error', () => resolve(false));
+    upstreamReq.end();
+  });
+}
+
 function collectBody(req) {
   if (typeof req.body === 'string') {
     return Promise.resolve(req.body);
@@ -349,7 +403,8 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
-    writeJson(res, 200, { hasCookie: Boolean(resolveCookie(req)), loginUrl: `${localOrigin(req)}${loginPagePath}` });
+    const hasCookie = await validateTraacsSession(req.headers.cookie || '');
+    writeJson(res, 200, { hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` });
     return;
   }
 
