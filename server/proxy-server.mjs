@@ -23,12 +23,103 @@ function normalizeCookie(rawCookie) {
   return trimmedCookie.includes('=') ? trimmedCookie : `${sessionCookieName}=${trimmedCookie}`;
 }
 
-function resolveCookie() {
+function resolveCookie(req) {
+  if (req?.headers.cookie) {
+    return req.headers.cookie;
+  }
+
   if (cookieJar.size > 0) {
     return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
+}
+
+function rewriteSetCookieHeaders(setCookieHeaders) {
+  const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+
+  return headers.map((header) => {
+    const parts = String(header).split(';').map((part) => part.trim()).filter(Boolean);
+    const [cookiePair, ...attributes] = parts;
+    const nextAttributes = [];
+    let hasPath = false;
+
+    for (const attribute of attributes) {
+      if (/^domain=/i.test(attribute)) {
+        continue;
+      }
+
+      if (/^path=/i.test(attribute)) {
+        if (!hasPath) {
+          nextAttributes.push('Path=/');
+          hasPath = true;
+        }
+        continue;
+      }
+
+      nextAttributes.push(attribute);
+    }
+
+    if (!hasPath) {
+      nextAttributes.push('Path=/');
+    }
+
+    return [cookiePair, ...nextAttributes].join('; ');
+  });
+}
+
+function hasSessionCookie(cookie) {
+  return String(cookie || '')
+    .split(';')
+    .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
+}
+
+function validateTraacsSession(cookie) {
+  if (!hasSessionCookie(cookie)) {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    const upstreamReq = request(
+      {
+        hostname: targetHost,
+        port: 9191,
+        path: reportPagePath,
+        method: 'GET',
+        headers: {
+          Accept: 'text/html,*/*',
+          'Accept-Encoding': 'identity',
+          Cookie: cookie,
+          Host: `${targetHost}:9191`,
+          'User-Agent': 'Mozilla/5.0 PremiumReportsProxy/1.0',
+        },
+      },
+      (upstreamRes) => {
+        const location = String(upstreamRes.headers.location || '');
+        const chunks = [];
+
+        if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode ?? 0) && /login/i.test(location)) {
+          upstreamRes.resume();
+          resolve(false);
+          return;
+        }
+
+        upstreamRes.on('data', (chunk) => {
+          if (chunks.reduce((total, item) => total + item.length, 0) < 12000) {
+            chunks.push(chunk);
+          }
+        });
+        upstreamRes.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8');
+          const looksLikeLogin = /basic_users\/login|name=["']?password|type=["']password|login/i.test(body);
+          resolve((upstreamRes.statusCode ?? 500) < 400 && !looksLikeLogin);
+        });
+      },
+    );
+
+    upstreamReq.on('error', () => resolve(false));
+    upstreamReq.end();
+  });
 }
 
 function captureSetCookies(setCookieHeaders) {
@@ -106,7 +197,7 @@ function shouldRewriteBody(headers) {
 }
 
 function proxyTraacsRequest(req, res) {
-  const cookie = resolveCookie();
+  const cookie = resolveCookie(req);
   const headers = {
     ...req.headers,
     Accept: req.headers.accept ?? '*/*',
@@ -135,9 +226,14 @@ function proxyTraacsRequest(req, res) {
       captureSetCookies(upstreamRes.headers['set-cookie']);
 
       const responseHeaders = { ...upstreamRes.headers };
+      const rewrittenCookies = rewriteSetCookieHeaders(responseHeaders['set-cookie']);
       delete responseHeaders['set-cookie'];
       if (responseHeaders.location) {
         responseHeaders.location = rewriteLocation(responseHeaders.location, req);
+      }
+
+      if (rewrittenCookies.length > 0) {
+        responseHeaders['set-cookie'] = rewrittenCookies;
       }
 
       if (!shouldRewriteBody(responseHeaders)) {
@@ -178,8 +274,10 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.url === '/api/session/status' && req.method === 'GET') {
+    const cookie = req.headers.cookie || '';
+    const hasCookie = await validateTraacsSession(cookie);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ hasCookie: Boolean(resolveCookie()), loginUrl: `${localOrigin(req)}${loginPagePath}` }));
+    res.end(JSON.stringify({ hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` }));
     return;
   }
 
@@ -224,7 +322,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const cookie = resolveCookie();
+  const cookie = resolveCookie(req);
   if (!cookie) {
     res.writeHead(401, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'TRAACS_COOKIE environment variable is required.' }));

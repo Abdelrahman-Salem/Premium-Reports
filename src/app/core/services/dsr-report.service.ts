@@ -841,6 +841,6 @@ export class DsrReportService {
   }
 
   private resolveApiOrigin(): string {
-    return ['4200', '4201'].includes(window.location.port) ? `${window.location.protocol}//${window.location.hostname}:3333` : '';
+    return '';
   }
 }
