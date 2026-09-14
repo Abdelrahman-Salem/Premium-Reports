@@ -10,13 +10,20 @@
 
     <div class="nav-label">{{ t('reportSections') }}</div>
     <nav class="nav">
-      <div class="nav-item active">
+      <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'monthly'" (click)="setReportMode('monthly')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 5h16v14H4z" />
+          <path d="M8 3v4M16 3v4M4 10h16" />
+        </svg>
+        {{ t('monthlyReport') }}
+      </button>
+      <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'dsr'" (click)="setReportMode('dsr')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M4 19V5a1 1 0 0 1 1-1h9l6 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" />
           <path d="M9 13h6M9 17h6M9 9h2" />
         </svg>
-        {{ t('salesDsr') }}
-      </div>
+        {{ t('dsrReport') }}
+      </button>
       <div class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M3 12h4l3 8 4-16 3 8h4" />
@@ -35,14 +42,14 @@
     <div class="nav-divider"></div>
     <div class="nav-label">Session</div>
     <nav class="nav">
-      <a class="nav-item nav-button" [href]="traacsLoginUrl()" target="_blank" rel="noopener noreferrer">
+      <button class="nav-item nav-button" type="button" (click)="openTraacsLogin()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
           <path d="M10 17l5-5-5-5" />
           <path d="M15 12H3" />
         </svg>
         {{ t('openTraacs') }}
-      </a>
+      </button>
       <button class="nav-item nav-button" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M20 6 9 17l-5-5" />
@@ -53,7 +60,7 @@
 
     <div class="sidebar-foot">
       <div class="period">{{ language() === 'ar' ? 'الفترة المعروضة' : 'Visible period' }}</div>
-      <div class="period"><strong>{{ periodLabel() }}</strong></div>
+      <div class="period"><strong>{{ reportMode() === 'monthly' ? monthlyPeriodLabel() : periodLabel() }}</strong></div>
       <div class="session-state" [class.ready]="sessionReady()">
         <span class="session-dot"></span>
         <span>{{ sessionMessage() || t('sessionMissing') }}</span>
@@ -65,16 +72,29 @@
     <div class="topbar">
       <div>
         <div class="eyebrow-row">{{ t('salesReport') }}</div>
-        <div class="title">{{ t('title') }}</div>
-        <p class="subtitle">{{ t('subtitle') }}</p>
+        <div class="title">{{ reportMode() === 'monthly' ? t('monthlyReport') : t('title') }}</div>
+        <p class="subtitle">
+          {{
+            reportMode() === 'monthly'
+              ? (language() === 'ar'
+                ? 'تحليل شهري لإيرادات الخدمات والربحية والحجم مع مقارنة بين الشهور والخدمات.'
+                : 'Monthly service revenue, profit, volume, service mix, and performance comparison.')
+              : t('subtitle')
+          }}
+        </p>
       </div>
 
       <div class="topbar-actions">
         <button class="light-btn" type="button" (click)="toggleLanguage()">{{ t('language') }}</button>
-        @if (report()) {
+        @if ((reportMode() === 'monthly' && monthlyDashboard()) || (reportMode() === 'dsr' && report())) {
           <span class="live-pill">{{ sourceLabel() }}</span>
         }
-        <button class="export-btn" type="button" (click)="exportReport()" [disabled]="!report()">
+        <button
+          class="export-btn"
+          type="button"
+          (click)="reportMode() === 'monthly' ? exportMonthlyReport() : exportReport()"
+          [disabled]="reportMode() === 'monthly' ? !monthlyDashboard() : !report()"
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3v13m0 0-4-4m4 4 4-4M4 19h16" />
           </svg>
@@ -93,16 +113,109 @@
       </div>
       <p>{{ t('sessionHint') }}</p>
       <div class="auth-actions">
-        <a class="light-btn" [href]="traacsLoginUrl()" target="_blank" rel="noopener noreferrer">
+        <button class="light-btn" type="button" (click)="openTraacsLogin()">
           {{ t('openTraacs') }}
-        </a>
+        </button>
         <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
           {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
         </button>
       </div>
     </section>
 
+    @if (loginPanelOpen()) {
+      <section class="login-panel">
+        <div class="login-panel-head">
+          <div>
+            <strong>{{ t('openTraacs') }}</strong>
+            <span>{{ language() === 'ar' ? 'سجل الدخول هنا ثم اضغط فحص الجلسة.' : 'Sign in here, then check the session.' }}</span>
+          </div>
+          <div class="login-panel-actions">
+            <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
+              {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
+            </button>
+            <button class="light-btn" type="button" (click)="closeTraacsLogin()">
+              {{ language() === 'ar' ? 'إغلاق' : 'Close' }}
+            </button>
+          </div>
+        </div>
+        <iframe
+          class="login-frame"
+          [src]="safeTraacsLoginUrl()"
+          title="TRAACS login"
+          (load)="onTraacsLoginFrameLoad()"
+        ></iframe>
+      </section>
+    }
+
     <div class="filters">
+      @if (reportMode() === 'monthly') {
+        <div class="field">
+          <label>{{ language() === 'ar' ? 'من شهر' : 'From month' }}</label>
+          <select [ngModel]="monthlyFilters().fromMonth" (ngModelChange)="updateMonthlyFilter('fromMonth', $event)">
+            @for (month of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']; track month) {
+              <option [value]="month">{{ month }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label>{{ language() === 'ar' ? 'سنة البداية' : 'From year' }}</label>
+          <input type="number" [ngModel]="monthlyFilters().fromYear" (ngModelChange)="updateMonthlyFilter('fromYear', $event)" />
+        </div>
+
+        <div class="field">
+          <label>{{ language() === 'ar' ? 'إلى شهر' : 'To month' }}</label>
+          <select [ngModel]="monthlyFilters().toMonth" (ngModelChange)="updateMonthlyFilter('toMonth', $event)">
+            @for (month of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']; track month) {
+              <option [value]="month">{{ month }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label>{{ language() === 'ar' ? 'سنة النهاية' : 'To year' }}</label>
+          <input type="number" [ngModel]="monthlyFilters().toYear" (ngModelChange)="updateMonthlyFilter('toYear', $event)" />
+        </div>
+
+        <div class="field">
+          <label>{{ t('dateType') }}</label>
+          <select [ngModel]="monthlyFilters().dateType" (ngModelChange)="updateMonthlyFilter('dateType', $event)">
+            <option value="Document Date">{{ t('document') }}</option>
+            <option value="Service Date">{{ t('service') }}</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>{{ t('currency') }}</label>
+          <select [ngModel]="monthlyFilters().currency" (ngModelChange)="updateMonthlyFilter('currency', $event)">
+            <option value="SAR">SAR</option>
+            <option value="Base">Base</option>
+          </select>
+        </div>
+
+        <div class="checks">
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="monthlyFilters().showProfit"
+              (ngModelChange)="updateMonthlyFilter('showProfit', $event)"
+            />
+            {{ t('grossProfit') }}
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="monthlyFilters().showCount"
+              (ngModelChange)="updateMonthlyFilter('showCount', $event)"
+            />
+            {{ t('documents') }}
+          </label>
+        </div>
+
+        <button class="search-btn" type="button" (click)="refreshMonthlyReport()" [disabled]="loading()">
+          {{ loading() ? t('searching') : t('search') }}
+        </button>
+      } @else {
       <div class="field">
         <label>{{ t('from') }}</label>
         <input type="date" [ngModel]="filters().fromDate" (ngModelChange)="updateFilter('fromDate', $event)" />
@@ -179,13 +292,14 @@
       <button class="search-btn" type="button" (click)="refreshReport()" [disabled]="loading()">
         {{ loading() ? t('searching') : t('search') }}
       </button>
+      }
     </div>
 
     @if (error()) {
       <div class="notice" role="status">{{ error() }}</div>
     }
 
-    @if (loading() && !dashboard()) {
+    @if (loading() && ((reportMode() === 'monthly' && !monthlyDashboard()) || (reportMode() === 'dsr' && !dashboard()))) {
       <section class="loading-grid" [attr.aria-label]="t('loadingReport')">
         @for (item of [1, 2, 3, 4]; track item) {
           <div class="skeleton"></div>
@@ -193,14 +307,371 @@
       </section>
     }
 
-    @if (!loading() && !dashboard() && !hasSearched()) {
+    @if (!loading() && ((reportMode() === 'monthly' && !monthlyDashboard()) || (reportMode() === 'dsr' && !dashboard())) && !hasSearched()) {
       <section class="empty-card">
         <h2>{{ t('noReportTitle') }}</h2>
         <p>{{ t('noReportSubtitle') }}</p>
       </section>
     }
 
-    @if (dashboard(); as view) {
+    @if (reportMode() === 'monthly' && monthlyDashboard(); as monthly) {
+      <div class="report-context">
+        <span>{{ language() === 'ar' ? 'نوع الخدمة: Service' : 'Service Type: Service' }}</span>
+        <span>{{ language() === 'ar' ? 'التجميع: Service' : 'Group: Service' }}</span>
+        <span>{{ language() === 'ar' ? 'القسم: Default' : 'Department: Default' }}</span>
+        <span>{{ language() === 'ar' ? 'عرض القيمة: Price' : 'Showing Amount: Price' }}</span>
+        <b>{{ monthly.periodLabel }}</b>
+      </div>
+
+      <div class="kpi-grid monthly-kpis">
+        <div class="kpi-card tone-sale">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5m0 14h16M7 15l3-4 4 2 4-7" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('revenue') }}</div>
+            <div class="kpi-amount"><span class="currency-code">{{ monthlyDisplayCurrency() }}</span><span>{{ monthly.totalAmount | number: '1.0-2' }}</span></div>
+            <div class="kpi-foot">{{ monthly.periodLabel }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-profit">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M7 8h7a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h8" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('grossProfit') }}</div>
+            <div class="kpi-amount"><span class="currency-code">{{ monthlyDisplayCurrency() }}</span><span>{{ monthly.totalProfit | number: '1.0-2' }}</span></div>
+            <div class="kpi-foot pos">{{ t('grossMargin') }} {{ monthly.grossMargin | percent: '1.1-1' }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-net">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 7h8M8 12h8M8 17h5" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('documents') }}</div>
+            <div class="kpi-amount"><span>{{ monthly.totalCount | number }}</span></div>
+            <div class="kpi-foot">{{ t('avgTicket') }} {{ monthly.avgTicket | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-refund">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('bestMonth') }}</div>
+            <div class="kpi-amount"><span>{{ monthly.bestMonth?.label || '-' }}</span></div>
+            <div class="kpi-foot">{{ (monthly.bestMonth?.amount || 0) | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-net">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M8 17V7M12 17V4M16 17v-6" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('avgMonthlyRevenue') }}</div>
+            <div class="kpi-amount"><span class="currency-code">{{ monthlyDisplayCurrency() }}</span><span>{{ monthly.avgMonthlyAmount | number: '1.0-0' }}</span></div>
+            <div class="kpi-foot">{{ monthly.months.length }} {{ language() === 'ar' ? 'شهور' : 'months' }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-refund">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 14 4-4 4 3 8-8" /><path d="M20 5v6h-6" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ language() === 'ar' ? 'أضعف شهر' : 'Slowest month' }}</div>
+            <div class="kpi-amount"><span>{{ monthly.weakestMonth?.label || '-' }}</span></div>
+            <div class="kpi-foot">{{ (monthly.weakestMonth?.amount || 0) | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-profit">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16" /><path d="m14 6 6 6-6 6" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ language() === 'ar' ? 'نمو الفترة' : 'Period growth' }}</div>
+            <div class="kpi-amount" [class.negative]="(monthly.growthRate ?? 0) < 0"><span>{{ monthly.growthRate === null ? '-' : (monthly.growthRate | percent: '1.1-1') }}</span></div>
+            <div class="kpi-foot">{{ monthly.months[0]?.label }} → {{ monthly.months[monthly.months.length - 1]?.label }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-sale">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ language() === 'ar' ? 'الخدمات النشطة' : 'Active services' }}</div>
+            <div class="kpi-amount"><span>{{ monthly.activeServiceCount }} / {{ monthly.services.length }}</span></div>
+            <div class="kpi-foot">{{ monthly.totalSaleCount | number }} {{ language() === 'ar' ? 'مبيعات' : 'sales' }} · {{ monthly.totalRefundCount | number }} {{ language() === 'ar' ? 'مرتجعات' : 'refunds' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="monthly-hero-grid">
+        <section class="panel trend-panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('monthlyTrend') }}</div>
+            <div class="panel-meta">{{ t('avgMonthlyRevenue') }} {{ monthly.avgMonthlyAmount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+          </div>
+          <div class="trend-legend">
+            <span><i class="amount-key"></i>{{ t('revenue') }}</span>
+            <span><i class="profit-key"></i>{{ t('grossProfit') }}</span>
+            <span><i class="line-key"></i>{{ language() === 'ar' ? 'خط اتجاه الإيراد' : 'Revenue trend line' }}</span>
+          </div>
+          <div class="trend-stage">
+            <svg class="trend-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polyline class="trend-line profit-line" [attr.points]="monthly.profitTrendPoints"></polyline>
+              <polyline class="trend-line amount-line" [attr.points]="monthly.amountTrendPoints"></polyline>
+            </svg>
+            <div class="column-chart">
+              @for (month of monthly.months; track month.label) {
+                <div class="month-column">
+                  <div class="column-bars">
+                    <div class="bar-stack" [title]="t('grossProfit') + ': ' + (month.profit | number: '1.0-2')">
+                      <b>{{ compactMoney(month.profit) }}</b>
+                      <span class="profit-bar" [style.height]="monthlyBarHeight(month.profit, monthly.maxMonthlyAmount)"></span>
+                    </div>
+                    <div class="bar-stack" [title]="t('revenue') + ': ' + (month.amount | number: '1.0-2')">
+                      <b>{{ compactMoney(month.amount) }}</b>
+                      <span class="amount-bar" [style.height]="monthlyBarHeight(month.amount, monthly.maxMonthlyAmount)"></span>
+                    </div>
+                  </div>
+                  <strong>{{ month.label.split(' ')[0] }}</strong>
+                  <small [class.neg]="(month.change ?? 0) < 0">{{ month.change === null ? '-' : (month.change | percent: '1.0-0') }}</small>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <section class="panel mix-panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('serviceMix') }}</div>
+            <div class="panel-meta">{{ t('topService') }}: {{ monthly.topService?.name || '-' }}</div>
+          </div>
+          <div class="share-donut" [style.background]="shareDonutGradient(monthly.services)">
+            <div>
+              <strong>{{ monthly.services.length }}</strong>
+              <span>{{ language() === 'ar' ? 'خدمات' : 'services' }}</span>
+            </div>
+          </div>
+          <div class="donut-wrap all-services">
+            @for (service of monthly.services; track service.id; let serviceIndex = $index) {
+              <div class="mix-row">
+                <span class="mix-dot" [style.background]="serviceColor(serviceIndex)"></span>
+                <span>{{ service.name }}</span>
+                <b>{{ service.share | percent: '1.1-1' }}</b>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <div class="monthly-analytics-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('profitVsRevenue') }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'إيراد وربح لكل خدمة' : 'Sales and profit by service' }}</div>
+          </div>
+          <div class="ranking-list">
+            @for (service of monthly.services; track service.id) {
+              <div class="ranking-row dual-ranking-row">
+                <div>
+                  <strong>{{ service.name }}</strong>
+                  <span>{{ service.count | number }} {{ t('documents') }}</span>
+                </div>
+                <div class="dual-meters">
+                  <div class="dual-meter"><span>{{ t('revenue') }}</span><i><b [style.width]="monthlyBarWidth(service.amount, monthly.maxServiceAmount)"></b></i></div>
+                  <div class="dual-meter profit"><span>{{ t('grossProfit') }}</span><i><b [style.width]="monthlyBarWidth(service.profit, monthly.maxServiceProfit)"></b></i></div>
+                </div>
+                <b>{{ service.amount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel bubble-panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'خريطة الخدمات: الحصة مقابل الهامش' : 'Service map: share vs margin' }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'يمين = حصة أكبر، أعلى = هامش أعلى، حجم النقطة = الإيراد' : 'Right = higher share, up = higher margin, dot size = revenue' }}</div>
+          </div>
+          <div class="chart-note">
+            {{
+              language() === 'ar'
+                ? 'الخدمات القريبة من أعلى اليمين هي الأقوى: حصة كبيرة مع هامش ربح مرتفع.'
+                : 'Upper-right services are strongest: high share with high profit margin.'
+            }}
+          </div>
+          <div class="bubble-stage">
+            <div class="axis-label y-axis">{{ t('grossMargin') }}</div>
+            <div class="axis-label x-axis">{{ language() === 'ar' ? 'حصة من الإيراد' : 'Revenue share' }}</div>
+            @for (service of monthly.services; track service.id) {
+              <div
+                class="service-point"
+                [style.left.%]="serviceBubbleLeft(service)"
+                [style.top.%]="serviceBubbleTop(service)"
+                [title]="service.name + ' · ' + (service.share | percent: '1.1-1') + ' · ' + (service.margin | percent: '1.1-1')"
+              >
+                <span
+                  class="service-bubble"
+                  [style.width.px]="serviceBubbleSize(service, monthly.maxServiceAmount)"
+                  [style.height.px]="serviceBubbleSize(service, monthly.maxServiceAmount)"
+                  [style.background]="serviceColor($index)"
+                ></span>
+                <b>{{ service.name }}</b>
+                <small>{{ service.share | percent: '1.1-1' }} · {{ service.margin | percent: '1.1-1' }}</small>
+              </div>
+            }
+          </div>
+          <div class="service-map-list">
+            @for (service of monthly.services; track service.id; let serviceIndex = $index) {
+              <div>
+                <i [style.background]="serviceColor(serviceIndex)"></i>
+                <strong>{{ service.name }}</strong>
+                <span>{{ t('revenue') }} {{ service.amount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</span>
+                <span>{{ t('grossMargin') }} {{ service.margin | percent: '1.1-1' }}</span>
+                <span>{{ language() === 'ar' ? 'الحصة' : 'Share' }} {{ service.share | percent: '1.1-1' }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <div class="monthly-analytics-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'المبيعات الشهرية حسب الخدمة' : 'Monthly sales by service' }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'Stacked share لكل شهر' : 'Stacked service contribution' }}</div>
+          </div>
+          <div class="stacked-legend">
+            @for (service of monthly.services; track service.id; let serviceIndex = $index) {
+              <span>
+                <i [style.background]="serviceColor(serviceIndex)"></i>
+                {{ service.name }}
+              </span>
+            }
+          </div>
+          <div class="stacked-months">
+            @for (month of monthly.months; track month.label; let monthIndex = $index) {
+              <div class="stacked-month">
+                <div class="stacked-label">
+                  <strong>{{ month.label }}</strong>
+                  <span>{{ month.amount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</span>
+                </div>
+                <div class="stacked-track">
+                  @for (service of monthly.services; track service.id; let serviceIndex = $index) {
+                    @if (service.months[monthIndex].amount > 0) {
+                      <i
+                        [style.background]="serviceColor(serviceIndex)"
+                        [style.width]="monthlyBarWidth(service.months[monthIndex].amount, month.amount)"
+                        [title]="service.name"
+                      ></i>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'مقارنة متعددة المؤشرات' : 'Multi-metric comparison' }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'أعلى 4 خدمات، معيار 0-100' : 'Top 4 services, normalized 0-100' }}</div>
+          </div>
+          <div class="radar-list">
+            @for (service of monthly.topServices.slice(0, 4); track service.id) {
+              <div class="radar-row">
+                <strong>{{ service.name }}</strong>
+                <div class="radar-metrics">
+                  <span>{{ t('revenue') }}</span><i><b [style.width]="normalizedWidth(service.amount, monthly.maxServiceAmount)"></b></i>
+                  <span>{{ t('grossProfit') }}</span><i><b [style.width]="normalizedWidth(service.profit, monthly.maxServiceProfit)"></b></i>
+                  <span>{{ t('grossMargin') }}</span><i><b [style.width]="normalizedWidth(service.margin, monthly.maxServiceMargin)"></b></i>
+                  <span>{{ t('documents') }}</span><i><b [style.width]="normalizedWidth(service.count, monthly.maxServiceCount)"></b></i>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">{{ t('revenueHeatmap') }}</div>
+          <div class="panel-meta">{{ monthly.periodLabel }}</div>
+        </div>
+        <div class="heatmap" [style.grid-template-columns]="heatmapColumns(monthly.months.length)">
+          <div class="heatmap-head"></div>
+          @for (month of monthly.months; track month.label) {
+            <div class="heatmap-head">{{ month.label.split(' ')[0] }}</div>
+          }
+          @for (service of monthly.services; track service.id) {
+            <div class="heat-label">{{ service.name }}</div>
+            @for (month of service.months; track month.label) {
+              <div
+                class="heat-cell"
+                [class.neg]="month.amount < 0"
+                [style.opacity]="heatOpacity(month.amount, monthly.maxHeatAmount)"
+                [title]="service.name + ' - ' + month.label"
+              >
+                <span>{{ month.amount | number: '1.0-0' }}</span>
+                <small>{{ month.margin | percent: '1.1-1' }}</small>
+              </div>
+            }
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">{{ t('monthlyServiceTable') }}</div>
+          <div class="panel-meta">{{ monthlyDisplayCurrency() }}</div>
+        </div>
+        <div class="table-wrap">
+          <table class="dsr monthly-table">
+            <thead>
+              <tr>
+                <th>{{ t('service') }}</th>
+                @for (month of monthly.months; track month.label) {
+                  <th class="num">{{ month.label }}</th>
+                }
+                <th class="num">{{ t('revenue') }}</th>
+                <th class="num">{{ t('grossMargin') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (service of monthly.services; track service.id) {
+                <tr>
+                  <td class="label">{{ service.name }}</td>
+                  @for (month of service.months; track month.label) {
+                    <td class="num" [class.neg]="month.amount < 0" [class.dim]="month.amount === 0">
+                      <div class="monthly-cell">
+                        <strong>{{ month.amount | number: '1.2-2' }}</strong>
+                        <span>{{ month.profit | number: '1.2-2' }}</span>
+                        <em>{{ month.margin | percent: '1.2-2' }}</em>
+                        <small>{{ month.count | number: '1.0-0' }} ({{ month.saleCount | number: '1.0-0' }}-{{ month.refundCount | number: '1.0-0' }})</small>
+                      </div>
+                    </td>
+                  }
+                  <td class="num">{{ service.amount | number: '1.0-0' }}</td>
+                  <td class="num">{{ service.margin | percent: '1.1-1' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="label">{{ language() === 'ar' ? 'الإجمالي' : 'Total' }}</td>
+                @for (month of monthly.months; track month.label) {
+                  <td class="num">
+                    <div class="monthly-cell total-cell">
+                      <strong>{{ month.amount | number: '1.2-2' }}</strong>
+                      <span>{{ month.profit | number: '1.2-2' }}</span>
+                      <em>{{ month.margin | percent: '1.2-2' }}</em>
+                      <small>{{ month.count | number: '1.0-0' }} ({{ month.saleCount | number: '1.0-0' }}-{{ month.refundCount | number: '1.0-0' }})</small>
+                    </div>
+                  </td>
+                }
+                <td class="num">{{ monthly.totalAmount | number: '1.0-0' }}</td>
+                <td class="num">{{ monthly.grossMargin | percent: '1.1-1' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (reportMode() === 'dsr' && dashboard(); as view) {
       <div class="kpi-grid">
         @for (card of view.metricCards; track trackByLabel($index, card)) {
           <div
@@ -268,6 +739,155 @@
           </div>
         }
       </div>
+
+      @if (view.detailAnalytics; as details) {
+        <div class="report-context">
+          <span>{{ language() === 'ar' ? 'نوع التقرير: DSR Details' : 'Report: DSR Details' }}</span>
+          <span>{{ language() === 'ar' ? 'الصفوف المعروضة' : 'Rows loaded' }}: {{ details.rowCount | number }}</span>
+          <span>{{ language() === 'ar' ? 'إجمالي المستندات' : 'Total documents' }}: {{ details.totalDocumentCount | number }}</span>
+          <span>{{ language() === 'ar' ? 'متوسط المستند' : 'Avg document' }}: {{ details.avgDocumentValue | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</span>
+          <b>{{ periodLabel() }}</b>
+        </div>
+
+        <div class="dsr-detail-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">{{ language() === 'ar' ? 'اتجاه المستندات حسب الشهر' : 'Document movement by month' }}</div>
+              <div class="panel-meta">{{ language() === 'ar' ? 'الإيراد، الربح، والضريبة' : 'Revenue, profit, and tax' }}</div>
+            </div>
+            <div class="trend-legend">
+              <span><i class="amount-key"></i>{{ t('revenue') }}</span>
+              <span><i class="profit-key"></i>{{ t('grossProfit') }}</span>
+              <span><i class="tax-key"></i>{{ language() === 'ar' ? 'الضريبة' : 'Tax' }}</span>
+            </div>
+            <div class="dsr-month-bars">
+              @for (month of details.months; track month.label) {
+                <div class="dsr-month-row">
+                  <div>
+                    <strong>{{ month.label }}</strong>
+                    <span>{{ month.count | number }} {{ t('documents') }} · {{ month.margin | percent: '1.1-1' }}</span>
+                  </div>
+                  <div class="dsr-triple-bars">
+                    <i class="amount-fill" [style.width]="monthlyBarWidth(month.amount, details.maxMonthAmount)"></i>
+                    <i class="profit-fill" [style.width]="monthlyBarWidth(month.profit, details.maxMonthAmount)"></i>
+                    <i class="tax-fill" [style.width]="monthlyBarWidth(month.tax, details.maxMonthAmount)"></i>
+                  </div>
+                  <b>{{ month.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">{{ language() === 'ar' ? 'توزيع الخدمات' : 'Service distribution' }}</div>
+              <div class="panel-meta">{{ language() === 'ar' ? 'كل الخدمات ظاهرة' : 'All services shown' }}</div>
+            </div>
+            <div class="donut-wrap all-services">
+              @for (service of details.services; track service.label; let serviceIndex = $index) {
+                <div class="mix-row">
+                  <span class="mix-dot" [style.background]="serviceColor(serviceIndex)"></span>
+                  <span>{{ service.label }}</span>
+                  <b>{{ service.share | percent: '1.1-1' }}</b>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
+
+        <div class="dsr-detail-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">{{ language() === 'ar' ? 'أعلى العملاء' : 'Top customers' }}</div>
+              <div class="panel-meta">{{ language() === 'ar' ? 'حسب الإيراد' : 'By revenue' }}</div>
+            </div>
+            <div class="ranking-list">
+              @for (customer of details.customers; track customer.label) {
+                <div class="ranking-row">
+                  <div>
+                    <strong>{{ customer.label }}</strong>
+                    <span>{{ customer.count | number }} {{ t('documents') }} · {{ customer.margin | percent: '1.1-1' }}</span>
+                  </div>
+                  <div class="ranking-meter">
+                    <i [style.width]="monthlyBarWidth(customer.amount, details.maxCustomerAmount)"></i>
+                  </div>
+                  <b>{{ customer.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">{{ language() === 'ar' ? 'مراكز التكلفة والضريبة' : 'Cost centers and tax' }}</div>
+              <div class="panel-meta">{{ language() === 'ar' ? 'الحركة حسب مركز التكلفة والمنطقة' : 'Movement by cost center and region' }}</div>
+            </div>
+            <div class="split-summary">
+              <div>
+                <strong>{{ details.totalTax | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</strong>
+                <span>{{ language() === 'ar' ? 'إجمالي الضريبة' : 'Total tax' }} · {{ details.taxableShare | percent: '1.1-1' }}</span>
+              </div>
+              <div>
+                <strong>{{ details.totalProfit | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</strong>
+                <span>{{ t('grossProfit') }} · {{ details.profitMargin | percent: '1.1-1' }}</span>
+              </div>
+            </div>
+            <div class="mini-breakdown">
+              @for (center of details.costCenters; track center.label) {
+                <div>
+                  <span>{{ center.label }}</span>
+                  <i><b [style.width]="monthlyBarWidth(center.amount, details.maxCostCenterAmount)"></b></i>
+                  <strong>{{ center.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</strong>
+                </div>
+              }
+            </div>
+            <div class="tax-region-list">
+              @for (region of details.taxRegions; track region.label) {
+                <span>{{ region.label }}: <b>{{ region.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b></span>
+              }
+            </div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'تفاصيل المستندات' : 'Document details' }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'أول 80 صف من البيانات المعروضة' : 'First 80 loaded rows' }}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="dsr detail-doc-table">
+              <thead>
+                <tr>
+                  <th>{{ language() === 'ar' ? 'التاريخ' : 'Date' }}</th>
+                  <th>{{ language() === 'ar' ? 'المستند' : 'Document' }}</th>
+                  <th>{{ t('service') }}</th>
+                  <th>{{ language() === 'ar' ? 'العميل' : 'Customer' }}</th>
+                  <th>{{ language() === 'ar' ? 'مركز التكلفة' : 'Cost center' }}</th>
+                  <th class="num">{{ t('revenue') }}</th>
+                  <th class="num">{{ t('grossProfit') }}</th>
+                  <th class="num">{{ language() === 'ar' ? 'الضريبة' : 'Tax' }}</th>
+                  <th class="num">{{ t('grossMargin') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (doc of details.documents; track doc.documentNo + doc.ticketNo) {
+                  <tr>
+                    <td>{{ doc.date }}</td>
+                    <td class="label">{{ doc.documentNo }}</td>
+                    <td>{{ doc.service }}</td>
+                    <td>{{ doc.customer }}</td>
+                    <td>{{ doc.costCenter }}</td>
+                    <td class="num" [class.neg]="doc.amount < 0">{{ doc.amount | number: '1.0-2' }}</td>
+                    <td class="num" [class.neg]="doc.profit < 0">{{ doc.profit | number: '1.0-2' }}</td>
+                    <td class="num">{{ doc.tax | number: '1.0-2' }}</td>
+                    <td class="num">{{ doc.margin | percent: '1.1-1' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
 
       <div class="chart-row">
         <div class="panel">

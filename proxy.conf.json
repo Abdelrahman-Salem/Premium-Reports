@@ -3,5 +3,60 @@
     "target": "http://127.0.0.1:3333",
     "secure": false,
     "changeOrigin": true
+  },
+  "/traacs": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/nucorelib": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/css": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/theme": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/js": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/script": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/images": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/img": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/plugins": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/font": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
+  },
+  "/fonts": {
+    "target": "http://127.0.0.1:3333",
+    "secure": false,
+    "changeOrigin": false
   }
 }

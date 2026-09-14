@@ -2,7 +2,10 @@ import { request } from 'node:https';
 
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
+const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
+const monthlySaleReportPagePath =
+  '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/servicemonthlysalereport/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
 let runtimeCookie = '';
@@ -276,7 +279,7 @@ async function proxyTraacsRequest(req, res, upstreamPath) {
   upstreamReq.end();
 }
 
-async function proxyReportRequest(req, res) {
+async function proxyReportRequest(req, res, upstreamPath = targetPath, refererPath = reportPagePath) {
   const cookie = resolveCookie(req);
 
   if (!cookie) {
@@ -290,7 +293,7 @@ async function proxyReportRequest(req, res) {
       {
         hostname: targetHost,
         port: 9191,
-        path: targetPath,
+        path: upstreamPath,
         method: 'POST',
         headers: {
           Accept: '*/*',
@@ -300,7 +303,7 @@ async function proxyReportRequest(req, res) {
           Cookie: cookie,
           Host: `${targetHost}:9191`,
           Origin: `https://${targetHost}:9191`,
-          Referer: `https://${targetHost}:9191${reportPagePath}`,
+          Referer: `https://${targetHost}:9191${refererPath}`,
           'User-Agent': 'Mozilla/5.0 PremiumReportsProxy/1.0',
           'X-Requested-With': 'XMLHttpRequest',
         },
@@ -373,6 +376,11 @@ export default async function handler(req, res) {
 
   if (action === 'report' && req.method === 'POST') {
     await proxyReportRequest(req, res);
+    return;
+  }
+
+  if (action === 'monthly-service-report' && req.method === 'POST') {
+    await proxyReportRequest(req, res, monthlySaleTargetPath, monthlySaleReportPagePath);
     return;
   }
 
