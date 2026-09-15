@@ -12,6 +12,7 @@ const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
 let runtimeCookie = '';
 const cookieJar = new Map();
+let lastUpstreamCookieNames = [];
 
 function normalizeCookie(rawCookie) {
   const trimmedCookie = String(rawCookie ?? '').trim();
@@ -29,21 +30,53 @@ function hasSessionCookie(cookie) {
     .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
 }
 
+function cookieNamesFromCookieHeader(cookie) {
+  return String(cookie || '')
+    .split(';')
+    .map((part) => part.trim().split('=')[0])
+    .filter(Boolean);
+}
+
+function cookieNamesFromSetCookieHeaders(setCookieHeaders) {
+  const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+
+  return headers
+    .map((header) => String(header).split(';')[0]?.split('=')[0]?.trim())
+    .filter(Boolean);
+}
+
 function serializeCookieJar() {
   return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
 }
 
-function resolveCookie(req) {
+function resolveCookieWithSource(req) {
   if (hasSessionCookie(req?.headers.cookie)) {
-    return req.headers.cookie;
+    return { cookie: req.headers.cookie, source: 'browser-request' };
   }
 
   const jarCookie = serializeCookieJar();
   if (hasSessionCookie(jarCookie)) {
-    return jarCookie;
+    return { cookie: jarCookie, source: 'server-jar' };
   }
 
-  return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
+  const manualCookie = runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
+  if (hasSessionCookie(manualCookie)) {
+    return { cookie: manualCookie, source: 'manual-runtime-cookie' };
+  }
+
+  return { cookie: '', source: 'none' };
+}
+
+function resolveCookie(req) {
+  return resolveCookieWithSource(req).cookie;
+}
+
+function buildSessionDiagnostics(req, cookieSource) {
+  return {
+    cookieSource,
+    lastUpstreamCookieNames,
+    requestCookieNames: cookieNamesFromCookieHeader(req?.headers.cookie),
+  };
 }
 
 function rewriteSetCookieHeaders(setCookieHeaders, req) {
@@ -86,6 +119,11 @@ function rewriteSetCookieHeaders(setCookieHeaders, req) {
 
 function captureSetCookies(setCookieHeaders) {
   const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+  const upstreamCookieNames = cookieNamesFromSetCookieHeaders(headers);
+
+  if (upstreamCookieNames.length > 0) {
+    lastUpstreamCookieNames = upstreamCookieNames;
+  }
 
   for (const header of headers) {
     const [cookiePair] = String(header).split(';');
@@ -124,6 +162,7 @@ function writeCorsHeaders(req, res) {
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
 function localOrigin(req) {
@@ -236,9 +275,15 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.url === '/api/session/status' && req.method === 'GET') {
-    const cookie = resolveCookie(req);
+    const { cookie, source } = resolveCookieWithSource(req);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ hasCookie: hasSessionCookie(cookie), loginUrl: `${localOrigin(req)}${loginPagePath}` }));
+    res.end(
+      JSON.stringify({
+        hasCookie: hasSessionCookie(cookie),
+        loginUrl: `${localOrigin(req)}${loginPagePath}`,
+        diagnostics: buildSessionDiagnostics(req, source),
+      }),
+    );
     return;
   }
 
