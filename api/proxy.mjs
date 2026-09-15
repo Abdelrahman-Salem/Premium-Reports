@@ -37,7 +37,6 @@ function resolveCookie(req) {
   if (hasSessionCookie(jarCookie)) {
     return jarCookie;
   }
-
   if (hasSessionCookie(req.headers.cookie)) {
     return req.headers.cookie;
   }

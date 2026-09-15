@@ -39,7 +39,6 @@ function resolveCookie(req) {
   if (hasSessionCookie(jarCookie)) {
     return jarCookie;
   }
-
   if (hasSessionCookie(req?.headers.cookie)) {
     return req.headers.cookie;
   }
@@ -136,7 +135,6 @@ function validateTraacsSession(cookie) {
     upstreamReq.end();
   });
 }
-
 function captureSetCookies(setCookieHeaders) {
   const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
 
