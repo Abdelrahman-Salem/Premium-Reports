@@ -74,6 +74,7 @@ function buildSessionDiagnostics(req, cookieSource) {
     cookieSource,
     lastUpstreamCookieNames,
     requestCookieNames: cookieNamesFromCookieHeader(req.headers.cookie),
+    sessionDecision: 'traacs-cookie-presence',
   };
 }
 
@@ -317,6 +318,7 @@ async function proxyTraacsRequest(req, res, upstreamPath) {
   };
 
   delete headers.connection;
+  delete headers.cookie;
   delete headers['content-length'];
   delete headers.host;
   delete headers['x-forwarded-for'];
@@ -452,9 +454,8 @@ export default async function handler(req, res) {
 
   if (action === 'session-status' && req.method === 'GET') {
     const { cookie, source } = resolveCookieWithSource(req);
-    const hasCookie = await validateTraacsSession(cookie);
     writeJson(res, 200, {
-      hasCookie,
+      hasCookie: hasSessionCookie(cookie),
       loginUrl: `${localOrigin(req)}${loginPagePath}`,
       diagnostics: buildSessionDiagnostics(req, source),
     });
