@@ -32,27 +32,17 @@ function serializeCookieJar() {
 }
 
 function resolveCookie(req) {
-<<<<<<< HEAD
-=======
   const jarCookie = serializeCookieJar();
 
   if (hasSessionCookie(jarCookie)) {
     return jarCookie;
   }
-
->>>>>>> origin/main
   if (hasSessionCookie(req.headers.cookie)) {
     return req.headers.cookie;
   }
 
-<<<<<<< HEAD
-  const jarCookie = serializeCookieJar();
-  if (hasSessionCookie(jarCookie)) {
-    return jarCookie;
-=======
   if (req.headers.cookie) {
     return req.headers.cookie;
->>>>>>> origin/main
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
@@ -427,12 +417,8 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
-<<<<<<< HEAD
-    writeJson(res, 200, { hasCookie: hasSessionCookie(resolveCookie(req)), loginUrl: `${localOrigin(req)}${loginPagePath}` });
-=======
     const hasCookie = await validateTraacsSession(resolveCookie(req));
     writeJson(res, 200, { hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` });
->>>>>>> origin/main
     return;
   }
 
