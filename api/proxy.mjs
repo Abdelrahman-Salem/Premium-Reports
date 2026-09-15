@@ -21,13 +21,24 @@ function normalizeCookie(rawCookie) {
   return trimmedCookie.includes('=') ? trimmedCookie : `${sessionCookieName}=${trimmedCookie}`;
 }
 
+function hasSessionCookie(cookie) {
+  return String(cookie || '')
+    .split(';')
+    .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
+}
+
+function serializeCookieJar() {
+  return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+}
+
 function resolveCookie(req) {
-  if (req.headers.cookie) {
+  if (hasSessionCookie(req.headers.cookie)) {
     return req.headers.cookie;
   }
 
-  if (cookieJar.size > 0) {
-    return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+  const jarCookie = serializeCookieJar();
+  if (hasSessionCookie(jarCookie)) {
+    return jarCookie;
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
@@ -349,7 +360,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
-    writeJson(res, 200, { hasCookie: Boolean(resolveCookie(req)), loginUrl: `${localOrigin(req)}${loginPagePath}` });
+    writeJson(res, 200, { hasCookie: hasSessionCookie(resolveCookie(req)), loginUrl: `${localOrigin(req)}${loginPagePath}` });
     return;
   }
 
