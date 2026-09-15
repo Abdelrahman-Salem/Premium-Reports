@@ -34,13 +34,27 @@ function serializeCookieJar() {
 }
 
 function resolveCookie(req) {
+<<<<<<< HEAD
+=======
+  const jarCookie = serializeCookieJar();
+
+  if (hasSessionCookie(jarCookie)) {
+    return jarCookie;
+  }
+
+>>>>>>> origin/main
   if (hasSessionCookie(req?.headers.cookie)) {
     return req.headers.cookie;
   }
 
+<<<<<<< HEAD
   const jarCookie = serializeCookieJar();
   if (hasSessionCookie(jarCookie)) {
     return jarCookie;
+=======
+  if (req?.headers.cookie) {
+    return req.headers.cookie;
+>>>>>>> origin/main
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
@@ -84,6 +98,57 @@ function rewriteSetCookieHeaders(setCookieHeaders, req) {
   });
 }
 
+<<<<<<< HEAD
+=======
+function validateTraacsSession(cookie) {
+  if (!hasSessionCookie(cookie)) {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    const upstreamReq = request(
+      {
+        hostname: targetHost,
+        port: 9191,
+        path: reportPagePath,
+        method: 'GET',
+        headers: {
+          Accept: 'text/html,*/*',
+          'Accept-Encoding': 'identity',
+          Cookie: cookie,
+          Host: `${targetHost}:9191`,
+          'User-Agent': 'Mozilla/5.0 PremiumReportsProxy/1.0',
+        },
+      },
+      (upstreamRes) => {
+        const location = String(upstreamRes.headers.location || '');
+        const chunks = [];
+
+        if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode ?? 0) && /login/i.test(location)) {
+          upstreamRes.resume();
+          resolve(false);
+          return;
+        }
+
+        upstreamRes.on('data', (chunk) => {
+          if (chunks.reduce((total, item) => total + item.length, 0) < 12000) {
+            chunks.push(chunk);
+          }
+        });
+        upstreamRes.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8');
+          const looksLikeLogin = /basic_users\/login|name=["']?password|type=["']password|login/i.test(body);
+          resolve((upstreamRes.statusCode ?? 500) < 400 && !looksLikeLogin);
+        });
+      },
+    );
+
+    upstreamReq.on('error', () => resolve(false));
+    upstreamReq.end();
+  });
+}
+
+>>>>>>> origin/main
 function captureSetCookies(setCookieHeaders) {
   const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
 
@@ -169,7 +234,11 @@ function proxyTraacsRequest(req, res) {
   };
 
   delete headers.connection;
+  delete headers.host;
   delete headers['proxy-connection'];
+  delete headers['x-forwarded-for'];
+  delete headers['x-forwarded-host'];
+  delete headers['x-forwarded-proto'];
 
   if (cookie) {
     delete headers.cookie;
@@ -237,8 +306,14 @@ const server = createServer(async (req, res) => {
 
   if (req.url === '/api/session/status' && req.method === 'GET') {
     const cookie = resolveCookie(req);
+<<<<<<< HEAD
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ hasCookie: hasSessionCookie(cookie), loginUrl: `${localOrigin(req)}${loginPagePath}` }));
+=======
+    const hasCookie = await validateTraacsSession(cookie);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` }));
+>>>>>>> origin/main
     return;
   }
 

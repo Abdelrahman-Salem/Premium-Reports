@@ -32,13 +32,27 @@ function serializeCookieJar() {
 }
 
 function resolveCookie(req) {
+<<<<<<< HEAD
+=======
+  const jarCookie = serializeCookieJar();
+
+  if (hasSessionCookie(jarCookie)) {
+    return jarCookie;
+  }
+
+>>>>>>> origin/main
   if (hasSessionCookie(req.headers.cookie)) {
     return req.headers.cookie;
   }
 
+<<<<<<< HEAD
   const jarCookie = serializeCookieJar();
   if (hasSessionCookie(jarCookie)) {
     return jarCookie;
+=======
+  if (req.headers.cookie) {
+    return req.headers.cookie;
+>>>>>>> origin/main
   }
 
   return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
@@ -64,8 +78,9 @@ function captureSetCookies(setCookieHeaders) {
   }
 }
 
-function rewriteSetCookieHeaders(setCookieHeaders) {
+function rewriteSetCookieHeaders(setCookieHeaders, req) {
   const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+  const isLocalHttp = localOrigin(req).startsWith('http://');
 
   return headers.map((header) => {
     const parts = String(header).split(';').map((part) => part.trim()).filter(Boolean);
@@ -75,6 +90,10 @@ function rewriteSetCookieHeaders(setCookieHeaders) {
 
     for (const attribute of attributes) {
       if (/^domain=/i.test(attribute)) {
+        continue;
+      }
+
+      if (isLocalHttp && /^secure$/i.test(attribute)) {
         continue;
       }
 
@@ -94,6 +113,54 @@ function rewriteSetCookieHeaders(setCookieHeaders) {
     }
 
     return [cookiePair, ...nextAttributes].join('; ');
+  });
+}
+
+function validateTraacsSession(cookie) {
+  if (!hasSessionCookie(cookie)) {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    const upstreamReq = request(
+      {
+        hostname: targetHost,
+        port: 9191,
+        path: reportPagePath,
+        method: 'GET',
+        headers: {
+          Accept: 'text/html,*/*',
+          'Accept-Encoding': 'identity',
+          Cookie: cookie,
+          Host: `${targetHost}:9191`,
+          'User-Agent': 'Mozilla/5.0 PremiumReportsProxy/1.0',
+        },
+      },
+      (upstreamRes) => {
+        const location = String(upstreamRes.headers.location || '');
+        const chunks = [];
+
+        if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode ?? 0) && /login/i.test(location)) {
+          upstreamRes.resume();
+          resolve(false);
+          return;
+        }
+
+        upstreamRes.on('data', (chunk) => {
+          if (chunks.reduce((total, item) => total + item.length, 0) < 12000) {
+            chunks.push(chunk);
+          }
+        });
+        upstreamRes.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8');
+          const looksLikeLogin = /basic_users\/login|name=["']?password|type=["']password|login/i.test(body);
+          resolve((upstreamRes.statusCode ?? 500) < 400 && !looksLikeLogin);
+        });
+      },
+    );
+
+    upstreamReq.on('error', () => resolve(false));
+    upstreamReq.end();
   });
 }
 
@@ -194,7 +261,7 @@ function shouldRewriteBody(headers) {
 
 function sanitizeResponseHeaders(headers, req) {
   const responseHeaders = { ...headers };
-  const rewrittenCookies = rewriteSetCookieHeaders(responseHeaders['set-cookie']);
+  const rewrittenCookies = rewriteSetCookieHeaders(responseHeaders['set-cookie'], req);
 
   delete responseHeaders.connection;
   delete responseHeaders['content-encoding'];
@@ -360,7 +427,12 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
+<<<<<<< HEAD
     writeJson(res, 200, { hasCookie: hasSessionCookie(resolveCookie(req)), loginUrl: `${localOrigin(req)}${loginPagePath}` });
+=======
+    const hasCookie = await validateTraacsSession(resolveCookie(req));
+    writeJson(res, 200, { hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` });
+>>>>>>> origin/main
     return;
   }
 

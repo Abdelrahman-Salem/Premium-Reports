@@ -208,7 +208,6 @@ export class App {
   protected readonly hasSearched = signal(false);
   protected readonly sessionChecking = signal(false);
   protected readonly sessionReady = signal(false);
-  protected readonly traacsLoginUrl = signal(this.dsrReportService.getTraacsLoginUrl());
   protected readonly sessionMessage = signal<string | null>(null);
   protected readonly costCentreOptions: CostCentreOption[] = [
     { id: '1', label: '100 - Head Quarter' },
@@ -371,7 +370,7 @@ export class App {
   }
 
   protected openTraacsLogin(): void {
-    window.open(this.traacsLoginUrl(), '_blank', 'noopener');
+    window.open(this.dsrReportService.getTraacsLoginUrl(), '_blank', 'noopener,noreferrer');
   }
 
   protected checkSession(): void {
@@ -382,13 +381,11 @@ export class App {
       next: (status) => {
         this.sessionChecking.set(false);
         this.sessionReady.set(status.hasCookie);
-        this.traacsLoginUrl.set(status.loginUrl);
         this.sessionMessage.set(status.hasCookie ? this.t('sessionReady') : this.t('sessionMissing'));
       },
       error: () => {
         this.sessionChecking.set(false);
         this.sessionReady.set(false);
-        this.traacsLoginUrl.set(this.dsrReportService.getTraacsLoginUrl());
         this.sessionMessage.set(this.t('proxyMissing'));
       },
     });
