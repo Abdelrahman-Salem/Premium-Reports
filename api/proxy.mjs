@@ -10,6 +10,7 @@ const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
 let runtimeCookie = '';
 const cookieJar = new Map();
+let lastUpstreamCookieNames = [];
 
 function normalizeCookie(rawCookie) {
   const trimmedCookie = String(rawCookie ?? '').trim();
@@ -27,29 +28,62 @@ function hasSessionCookie(cookie) {
     .some((part) => part.trim().startsWith(`${sessionCookieName}=`));
 }
 
+function cookieNamesFromCookieHeader(cookie) {
+  return String(cookie || '')
+    .split(';')
+    .map((part) => part.trim().split('=')[0])
+    .filter(Boolean);
+}
+
+function cookieNamesFromSetCookieHeaders(setCookieHeaders) {
+  const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+
+  return headers
+    .map((header) => String(header).split(';')[0]?.split('=')[0]?.trim())
+    .filter(Boolean);
+}
+
 function serializeCookieJar() {
   return [...cookieJar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
 }
 
-function resolveCookie(req) {
-  const jarCookie = serializeCookieJar();
-
-  if (hasSessionCookie(jarCookie)) {
-    return jarCookie;
-  }
+function resolveCookieWithSource(req) {
   if (hasSessionCookie(req.headers.cookie)) {
-    return req.headers.cookie;
+    return { cookie: req.headers.cookie, source: 'browser-request' };
   }
 
-  if (req.headers.cookie) {
-    return req.headers.cookie;
+  const jarCookie = serializeCookieJar();
+  if (hasSessionCookie(jarCookie)) {
+    return { cookie: jarCookie, source: 'server-jar' };
   }
 
-  return runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
+  const manualCookie = runtimeCookie || normalizeCookie(process.env.TRAACS_COOKIE);
+  if (hasSessionCookie(manualCookie)) {
+    return { cookie: manualCookie, source: 'manual-runtime-cookie' };
+  }
+
+  return { cookie: '', source: 'none' };
+}
+
+function resolveCookie(req) {
+  return resolveCookieWithSource(req).cookie;
+}
+
+function buildSessionDiagnostics(req, cookieSource) {
+  return {
+    cookieSource,
+    lastUpstreamCookieNames,
+    requestCookieNames: cookieNamesFromCookieHeader(req.headers.cookie),
+  };
 }
 
 function captureSetCookies(setCookieHeaders) {
   const headers = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders].filter(Boolean);
+  const upstreamCookieNames = cookieNamesFromSetCookieHeaders(headers);
+
+  if (upstreamCookieNames.length > 0) {
+    lastUpstreamCookieNames = upstreamCookieNames;
+  }
 
   for (const header of headers) {
     const [cookiePair] = String(header).split(';');
@@ -417,8 +451,13 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
-    const hasCookie = await validateTraacsSession(resolveCookie(req));
-    writeJson(res, 200, { hasCookie, loginUrl: `${localOrigin(req)}${loginPagePath}` });
+    const { cookie, source } = resolveCookieWithSource(req);
+    const hasCookie = await validateTraacsSession(cookie);
+    writeJson(res, 200, {
+      hasCookie,
+      loginUrl: `${localOrigin(req)}${loginPagePath}`,
+      diagnostics: buildSessionDiagnostics(req, source),
+    });
     return;
   }
 

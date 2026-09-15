@@ -89,20 +89,22 @@ export class DsrReportService {
   private readonly http = inject(HttpClient);
   private readonly loginPagePath = '/nucorelib/basic_users/login';
   private readonly apiOrigin = this.resolveApiOrigin();
+  private readonly loginOrigin = this.resolveLoginOrigin();
   private readonly endpoint = `${this.apiOrigin}/api/reports/sales/dsr`;
   private readonly monthlySaleEndpoint = `${this.apiOrigin}/api/reports/sales/monthly-service`;
 
   updateSessionCookie(cookie: string): Observable<void> {
-    return this.http.post<void>(`${this.apiOrigin}/api/session/cookie`, { cookie });
+    return this.http.post<void>(`${this.apiOrigin}/api/session/cookie`, { cookie }, { withCredentials: true });
   }
 
   getSessionStatus(): Observable<{ hasCookie: boolean; loginUrl: string }> {
-    return this.http.get<{ hasCookie: boolean; loginUrl: string }>(`${this.apiOrigin}/api/session/status`);
+    return this.http.get<{ hasCookie: boolean; loginUrl: string }>(`${this.apiOrigin}/api/session/status`, {
+      withCredentials: true,
+    });
   }
 
   getTraacsLoginUrl(): string {
-    const loginOrigin = ['4200', '4201'].includes(window.location.port) ? window.location.origin : this.apiOrigin || window.location.origin;
-    return `${loginOrigin}${this.loginPagePath}`;
+    return `${this.loginOrigin}${this.loginPagePath}`;
   }
 
   getDsrReport(filters: DsrFilters): Observable<DsrReportResult> {
@@ -116,7 +118,7 @@ export class DsrReportService {
       'X-Requested-With': 'XMLHttpRequest',
     });
 
-    return this.http.post(this.endpoint, body.toString(), { headers, responseType: 'text' }).pipe(
+    return this.http.post(this.endpoint, body.toString(), { headers, responseType: 'text', withCredentials: true }).pipe(
       map((response) => ({
         data: this.parseResponse(response),
         source: 'api' as const,
@@ -138,7 +140,7 @@ export class DsrReportService {
     });
 
     return this.http
-      .post(this.monthlySaleEndpoint, body.toString(), { headers, responseType: 'text' })
+      .post(this.monthlySaleEndpoint, body.toString(), { headers, responseType: 'text', withCredentials: true })
       .pipe(map((response) => this.parseMonthlySaleResponse(response)));
   }
 
@@ -842,5 +844,11 @@ export class DsrReportService {
 
   private resolveApiOrigin(): string {
     return '';
+  }
+
+  private resolveLoginOrigin(): string {
+    return ['4200', '4201'].includes(window.location.port)
+      ? `${window.location.protocol}//${window.location.hostname}:3333`
+      : window.location.origin;
   }
 }
