@@ -61,6 +61,10 @@
     {
       "source": "/fonts/:path*",
       "destination": "/api/proxy?path=/fonts/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/api/proxy?path=/:path*"
     }
   ]
 }
