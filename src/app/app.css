@@ -613,7 +613,7 @@ button:disabled {
 .kpi-amount {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 8px;
   overflow: hidden;
   color: var(--ink);
   direction: ltr;
@@ -678,6 +678,10 @@ button:disabled {
   border-radius: var(--radius-lg);
   background: var(--card);
   padding: 22px 24px;
+}
+
+.topbar .subtitle + .subtitle {
+  display: none;
 }
 
 .panel-head {
@@ -1302,6 +1306,8 @@ table.dsr td.label {
   background: var(--profit);
 }
 
+.dual-meter.net-meter i > b { background: var(--net); }
+
 .ranking-row strong,
 .ranking-row span {
   display: block;
@@ -1447,6 +1453,312 @@ table.dsr td.label {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--sale), var(--net));
+}
+
+.ranking-meter > b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sale), var(--net)); }
+
+.cost-net-list {
+  container-type: inline-size;
+  display: grid;
+  gap: 12px;
+}
+
+.cost-net-row {
+  display: grid;
+  grid-template-areas: "title visual values";
+  grid-template-columns: minmax(0, 1.15fr) minmax(110px, 0.65fr) minmax(150px, 0.7fr);
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.cost-net-row.loss {
+  border-color: rgb(191 75 60 / 22%);
+}
+
+.cost-net-row.admin-center {
+  background: #f8fafc;
+}
+
+.cost-net-title {
+  grid-area: title;
+  min-width: 0;
+}
+
+.cost-net-title strong,
+.cost-net-title span {
+  display: block;
+}
+
+.cost-net-title strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.cost-net-title span {
+  margin-top: 5px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.cost-net-title em {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.cost-net-visual {
+  grid-area: visual;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cost-net-meter {
+  display: block;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(16 24 43 / 8%);
+  direction: ltr;
+}
+
+.cost-net-meter > b {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: var(--net);
+}
+
+.cost-net-meter > b.negative {
+  margin-left: auto;
+  background: var(--refund);
+}
+
+.cost-net-visual span {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.cost-net-values {
+  grid-area: values;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  text-align: end;
+}
+
+.cost-net-values span,
+.cost-net-values strong {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.cost-net-values strong {
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.cost-net-values b {
+  color: inherit;
+  direction: ltr;
+  font-family: Cairo, "IBM Plex Sans Arabic", sans-serif;
+  font-size: 12.5px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cost-highlights-panel {
+  container-type: inline-size;
+}
+
+.cost-centre-snapshot {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.highlight-tile {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.highlight-tile span {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.highlight-tile strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.highlight-tile b {
+  color: var(--net);
+  direction: ltr;
+  font-family: Cairo, "IBM Plex Sans Arabic", sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.expense-tile b {
+  color: var(--profit);
+}
+
+.centre-account-list {
+  display: grid;
+  gap: 10px;
+}
+
+.centre-account-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.centre-account-card.admin-center {
+  background: #f8fafc;
+}
+
+.centre-account-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.centre-account-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.centre-account-head span {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.centre-account-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.centre-account-metrics div {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.centre-account-metrics em,
+.centre-account-metrics b {
+  display: block;
+}
+
+.centre-account-metrics em {
+  margin-bottom: 4px;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.centre-account-metrics b {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+@container (max-width: 520px) {
+  .cost-centre-snapshot,
+  .centre-account-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .centre-account-head {
+    display: grid;
+  }
+}
+
+@container (max-width: 680px) {
+  .cost-net-row {
+    grid-template-areas:
+      "title values"
+      "visual visual";
+    grid-template-columns: minmax(0, 1fr) minmax(145px, auto);
+  }
+
+  .cost-net-values {
+    align-self: start;
+  }
+}
+
+@container (max-width: 500px) {
+  .cost-net-row {
+    grid-template-areas:
+      "title"
+      "visual"
+      "values";
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .cost-net-values {
+    text-align: start;
+  }
 }
 
 .bubble-stage {
@@ -1879,6 +2191,18 @@ table.dsr td.label {
 
   .ranking-row {
     grid-template-columns: 1fr;
+  }
+
+  .cost-net-row {
+    grid-template-areas:
+      "title"
+      "visual"
+      "values";
+    grid-template-columns: 1fr;
+  }
+
+  .cost-net-values {
+    text-align: start;
   }
 
   .service-map-list div {

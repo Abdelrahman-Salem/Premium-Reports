@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import {
+  CostCentreAccountRow,
+  CostCentrePerformanceRow,
   DsrBucket,
   DsrDashboardView,
   DsrFilters,
@@ -19,6 +21,10 @@ import {
   DsrTicketRawRow,
   DsrTypeOfSaleRow,
   MetricCard,
+  CostCentrePeriodicalDashboardView,
+  CostCentrePeriodicalFilters,
+  CostCentrePeriodicalRawRow,
+  CostCentrePeriodicalResponse,
   MonthlySaleDashboardView,
   MonthlySaleFilters,
   MonthlySaleMonthMetric,
@@ -28,6 +34,12 @@ import {
 } from '../../models/dsr-report.models';
 
 type DashboardLanguage = 'en' | 'ar';
+type CostCentreReportingCenter = {
+  id: string;
+  name: string;
+  sourceIds: string[];
+  isOperating: boolean;
+};
 
 const BUCKET_LABELS: Record<DashboardLanguage, Record<DsrBucket, string>> = {
   en: {
@@ -92,6 +104,7 @@ export class DsrReportService {
   private readonly loginOrigin = this.resolveLoginOrigin();
   private readonly endpoint = `${this.apiOrigin}/api/reports/sales/dsr`;
   private readonly monthlySaleEndpoint = `${this.apiOrigin}/api/reports/sales/monthly-service`;
+  private readonly costCentrePeriodicalEndpoint = `${this.apiOrigin}/api/reports/finance/cost-centre-periodical`;
 
   updateSessionCookie(cookie: string): Observable<void> {
     return this.http.post<void>(`${this.apiOrigin}/api/session/cookie`, { cookie }, { withCredentials: true });
@@ -142,6 +155,21 @@ export class DsrReportService {
     return this.http
       .post(this.monthlySaleEndpoint, body.toString(), { headers, responseType: 'text', withCredentials: true })
       .pipe(map((response) => this.parseMonthlySaleResponse(response)));
+  }
+
+  getCostCentrePeriodicalReport(filters: CostCentrePeriodicalFilters): Observable<CostCentrePeriodicalResponse> {
+    const body = new URLSearchParams();
+    body.set('arrSearchValueAjxKey', JSON.stringify(this.buildCostCentrePeriodicalSearchPayload(filters)));
+
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      Accept: '*/*',
+      'X-Requested-With': 'XMLHttpRequest',
+    });
+
+    return this.http
+      .post(this.costCentrePeriodicalEndpoint, body.toString(), { headers, responseType: 'text', withCredentials: true })
+      .pipe(map((response) => this.parseCostCentrePeriodicalResponse(response)));
   }
 
   toDashboardView(response: DsrReportResponse, language: DashboardLanguage): DsrDashboardView {
@@ -490,6 +518,85 @@ export class DsrReportService {
     };
   }
 
+  toCostCentrePeriodicalDashboardView(
+    response: CostCentrePeriodicalResponse,
+    filters: CostCentrePeriodicalFilters,
+  ): CostCentrePeriodicalDashboardView {
+    const rawCenters = response.arrCostCentersPhpKey ?? [];
+    const rows = response.arrCostCenterWiseDetailsPhpKey ?? [];
+    const centers = rawCenters.map((center) => ({
+      id: String(center.pk_bint_cost_center_id ?? ''),
+      name: String(center.vchr_cost_center_name || center.pk_bint_cost_center_id || 'Unclassified cost centre'),
+    }));
+    const detectedCenterIds = this.detectCostCentreIds(rows);
+    const sourceCenters =
+      centers.length > 0
+        ? centers
+        : detectedCenterIds.map((id) => ({ id, name: `Cost centre ${id}` }));
+    const centerList = this.buildCostCentreReportingCenters(sourceCenters);
+    const accounts = this.buildCostCentreAccounts(rows, centerList);
+    const revenueAccounts = accounts.filter((account) => account.type === 'revenue');
+    const expenseAccounts = accounts.filter((account) => account.type === 'expense');
+    const totalRevenue = revenueAccounts.reduce((total, account) => total + account.total, 0);
+    const totalExpense = expenseAccounts.reduce((total, account) => total + account.total, 0);
+    const netProfit = totalRevenue - totalExpense;
+    const performanceRows = centerList
+      .map((center) => {
+        const revenue = revenueAccounts.reduce(
+          (total, account) => total + (account.centerValues.find((value) => value.costCenterId === center.id)?.amount ?? 0),
+          0,
+        );
+        const expense = expenseAccounts.reduce(
+          (total, account) => total + (account.centerValues.find((value) => value.costCenterId === center.id)?.amount ?? 0),
+          0,
+        );
+        const topRevenueAccount = this.topAccountNameForCenter(revenueAccounts, center.id);
+        const topExpenseAccount = this.topAccountNameForCenter(expenseAccounts, center.id);
+
+        return {
+          id: center.id,
+          name: center.name,
+          isOperating: center.isOperating,
+          revenue,
+          expense,
+          net: revenue - expense,
+          margin: revenue === 0 ? 0 : (revenue - expense) / revenue,
+          revenueShare: totalRevenue === 0 ? 0 : revenue / totalRevenue,
+          expenseShare: totalExpense === 0 ? 0 : expense / totalExpense,
+          topRevenueAccount,
+          topExpenseAccount,
+        };
+      })
+      .sort((a, b) => Number(b.isOperating) - Number(a.isOperating) || b.revenue - a.revenue);
+    const operatingPerformanceRows = performanceRows.filter((center) => center.isOperating);
+    const topRevenueAccounts = revenueAccounts.slice(0, 8);
+    const topExpenseAccounts = expenseAccounts.slice(0, 8);
+
+    return {
+      periodLabel: `${filters.fromDate} - ${filters.toDate}`,
+      centers: performanceRows,
+      accounts,
+      revenueAccounts,
+      expenseAccounts,
+      topRevenueAccounts,
+      topExpenseAccounts,
+      totalRevenue,
+      totalExpense,
+      netProfit,
+      profitMargin: totalRevenue === 0 ? 0 : netProfit / totalRevenue,
+      strongestCenter: this.pickBestCenter(operatingPerformanceRows, 'net'),
+      highestExpenseCenter: this.pickBestCenter(performanceRows, 'expense'),
+      activeCenterCount: operatingPerformanceRows.filter((center) => center.revenue !== 0 || center.expense !== 0).length,
+      operatingCenterCount: operatingPerformanceRows.length,
+      accountCount: accounts.length,
+      maxCenterRevenue: Math.max(...performanceRows.map((center) => Math.abs(center.revenue)), 1),
+      maxCenterExpense: Math.max(...performanceRows.map((center) => Math.abs(center.expense)), 1),
+      maxCenterNet: Math.max(...performanceRows.map((center) => Math.abs(center.net)), 1),
+      maxAccountAmount: Math.max(...accounts.map((account) => Math.abs(account.total)), 1),
+      rawPreview: JSON.stringify(response, null, 2),
+    };
+  }
+
   private parseResponse(response: string): DsrReportResponse {
     const parsed = JSON.parse(response.trim()) as unknown;
 
@@ -508,6 +615,16 @@ export class DsrReportService {
     }
 
     return parsed as MonthlySaleReportResponse;
+  }
+
+  private parseCostCentrePeriodicalResponse(response: string): CostCentrePeriodicalResponse {
+    const parsed = JSON.parse(response.trim()) as unknown;
+
+    if (!this.isObject(parsed)) {
+      throw new Error('Cost centre periodical response is not an object.');
+    }
+
+    return parsed as CostCentrePeriodicalResponse;
   }
 
   private buildMonthlyServiceRows(
@@ -583,6 +700,128 @@ export class DsrReportService {
     return services
       .map((service) => ({ ...service, share: grandTotal === 0 ? 0 : service.amount / grandTotal }))
       .sort((a, b) => b.amount - a.amount);
+  }
+
+  private buildCostCentreAccounts(
+    rows: CostCentrePeriodicalRawRow[],
+    centers: CostCentreReportingCenter[],
+  ): CostCentreAccountRow[] {
+    const accounts = rows.map((row) => {
+      const category = this.toNumber(row.bint_category);
+      const type = category === 3 ? 'revenue' : category === 4 ? 'expense' : 'other';
+      const code = String(row.vchr_account_code || row.fk_bint_sub_ledger_id || 'NA');
+      const name = String(row.vchr_account_name || 'Unclassified account');
+      const centerValues = centers.map((center) => ({
+        costCenterId: center.id,
+        costCenterName: center.name,
+        amount: center.sourceIds.reduce(
+          (sum, sourceId) => sum + this.toNumber(row[`dbl_base_currency_debit_credt${sourceId}`] as number | string | undefined),
+          0,
+        ),
+      }));
+      const total = centerValues.reduce((sum, center) => sum + center.amount, 0);
+
+      return {
+        id: `${code}-${name}`,
+        code,
+        name,
+        category,
+        type,
+        total,
+        share: 0,
+        centerValues,
+      } satisfies CostCentreAccountRow;
+    });
+    const totalsByType = accounts.reduce(
+      (totals, account) => ({
+        ...totals,
+        [account.type]: (totals[account.type] ?? 0) + Math.abs(account.total),
+      }),
+      {} as Record<CostCentreAccountRow['type'], number>,
+    );
+
+    return accounts
+      .map((account) => ({
+        ...account,
+        share: (totalsByType[account.type] ?? 0) === 0 ? 0 : Math.abs(account.total) / (totalsByType[account.type] ?? 1),
+      }))
+      .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  }
+
+  private buildCostCentreReportingCenters(centers: Array<{ id: string; name: string }>): CostCentreReportingCenter[] {
+    const sourceMap = new Map(centers.filter((center) => center.id).map((center) => [center.id, center]));
+    const reportingCenters: CostCentreReportingCenter[] = [];
+    const usedIds = new Set<string>();
+
+    if (sourceMap.has('1')) {
+      const headQuarter = sourceMap.get('1')!;
+      reportingCenters.push({
+        id: '1',
+        name: `${headQuarter.name} (Admin overhead)`,
+        sourceIds: ['1'],
+        isOperating: false,
+      });
+      usedIds.add('1');
+    }
+
+    const jeddahGseIds = ['73', '75'].filter((id) => sourceMap.has(id));
+    if (jeddahGseIds.length > 0) {
+      reportingCenters.push({
+        id: '73+75',
+        name: '808 - AirPort Jeddah + 810 - G.S.E',
+        sourceIds: jeddahGseIds,
+        isOperating: true,
+      });
+      jeddahGseIds.forEach((id) => usedIds.add(id));
+    }
+
+    for (const center of centers) {
+      if (!center.id || usedIds.has(center.id)) {
+        continue;
+      }
+
+      reportingCenters.push({
+        id: center.id,
+        name: center.name,
+        sourceIds: [center.id],
+        isOperating: true,
+      });
+      usedIds.add(center.id);
+    }
+
+    return reportingCenters;
+  }
+
+  private detectCostCentreIds(rows: CostCentrePeriodicalRawRow[]): string[] {
+    return [
+      ...new Set(
+        rows.flatMap((row) =>
+          Object.keys(row)
+            .map((key) => /^dbl_base_currency_debit_credt(\d+)$/.exec(key)?.[1])
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ),
+    ];
+  }
+
+  private topAccountNameForCenter(accounts: CostCentreAccountRow[], centerId: string): string {
+    const topAccount = accounts.reduce<CostCentreAccountRow | null>((best, account) => {
+      const amount = Math.abs(account.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0);
+      const bestAmount = Math.abs(best?.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0);
+      return !best || amount > bestAmount ? account : best;
+    }, null);
+
+    return topAccount?.name ?? '-';
+  }
+
+  private pickBestCenter(
+    centers: CostCentrePerformanceRow[],
+    metric: 'revenue' | 'expense' | 'net',
+  ): CostCentrePerformanceRow | null {
+    return centers.reduce<CostCentrePerformanceRow | null>(
+      (best, center) => (!best || center[metric] > best[metric] ? center : best),
+      null,
+    );
   }
 
   private detectMonthCount(rows: MonthlySaleRawRow[]): number {
@@ -830,6 +1069,20 @@ export class DsrReportService {
       strGroupingNameAjxKey: 'Service',
       strServiceAjxKey: 'Service',
       strServiceTypeAjxKey: 'Service Type',
+    };
+  }
+
+  private buildCostCentrePeriodicalSearchPayload(filters: CostCentrePeriodicalFilters): Record<string, unknown> {
+    return {
+      datFromAjxKey: this.toTraacsDate(filters.fromDate),
+      datToAjxKey: this.toTraacsDate(filters.toDate),
+      intCostCenterAjxKey: filters.costCenterId,
+      intDeptAjxKey: filters.departmentId,
+      strCostCenterNameAjxKey: filters.costCenterName,
+      strDepartmentNameAjxKey: filters.departmentName,
+      intAccountIdAjaxKey: '',
+      strTransCategoryAjaxKey: '',
+      strAccountNameAjaxKey: '',
     };
   }
 

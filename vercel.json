@@ -19,6 +19,10 @@
       "destination": "/api/proxy?action=monthly-service-report"
     },
     {
+      "source": "/api/reports/finance/cost-centre-periodical",
+      "destination": "/api/proxy?action=cost-centre-periodical-report"
+    },
+    {
       "source": "/traacs/:path*",
       "destination": "/api/proxy?path=/traacs/:path*"
     },

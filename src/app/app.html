@@ -24,6 +24,13 @@
         </svg>
         {{ t('dsrReport') }}
       </button>
+      <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'costCentre'" (click)="setReportMode('costCentre')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 19h16M7 17V9M12 17V5M17 17v-7" />
+          <path d="M5 9h4M10 5h4M15 10h4" />
+        </svg>
+        {{ t('costCentrePeriodical') }}
+      </button>
       <div class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M3 12h4l3 8 4-16 3 8h4" />
@@ -60,7 +67,7 @@
 
     <div class="sidebar-foot">
       <div class="period">{{ language() === 'ar' ? 'الفترة المعروضة' : 'Visible period' }}</div>
-      <div class="period"><strong>{{ reportMode() === 'monthly' ? monthlyPeriodLabel() : periodLabel() }}</strong></div>
+      <div class="period"><strong>{{ visiblePeriodLabel() }}</strong></div>
       <div class="session-state" [class.ready]="sessionReady()">
         <span class="session-dot"></span>
         <span>{{ sessionMessage() || t('sessionMissing') }}</span>
@@ -72,7 +79,8 @@
     <div class="topbar">
       <div>
         <div class="eyebrow-row">{{ t('salesReport') }}</div>
-        <div class="title">{{ reportMode() === 'monthly' ? t('monthlyReport') : t('title') }}</div>
+        <div class="title">{{ reportTitle() }}</div>
+        <p class="subtitle">{{ reportSubtitle() }}</p>
         <p class="subtitle">
           {{
             reportMode() === 'monthly'
@@ -86,14 +94,14 @@
 
       <div class="topbar-actions">
         <button class="light-btn" type="button" (click)="toggleLanguage()">{{ t('language') }}</button>
-        @if ((reportMode() === 'monthly' && monthlyDashboard()) || (reportMode() === 'dsr' && report())) {
+        @if (hasActiveReport()) {
           <span class="live-pill">{{ sourceLabel() }}</span>
         }
         <button
           class="export-btn"
           type="button"
-          (click)="reportMode() === 'monthly' ? exportMonthlyReport() : exportReport()"
-          [disabled]="reportMode() === 'monthly' ? !monthlyDashboard() : !report()"
+          (click)="exportCurrentReport()"
+          [disabled]="!hasActiveReport()"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3v13m0 0-4-4m4 4 4-4M4 19h16" />
@@ -190,6 +198,43 @@
         <button class="search-btn" type="button" (click)="refreshMonthlyReport()" [disabled]="loading()">
           {{ loading() ? t('searching') : t('search') }}
         </button>
+      } @else if (reportMode() === 'costCentre') {
+        <div class="field">
+          <label>{{ t('from') }}</label>
+          <input
+            type="date"
+            [ngModel]="costCentreFilters().fromDate"
+            (ngModelChange)="updateCostCentreFilter('fromDate', $event)"
+          />
+        </div>
+
+        <div class="field">
+          <label>{{ t('to') }}</label>
+          <input
+            type="date"
+            [ngModel]="costCentreFilters().toDate"
+            (ngModelChange)="updateCostCentreFilter('toDate', $event)"
+          />
+        </div>
+
+        <div class="field">
+          <label>{{ t('costCentre') }}</label>
+          <select [ngModel]="costCentreFilters().costCenterId" (ngModelChange)="updateCostCentreSelection($event)">
+            <option value="">{{ t('allSelected') }}</option>
+            @for (option of costCentreOptions; track option.id) {
+              <option [value]="option.id">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label>{{ language() === 'ar' ? 'القسم' : 'Department' }}</label>
+          <input type="text" [ngModel]="costCentreFilters().departmentName" disabled />
+        </div>
+
+        <button class="search-btn" type="button" (click)="refreshCostCentreReport()" [disabled]="loading()">
+          {{ loading() ? t('searching') : t('search') }}
+        </button>
       } @else {
       <div class="field">
         <label>{{ t('from') }}</label>
@@ -274,7 +319,7 @@
       <div class="notice" role="status">{{ error() }}</div>
     }
 
-    @if (loading() && ((reportMode() === 'monthly' && !monthlyDashboard()) || (reportMode() === 'dsr' && !dashboard()))) {
+    @if (loading() && !hasActiveReport()) {
       <section class="loading-grid" [attr.aria-label]="t('loadingReport')">
         @for (item of [1, 2, 3, 4]; track item) {
           <div class="skeleton"></div>
@@ -282,7 +327,7 @@
       </section>
     }
 
-    @if (!loading() && ((reportMode() === 'monthly' && !monthlyDashboard()) || (reportMode() === 'dsr' && !dashboard())) && !hasSearched()) {
+    @if (!loading() && !hasActiveReport() && !hasSearched()) {
       <section class="empty-card">
         <h2>{{ t('noReportTitle') }}</h2>
         <p>{{ t('noReportSubtitle') }}</p>
@@ -323,7 +368,7 @@
           <div class="kpi-body">
             <div class="kpi-label">{{ t('documents') }}</div>
             <div class="kpi-amount"><span>{{ monthly.totalCount | number }}</span></div>
-            <div class="kpi-foot">{{ t('avgTicket') }} {{ monthly.avgTicket | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+            <div class="kpi-foot">{{ t('avgTicket') }} {{ formatMoney(monthly.avgTicket, monthlyDisplayCurrency()) }}</div>
           </div>
         </div>
         <div class="kpi-card tone-refund">
@@ -332,7 +377,7 @@
           <div class="kpi-body">
             <div class="kpi-label">{{ t('bestMonth') }}</div>
             <div class="kpi-amount"><span>{{ monthly.bestMonth?.label || '-' }}</span></div>
-            <div class="kpi-foot">{{ (monthly.bestMonth?.amount || 0) | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+            <div class="kpi-foot">{{ formatMoney(monthly.bestMonth?.amount || 0, monthlyDisplayCurrency()) }}</div>
           </div>
         </div>
         <div class="kpi-card tone-net">
@@ -350,7 +395,7 @@
           <div class="kpi-body">
             <div class="kpi-label">{{ language() === 'ar' ? 'أضعف شهر' : 'Slowest month' }}</div>
             <div class="kpi-amount"><span>{{ monthly.weakestMonth?.label || '-' }}</span></div>
-            <div class="kpi-foot">{{ (monthly.weakestMonth?.amount || 0) | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+            <div class="kpi-foot">{{ formatMoney(monthly.weakestMonth?.amount || 0, monthlyDisplayCurrency()) }}</div>
           </div>
         </div>
         <div class="kpi-card tone-profit">
@@ -377,7 +422,7 @@
         <section class="panel trend-panel">
           <div class="panel-head">
             <div class="panel-title">{{ t('monthlyTrend') }}</div>
-            <div class="panel-meta">{{ t('avgMonthlyRevenue') }} {{ monthly.avgMonthlyAmount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</div>
+            <div class="panel-meta">{{ t('avgMonthlyRevenue') }} {{ formatMoney(monthly.avgMonthlyAmount, monthlyDisplayCurrency()) }}</div>
           </div>
           <div class="trend-legend">
             <span><i class="amount-key"></i>{{ t('revenue') }}</span>
@@ -450,7 +495,7 @@
                   <div class="dual-meter"><span>{{ t('revenue') }}</span><i><b [style.width]="monthlyBarWidth(service.amount, monthly.maxServiceAmount)"></b></i></div>
                   <div class="dual-meter profit"><span>{{ t('grossProfit') }}</span><i><b [style.width]="monthlyBarWidth(service.profit, monthly.maxServiceProfit)"></b></i></div>
                 </div>
-                <b>{{ service.amount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+                <b>{{ formatMoney(service.amount, monthlyDisplayCurrency()) }}</b>
               </div>
             }
           </div>
@@ -494,7 +539,7 @@
               <div>
                 <i [style.background]="serviceColor(serviceIndex)"></i>
                 <strong>{{ service.name }}</strong>
-                <span>{{ t('revenue') }} {{ service.amount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</span>
+                <span>{{ t('revenue') }} {{ formatMoney(service.amount, monthlyDisplayCurrency()) }}</span>
                 <span>{{ t('grossMargin') }} {{ service.margin | percent: '1.1-1' }}</span>
                 <span>{{ language() === 'ar' ? 'الحصة' : 'Share' }} {{ service.share | percent: '1.1-1' }}</span>
               </div>
@@ -522,7 +567,7 @@
               <div class="stacked-month">
                 <div class="stacked-label">
                   <strong>{{ month.label }}</strong>
-                  <span>{{ month.amount | currency: monthlyDisplayCurrency() : 'symbol-narrow' : '1.0-0' }}</span>
+                  <span>{{ formatMoney(month.amount, monthlyDisplayCurrency()) }}</span>
                 </div>
                 <div class="stacked-track">
                   @for (service of monthly.services; track service.id; let serviceIndex = $index) {
@@ -646,6 +691,289 @@
       </section>
     }
 
+    @if (reportMode() === 'costCentre' && costCentreDashboard(); as cost) {
+      <div class="report-context">
+        <span>{{ language() === 'ar' ? 'القسم: Default' : 'Department: Default' }}</span>
+        <span>{{ language() === 'ar' ? '100 - Head Quarter: إدارة / مصروفات فقط' : '100 - Head Quarter: admin overhead' }}</span>
+        <span>{{ language() === 'ar' ? '808 + 810: مركز تشغيل واحد' : '808 + 810: one operating centre' }}</span>
+        <span>{{ language() === 'ar' ? 'العملة: SAR' : 'Currency: SAR' }}</span>
+        <b>{{ cost.periodLabel }}</b>
+      </div>
+
+      <div class="kpi-grid monthly-kpis">
+        <div class="kpi-card tone-sale">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5m0 14h16M7 15l3-4 4 2 4-7" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('revenue') }}</div>
+            <div class="kpi-amount"><span class="currency-code">SAR</span><span>{{ cost.totalRevenue | number: '1.0-2' }}</span></div>
+            <div class="kpi-foot">{{ cost.periodLabel }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-refund">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('totalExpense') }}</div>
+            <div class="kpi-amount"><span class="currency-code">SAR</span><span>{{ cost.totalExpense | number: '1.0-2' }}</span></div>
+            <div class="kpi-foot">{{ cost.expenseAccounts.length }} {{ t('accounts') }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-profit">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M7 8h7a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h8" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('netProfit') }}</div>
+            <div class="kpi-amount" [class.negative]="cost.netProfit < 0"><span class="currency-code">SAR</span><span>{{ cost.netProfit | number: '1.0-2' }}</span></div>
+            <div class="kpi-foot">{{ t('grossMargin') }} {{ cost.profitMargin | percent: '1.1-1' }}</div>
+          </div>
+        </div>
+        <div class="kpi-card tone-net">
+          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" /></svg></div>
+          <div class="kpi-divider"></div>
+          <div class="kpi-body">
+            <div class="kpi-label">{{ t('activeCostCentres') }}</div>
+            <div class="kpi-amount"><span>{{ cost.activeCenterCount }} / {{ cost.operatingCenterCount }}</span></div>
+            <div class="kpi-foot">{{ cost.accountCount }} {{ t('accounts') }} · {{ language() === 'ar' ? 'الإدارة مستبعدة من التشغيل' : 'admin excluded from operations' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="monthly-hero-grid">
+        <section class="panel mix-panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'توزيع الإيرادات حسب الحساب' : 'Revenue distribution by account' }}</div>
+            <div class="panel-meta">{{ cost.revenueAccounts.length }} {{ t('accounts') }}</div>
+          </div>
+          <div class="share-donut" [style.background]="accountDonutGradient(cost.topRevenueAccounts)">
+            <div>
+              <strong>{{ cost.revenueAccounts.length }}</strong>
+              <span>{{ t('accounts') }}</span>
+            </div>
+          </div>
+          <div class="donut-wrap all-services">
+            @for (account of cost.topRevenueAccounts; track account.id; let accountIndex = $index) {
+              <div class="mix-row">
+                <span class="mix-dot" [style.background]="serviceColor(accountIndex)"></span>
+                <span>{{ account.name }}</span>
+                <b>{{ account.share | percent: '1.1-1' }}</b>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'صافي الربح لكل مركز تكلفة' : 'Net profit by cost centre' }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'إيراد ناقص مصروف' : 'Revenue minus expense' }}</div>
+          </div>
+          <div class="cost-net-list">
+            @for (center of cost.centers; track center.id) {
+              <div class="cost-net-row" [class.loss]="center.net < 0" [class.admin-center]="!center.isOperating">
+                <div class="cost-net-title">
+                  <strong>{{ center.name }}</strong>
+                  <span>{{ t('revenue') }} {{ formatMoney(center.revenue) }}</span>
+                  @if (!center.isOperating) {
+                    <em>{{ language() === 'ar' ? 'إدارة / غير تشغيلي' : 'Admin / non-operating' }}</em>
+                  }
+                </div>
+                <div class="cost-net-visual">
+                  <i class="cost-net-meter">
+                    <b [class.negative]="center.net < 0" [style.width]="monthlyBarWidth(center.net, cost.maxCenterNet)"></b>
+                  </i>
+                  <span>{{ center.net < 0 ? (language() === 'ar' ? 'عجز' : 'loss') : (language() === 'ar' ? 'ربح' : 'profit') }}</span>
+                </div>
+                <div class="cost-net-values">
+                  <span>{{ t('expense') }} <b>{{ formatMoney(center.expense) }}</b></span>
+                  <strong [class.neg]="center.net < 0">{{ t('netProfit') }} <b>{{ formatMoney(center.net) }}</b></strong>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <div class="monthly-analytics-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ t('costCentrePerformance') }}</div>
+            <div class="panel-meta">{{ t('revenueVsExpense') }}</div>
+          </div>
+          <div class="ranking-list">
+            @for (center of cost.centers; track center.id) {
+              <div class="ranking-row dual-ranking-row cost-centre-row">
+                <div>
+                  <strong>{{ center.name }}</strong>
+                  <span>{{ t('grossMargin') }} {{ center.margin | percent: '1.1-1' }}</span>
+                </div>
+                <div class="dual-meters">
+                  <div class="dual-meter"><span>{{ t('revenue') }}</span><i><b [style.width]="monthlyBarWidth(center.revenue, cost.maxCenterRevenue)"></b></i></div>
+                  <div class="dual-meter profit"><span>{{ t('expense') }}</span><i><b [style.width]="monthlyBarWidth(center.expense, cost.maxCenterExpense)"></b></i></div>
+                  <div class="dual-meter net-meter"><span>{{ t('net') }}</span><i><b [style.width]="monthlyBarWidth(center.net, cost.maxCenterNet)"></b></i></div>
+                </div>
+                <b [class.neg]="center.net < 0">{{ formatMoney(center.net) }}</b>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel cost-highlights-panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'ملخص أقوى المراكز' : 'Cost centre highlights' }}</div>
+            <div class="panel-meta">{{ language() === 'ar' ? 'حسب الربح والمصروف' : 'By profit and expense' }}</div>
+          </div>
+          <div class="cost-centre-snapshot">
+            <div class="highlight-tile profit-tile">
+              <span>{{ language() === 'ar' ? 'أعلى صافي ربح' : 'Highest net profit' }}</span>
+              <strong>{{ cost.strongestCenter?.name || '-' }}</strong>
+              <b>{{ formatMoney(cost.strongestCenter?.net || 0) }}</b>
+            </div>
+            <div class="highlight-tile expense-tile">
+              <span>{{ language() === 'ar' ? 'أعلى مصروف' : 'Highest expense' }}</span>
+              <strong>{{ cost.highestExpenseCenter?.name || '-' }}</strong>
+              <b>{{ formatMoney(cost.highestExpenseCenter?.expense || 0) }}</b>
+            </div>
+          </div>
+          <div class="centre-account-list">
+            @for (center of cost.centers; track center.id) {
+              <div class="centre-account-card" [class.admin-center]="!center.isOperating">
+                <div class="centre-account-head">
+                  <strong>{{ center.name }}</strong>
+                  @if (!center.isOperating) {
+                    <span>{{ language() === 'ar' ? 'غير تشغيلي' : 'Non-operating' }}</span>
+                  }
+                </div>
+                <div class="centre-account-metrics">
+                  <div>
+                    <em>{{ language() === 'ar' ? 'أعلى إيراد' : 'Top revenue' }}</em>
+                    <b>{{ center.topRevenueAccount }}</b>
+                  </div>
+                  <div>
+                    <em>{{ language() === 'ar' ? 'أعلى مصروف' : 'Top expense' }}</em>
+                    <b>{{ center.topExpenseAccount }}</b>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <div class="monthly-analytics-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'أعلى حسابات الإيراد' : 'Top revenue accounts' }}</div>
+            <div class="panel-meta">{{ t('accountBreakdown') }}</div>
+          </div>
+          <div class="ranking-list">
+            @for (account of cost.topRevenueAccounts; track account.id) {
+              <div class="ranking-row account-row">
+                <div>
+                  <strong>{{ account.name }}</strong>
+                  <span>{{ account.code }} · {{ account.share | percent: '1.1-1' }}</span>
+                </div>
+                <i class="ranking-meter"><b [style.width]="monthlyBarWidth(account.total, cost.maxAccountAmount)"></b></i>
+                <b>{{ formatMoney(account.total) }}</b>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">{{ language() === 'ar' ? 'أعلى حسابات المصروف' : 'Top expense accounts' }}</div>
+            <div class="panel-meta">{{ t('accountBreakdown') }}</div>
+          </div>
+          <div class="ranking-list">
+            @for (account of cost.topExpenseAccounts; track account.id) {
+              <div class="ranking-row account-row expense-account-row">
+                <div>
+                  <strong>{{ account.name }}</strong>
+                  <span>{{ account.code }} · {{ account.share | percent: '1.1-1' }}</span>
+                </div>
+                <i class="ranking-meter"><b [style.width]="monthlyBarWidth(account.total, cost.maxAccountAmount)"></b></i>
+                <b>{{ formatMoney(account.total) }}</b>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">{{ language() === 'ar' ? 'بصمة المصروفات لكل مركز تكلفة' : 'Expense footprint by cost centre' }}</div>
+          <div class="panel-meta">{{ language() === 'ar' ? 'النسبة من إجمالي مصروفات المركز' : 'Share of each centre expense total' }}</div>
+        </div>
+        <div class="heatmap" [style.grid-template-columns]="heatmapColumns(cost.centers.length)">
+          <div class="heatmap-head"></div>
+          @for (center of cost.centers; track center.id) {
+            <div class="heatmap-head">{{ center.name }}</div>
+          }
+          @for (account of cost.topExpenseAccounts.slice(0, 8); track account.id) {
+            <div class="heat-label">{{ account.name }}</div>
+            @for (center of cost.centers; track center.id) {
+              <div
+                class="heat-cell"
+                [class.neg]="accountAmountForCenter(account, center.id) < 0"
+                [style.opacity]="heatOpacity(accountAmountForCenter(account, center.id), center.expense)"
+                [title]="account.name + ' - ' + center.name"
+              >
+                <span>{{ accountAmountForCenter(account, center.id) | number: '1.0-0' }}</span>
+                <small>{{ centerExpenseShare(account, center.expense, center.id) | percent: '1.1-1' }}</small>
+              </div>
+            }
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">{{ language() === 'ar' ? 'جدول الحسابات حسب مركز التكلفة' : 'Accounts by cost centre' }}</div>
+          <div class="filters">
+            <input
+              type="text"
+              [ngModel]="costAccountSearch()"
+              (ngModelChange)="costAccountSearch.set($event)"
+              [placeholder]="language() === 'ar' ? 'بحث عن حساب أو كود...' : 'Search account or code...'"
+            />
+            <select [ngModel]="costAccountTypeFilter()" (ngModelChange)="costAccountTypeFilter.set($event)">
+              <option value="all">{{ language() === 'ar' ? 'كل الأنواع' : 'All types' }}</option>
+              <option value="revenue">{{ t('revenue') }}</option>
+              <option value="expense">{{ t('expense') }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="dsr cost-centre-table">
+            <thead>
+              <tr>
+                <th>{{ language() === 'ar' ? 'الحساب' : 'Account' }}</th>
+                <th>{{ language() === 'ar' ? 'النوع' : 'Type' }}</th>
+                @for (center of cost.centers; track center.id) {
+                  <th class="num">{{ center.name }}</th>
+                }
+                <th class="num">{{ language() === 'ar' ? 'الإجمالي' : 'Total' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of filteredCostCentreAccounts(); track account.id) {
+                <tr>
+                  <td class="label">{{ account.name }} <span class="dim">{{ account.code }}</span></td>
+                  <td>{{ account.type }}</td>
+                  @for (center of cost.centers; track center.id) {
+                    <td class="num" [class.neg]="accountAmountForCenter(account, center.id) < 0" [class.dim]="accountAmountForCenter(account, center.id) === 0">
+                      {{ accountAmountForCenter(account, center.id) | number: '1.0-2' }}
+                    </td>
+                  }
+                  <td class="num" [class.neg]="account.total < 0">{{ account.total | number: '1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
     @if (reportMode() === 'dsr' && dashboard(); as view) {
       <div class="kpi-grid">
         @for (card of view.metricCards; track trackByLabel($index, card)) {
@@ -720,7 +1048,7 @@
           <span>{{ language() === 'ar' ? 'نوع التقرير: DSR Details' : 'Report: DSR Details' }}</span>
           <span>{{ language() === 'ar' ? 'الصفوف المعروضة' : 'Rows loaded' }}: {{ details.rowCount | number }}</span>
           <span>{{ language() === 'ar' ? 'إجمالي المستندات' : 'Total documents' }}: {{ details.totalDocumentCount | number }}</span>
-          <span>{{ language() === 'ar' ? 'متوسط المستند' : 'Avg document' }}: {{ details.avgDocumentValue | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</span>
+          <span>{{ language() === 'ar' ? 'متوسط المستند' : 'Avg document' }}: {{ formatMoney(details.avgDocumentValue, displayCurrency()) }}</span>
           <b>{{ periodLabel() }}</b>
         </div>
 
@@ -747,7 +1075,7 @@
                     <i class="profit-fill" [style.width]="monthlyBarWidth(month.profit, details.maxMonthAmount)"></i>
                     <i class="tax-fill" [style.width]="monthlyBarWidth(month.tax, details.maxMonthAmount)"></i>
                   </div>
-                  <b>{{ month.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+                  <b>{{ formatMoney(month.amount, displayCurrency()) }}</b>
                 </div>
               }
             </div>
@@ -786,7 +1114,7 @@
                   <div class="ranking-meter">
                     <i [style.width]="monthlyBarWidth(customer.amount, details.maxCustomerAmount)"></i>
                   </div>
-                  <b>{{ customer.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+                  <b>{{ formatMoney(customer.amount, displayCurrency()) }}</b>
                 </div>
               }
             </div>
@@ -799,11 +1127,11 @@
             </div>
             <div class="split-summary">
               <div>
-                <strong>{{ details.totalTax | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</strong>
+                <strong>{{ formatMoney(details.totalTax, displayCurrency()) }}</strong>
                 <span>{{ language() === 'ar' ? 'إجمالي الضريبة' : 'Total tax' }} · {{ details.taxableShare | percent: '1.1-1' }}</span>
               </div>
               <div>
-                <strong>{{ details.totalProfit | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</strong>
+                <strong>{{ formatMoney(details.totalProfit, displayCurrency()) }}</strong>
                 <span>{{ t('grossProfit') }} · {{ details.profitMargin | percent: '1.1-1' }}</span>
               </div>
             </div>
@@ -812,13 +1140,13 @@
                 <div>
                   <span>{{ center.label }}</span>
                   <i><b [style.width]="monthlyBarWidth(center.amount, details.maxCostCenterAmount)"></b></i>
-                  <strong>{{ center.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</strong>
+                  <strong>{{ formatMoney(center.amount, displayCurrency()) }}</strong>
                 </div>
               }
             </div>
             <div class="tax-region-list">
               @for (region of details.taxRegions; track region.label) {
-                <span>{{ region.label }}: <b>{{ region.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b></span>
+                <span>{{ region.label }}: <b>{{ formatMoney(region.amount, displayCurrency()) }}</b></span>
               }
             </div>
           </section>
@@ -877,7 +1205,7 @@
                 <div class="bar-track">
                   <div class="bar-fill" [class.negative]="row.value < 0" [style.width]="barWidth(row.value)"></div>
                 </div>
-                <b>{{ row.value | currency: displayCurrency() : 'symbol-narrow' : '1.0-0' }}</b>
+                <b>{{ formatMoney(row.value, displayCurrency()) }}</b>
               </div>
             }
           </div>
@@ -1023,7 +1351,7 @@
                     <td>
                       @if (row.amount !== 0) {
                         <div class="bar-cell">
-                          <span class="num amount-cell">{{ row.amount | currency: displayCurrency() : 'symbol-narrow' : '1.0-2' }}</span>
+                          <span class="num amount-cell">{{ formatMoney(row.amount, displayCurrency(), 2) }}</span>
                           <div class="bar-track"><div class="bar-fill sale-fill" [style.width]="typeBarWidth(row.amount)"></div></div>
                         </div>
                       } @else {

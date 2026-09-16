@@ -286,3 +286,86 @@ export interface MonthlySaleDashboardView {
   periodLabel: string;
   rawPreview: string;
 }
+
+export interface CostCentrePeriodicalFilters {
+  fromDate: string;
+  toDate: string;
+  costCenterId: string;
+  costCenterName: string;
+  departmentId: string;
+  departmentName: string;
+}
+
+export interface CostCentrePeriodicalRawRow {
+  fk_bint_sub_ledger_id?: number | string | null;
+  bint_category?: number | string | null;
+  vchr_account_name?: string | null;
+  vchr_account_code?: string | null;
+  [metricName: string]: number | string | null | undefined;
+}
+
+export interface CostCentrePeriodicalCenter {
+  vchr_cost_center_name?: string | null;
+  pk_bint_cost_center_id?: number | string | null;
+}
+
+export interface CostCentrePeriodicalResponse {
+  arrCostCenterWiseDetailsPhpKey?: CostCentrePeriodicalRawRow[];
+  arrCostCentersPhpKey?: CostCentrePeriodicalCenter[];
+  [sectionName: string]: unknown;
+}
+
+export interface CostCentreAccountBreakdown {
+  costCenterId: string;
+  costCenterName: string;
+  amount: number;
+}
+
+export interface CostCentreAccountRow {
+  id: string;
+  code: string;
+  name: string;
+  category: number;
+  type: 'revenue' | 'expense' | 'other';
+  total: number;
+  share: number;
+  centerValues: CostCentreAccountBreakdown[];
+}
+
+export interface CostCentrePerformanceRow {
+  id: string;
+  name: string;
+  isOperating: boolean;
+  revenue: number;
+  expense: number;
+  net: number;
+  margin: number;
+  revenueShare: number;
+  expenseShare: number;
+  topRevenueAccount: string;
+  topExpenseAccount: string;
+}
+
+export interface CostCentrePeriodicalDashboardView {
+  periodLabel: string;
+  centers: CostCentrePerformanceRow[];
+  accounts: CostCentreAccountRow[];
+  revenueAccounts: CostCentreAccountRow[];
+  expenseAccounts: CostCentreAccountRow[];
+  topRevenueAccounts: CostCentreAccountRow[];
+  topExpenseAccounts: CostCentreAccountRow[];
+  totalRevenue: number;
+  totalExpense: number;
+  netProfit: number;
+  profitMargin: number;
+  strongestCenter: CostCentrePerformanceRow | null;
+  highestExpenseCenter: CostCentrePerformanceRow | null;
+  activeCenterCount: number;
+  operatingCenterCount: number;
+  accountCount: number;
+  maxCenterRevenue: number;
+  maxCenterExpense: number;
+  maxCenterNet: number;
+  maxAccountAmount: number;
+  rawPreview: string;
+}

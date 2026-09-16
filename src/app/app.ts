@@ -1,9 +1,12 @@
-import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { DsrReportService } from './core/services/dsr-report.service';
 import {
+  CostCentreAccountRow,
+  CostCentrePeriodicalDashboardView,
+  CostCentrePeriodicalFilters,
   CostCentreOption,
   DsrDashboardView,
   DsrFilters,
@@ -16,7 +19,7 @@ import {
 } from './models/dsr-report.models';
 
 type Language = 'en' | 'ar';
-type ReportMode = 'monthly' | 'dsr';
+type ReportMode = 'monthly' | 'dsr' | 'costCentre';
 type ReportSection = 'overview' | 'profit' | 'type' | 'payment' | 'payable' | 'expense' | 'raw';
 
 const TRANSLATIONS = {
@@ -28,8 +31,13 @@ const TRANSLATIONS = {
     salesReport: 'Sales report',
     monthlyReport: 'Monthly service sales',
     dsrReport: 'DSR details',
+    costCentrePeriodical: 'Cost centre periodical',
     revenue: 'Revenue',
     grossProfit: 'Gross profit',
+    netProfit: 'Net profit',
+    totalExpense: 'Total expense',
+    activeCostCentres: 'Active cost centres',
+    accounts: 'Accounts',
     grossMargin: 'Gross margin',
     documents: 'Documents',
     avgMonthlyRevenue: 'Avg monthly revenue',
@@ -37,6 +45,9 @@ const TRANSLATIONS = {
     bestMonth: 'Best month',
     topService: 'Top service',
     monthlyTrend: 'Monthly trend',
+    costCentrePerformance: 'Cost centre performance',
+    revenueVsExpense: 'Revenue vs expense',
+    accountBreakdown: 'Account breakdown',
     serviceMix: 'Service mix',
     serviceRanking: 'Service ranking',
     revenueHeatmap: 'Revenue heatmap',
@@ -186,6 +197,14 @@ const TRANSLATIONS = {
     payableSummary: 'ملخص المستحقات',
     profitBreakdown: 'تفصيل الأرباح',
     normalizedResponse: 'الاستجابة المنظمة',
+    costCentrePeriodical: '\u062A\u0642\u0631\u064A\u0631 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
+    netProfit: '\u0635\u0627\u0641\u064A \u0627\u0644\u0631\u0628\u062D',
+    totalExpense: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
+    activeCostCentres: '\u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0646\u0634\u0637\u0629',
+    accounts: '\u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A',
+    costCentrePerformance: '\u0623\u062F\u0627\u0621 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
+    revenueVsExpense: '\u0627\u0644\u0625\u064A\u0631\u0627\u062F \u0645\u0642\u0627\u0628\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
+    accountBreakdown: '\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A',
     language: 'English',
   },
 } as const;
@@ -194,7 +213,7 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [CurrencyPipe, DecimalPipe, FormsModule, PercentPipe],
+  imports: [DecimalPipe, FormsModule, PercentPipe],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -209,6 +228,8 @@ export class App {
   protected readonly sessionChecking = signal(false);
   protected readonly sessionReady = signal(false);
   protected readonly sessionMessage = signal<string | null>(null);
+  protected readonly costAccountSearch = signal('');
+  protected readonly costAccountTypeFilter = signal<'all' | 'revenue' | 'expense'>('all');
   protected readonly costCentreOptions: CostCentreOption[] = [
     { id: '1', label: '100 - Head Quarter' },
     { id: '73', label: '808 - AirPort Jeddah' },
@@ -236,9 +257,18 @@ export class App {
     showProfit: true,
     showCount: true,
   });
+  protected readonly costCentreFilters = signal<CostCentrePeriodicalFilters>({
+    fromDate: '2026-01-01',
+    toDate: '2026-09-16',
+    costCenterId: '',
+    costCenterName: 'ALL',
+    departmentId: '1',
+    departmentName: 'Default',
+  });
 
   protected readonly report = signal<DsrReportResult | null>(null);
   protected readonly monthlyReport = signal<MonthlySaleDashboardView | null>(null);
+  protected readonly costCentreReport = signal<CostCentrePeriodicalDashboardView | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly activeSection = signal<ReportSection>('overview');
@@ -248,6 +278,7 @@ export class App {
     return report ? this.dsrReportService.toDashboardView(report.data, this.language()) : null;
   });
   protected readonly monthlyDashboard = computed<MonthlySaleDashboardView | null>(() => this.monthlyReport());
+  protected readonly costCentreDashboard = computed<CostCentrePeriodicalDashboardView | null>(() => this.costCentreReport());
 
   protected readonly metricCards = computed<MetricCard[]>(() => this.dashboard()?.metricCards ?? []);
   protected readonly comparisonRows = computed<DsrMetricRow[]>(() => this.dashboard()?.comparisonRows ?? []);
@@ -268,6 +299,60 @@ export class App {
   protected readonly monthlyPeriodLabel = computed(
     () => `${this.monthlyFilters().fromMonth}/${this.monthlyFilters().fromYear} - ${this.monthlyFilters().toMonth}/${this.monthlyFilters().toYear}`,
   );
+  protected readonly costCentrePeriodLabel = computed(
+    () => `${this.costCentreFilters().fromDate} - ${this.costCentreFilters().toDate}`,
+  );
+  protected readonly visiblePeriodLabel = computed(() => {
+    if (this.reportMode() === 'monthly') {
+      return this.monthlyPeriodLabel();
+    }
+
+    return this.reportMode() === 'costCentre' ? this.costCentrePeriodLabel() : this.periodLabel();
+  });
+  protected readonly reportTitle = computed(() => {
+    if (this.reportMode() === 'monthly') {
+      return this.t('monthlyReport');
+    }
+
+    return this.reportMode() === 'costCentre' ? this.t('costCentrePeriodical') : this.t('title');
+  });
+  protected readonly reportSubtitle = computed(() => {
+    if (this.reportMode() === 'monthly') {
+      return this.language() === 'ar'
+        ? 'تحليل شهري لإيرادات الخدمات والربحية والحجم مع مقارنة بين الشهور والخدمات.'
+        : 'Monthly service revenue, profit, volume, service mix, and performance comparison.';
+    }
+
+    if (this.reportMode() === 'costCentre') {
+      return this.language() === 'ar'
+        ? 'تحليل الإيرادات والمصروفات وصافي الربح حسب مركز التكلفة والحساب خلال الفترة.'
+        : 'Revenue, expense, and net profit analysis by cost centre and account for the selected period.';
+    }
+
+    return this.t('subtitle');
+  });
+  protected readonly hasActiveReport = computed(
+    () =>
+      (this.reportMode() === 'monthly' && Boolean(this.monthlyDashboard())) ||
+      (this.reportMode() === 'dsr' && Boolean(this.report())) ||
+      (this.reportMode() === 'costCentre' && Boolean(this.costCentreDashboard())),
+  );
+  protected readonly filteredCostCentreAccounts = computed(() => {
+    const dashboard = this.costCentreDashboard();
+    const query = this.costAccountSearch().trim().toLowerCase();
+    const type = this.costAccountTypeFilter();
+
+    if (!dashboard) {
+      return [];
+    }
+
+    return dashboard.accounts.filter((account) => {
+      const matchesType = type === 'all' || account.type === type;
+      const matchesQuery =
+        !query || account.name.toLowerCase().includes(query) || account.code.toLowerCase().includes(query);
+      return matchesType && matchesQuery;
+    });
+  });
 
   protected readonly selectedCostCentreLabel = computed(() => {
     const selected = this.filters().costCenters;
@@ -369,6 +454,41 @@ export class App {
     });
   }
 
+  protected refreshCostCentreReport(): void {
+    if (!this.sessionReady()) {
+      this.hasSearched.set(true);
+      this.costCentreReport.set(null);
+      this.error.set(this.t('signInFirst'));
+      this.checkSession();
+      return;
+    }
+
+    this.hasSearched.set(true);
+    this.loading.set(true);
+    this.error.set(null);
+    this.costCentreReport.set(null);
+
+    this.dsrReportService.getCostCentrePeriodicalReport(this.costCentreFilters()).subscribe({
+      next: (response) => {
+        const view = this.dsrReportService.toCostCentrePeriodicalDashboardView(response, this.costCentreFilters());
+        if (view.accounts.length === 0) {
+          this.error.set(this.t('noDataOrSession'));
+          this.loading.set(false);
+          return;
+        }
+
+        this.costCentreReport.set(view);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.sessionReady.set(false);
+        this.error.set(this.t('signInFirst'));
+        this.checkSession();
+      },
+    });
+  }
+
   protected openTraacsLogin(): void {
     window.open(this.dsrReportService.getTraacsLoginUrl(), '_blank', 'noopener,noreferrer');
   }
@@ -403,9 +523,27 @@ export class App {
     this.monthlyFilters.update((current) => ({ ...current, [key]: value }));
   }
 
+  protected updateCostCentreFilter<K extends keyof CostCentrePeriodicalFilters>(
+    key: K,
+    value: CostCentrePeriodicalFilters[K],
+  ): void {
+    this.costCentreFilters.update((current) => ({ ...current, [key]: value }));
+  }
+
+  protected updateCostCentreSelection(costCenterId: string): void {
+    const selected = this.costCentreOptions.find((option) => option.id === costCenterId);
+    this.costCentreFilters.update((current) => ({
+      ...current,
+      costCenterId,
+      costCenterName: selected?.label ?? 'ALL',
+    }));
+  }
+
   protected setReportMode(mode: ReportMode): void {
     this.reportMode.set(mode);
     this.error.set(null);
+    this.hasSearched.set(false);
+    this.costCentreOpen.set(false);
   }
 
   protected toggleLanguage(): void {
@@ -474,12 +612,46 @@ export class App {
     return `${value.toFixed(0)}`;
   }
 
+  protected formatMoney(
+    value: number | null | undefined,
+    currency: string = 'SAR',
+    maxFractionDigits = 0,
+    minFractionDigits = 0,
+  ): string {
+    const displayCode = currency === 'Base' ? 'SAR' : currency;
+    const numericValue = Number(value ?? 0);
+    const formattedValue = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: minFractionDigits,
+      maximumFractionDigits: maxFractionDigits,
+    }).format(Number.isFinite(numericValue) ? numericValue : 0);
+
+    return `${displayCode} ${formattedValue}`;
+  }
+
   protected heatmapColumns(monthCount: number): string {
     return `minmax(220px, 280px) repeat(${monthCount}, minmax(96px, 1fr))`;
   }
 
   protected serviceColor(index: number): string {
     return this.chartColors[index % this.chartColors.length];
+  }
+
+  protected accountDonutGradient(accounts: CostCentreAccountRow[]): string {
+    const total = accounts.reduce((sum, account) => sum + Math.abs(account.total), 0);
+
+    if (total === 0) {
+      return 'conic-gradient(#d8dee7 0deg 360deg)';
+    }
+
+    let start = 0;
+    const segments = accounts.map((account, index) => {
+      const end = start + (Math.abs(account.total) / total) * 360;
+      const segment = `${this.serviceColor(index)} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+      start = end;
+      return segment;
+    });
+
+    return `conic-gradient(${segments.join(', ')})`;
   }
 
   protected shareDonutGradient(services: MonthlySaleServiceRow[]): string {
@@ -522,6 +694,14 @@ export class App {
     return value === 0 ? 'dim' : '';
   }
 
+  protected accountAmountForCenter(account: CostCentreAccountRow, centerId: string): number {
+    return account.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0;
+  }
+
+  protected centerExpenseShare(account: CostCentreAccountRow, centerExpense: number, centerId: string): number {
+    return Math.abs(this.accountAmountForCenter(account, centerId)) / Math.max(Math.abs(centerExpense), 1);
+  }
+
   protected exportReport(): void {
     const report = this.report();
     if (!report) {
@@ -550,6 +730,35 @@ export class App {
     link.download = `monthly-service-sales-${this.monthlyFilters().fromYear}-${this.monthlyFilters().fromMonth}-${this.monthlyFilters().toMonth}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  protected exportCostCentreReport(): void {
+    const report = this.costCentreReport();
+    if (!report) {
+      return;
+    }
+
+    const blob = new Blob([report.rawPreview], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cost-centre-periodical-${this.costCentreFilters().fromDate}-${this.costCentreFilters().toDate}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  protected exportCurrentReport(): void {
+    if (this.reportMode() === 'monthly') {
+      this.exportMonthlyReport();
+      return;
+    }
+
+    if (this.reportMode() === 'costCentre') {
+      this.exportCostCentreReport();
+      return;
+    }
+
+    this.exportReport();
   }
 
   protected trackByLabel(_: number, row: DsrMetricRow | MetricCard): string {
