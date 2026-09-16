@@ -5,9 +5,13 @@ const port = Number(process.env.PORT ?? 3333);
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
 const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
+const costCentrePeriodicalTargetPath =
+  '/traacs/basic_costcenterwiseperiodicalreport_costcenterwiseperiodicalreport/getcostcenterwiseperiodicallist';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
 const monthlySaleReportPagePath =
   '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/servicemonthlysalereport/strMenuId/mnu_reports';
+const costCentrePeriodicalReportPagePath =
+  '/traacs/basic_costcenterwiseperiodicalreport_costcenterwiseperiodicalreport/costcenterwiseperiodicalreport/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
 let runtimeCookie = '';
@@ -76,6 +80,7 @@ function buildSessionDiagnostics(req, cookieSource) {
     cookieSource,
     lastUpstreamCookieNames,
     requestCookieNames: cookieNamesFromCookieHeader(req?.headers.cookie),
+    sessionDecision: 'traacs-cookie-presence',
   };
 }
 
@@ -95,6 +100,11 @@ function rewriteSetCookieHeaders(setCookieHeaders, req) {
       }
 
       if (isLocalHttp && /^secure$/i.test(attribute)) {
+        continue;
+      }
+
+      if (isLocalHttp && /^samesite=none$/i.test(attribute)) {
+        nextAttributes.push('SameSite=Lax');
         continue;
       }
 
@@ -327,11 +337,10 @@ const server = createServer(async (req, res) => {
 
   if (req.url === '/api/session/status' && req.method === 'GET') {
     const { cookie, source } = resolveCookieWithSource(req);
-    const hasCookie = await validateTraacsSession(cookie);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
-        hasCookie,
+        hasCookie: hasSessionCookie(cookie),
         loginUrl: `${localOrigin(req)}${loginPagePath}`,
         diagnostics: buildSessionDiagnostics(req, source),
       }),
@@ -371,6 +380,10 @@ const server = createServer(async (req, res) => {
   const reportRoutes = new Map([
     ['/api/reports/sales/dsr', { path: targetPath, referer: reportPagePath }],
     ['/api/reports/sales/monthly-service', { path: monthlySaleTargetPath, referer: monthlySaleReportPagePath }],
+    [
+      '/api/reports/finance/cost-centre-periodical',
+      { path: costCentrePeriodicalTargetPath, referer: costCentrePeriodicalReportPagePath },
+    ],
   ]);
   const reportRoute = reportRoutes.get(req.url ?? '');
 
@@ -383,7 +396,7 @@ const server = createServer(async (req, res) => {
   const cookie = resolveCookie(req);
   if (!cookie) {
     res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ message: 'TRAACS_COOKIE environment variable is required.' }));
+    res.end(JSON.stringify({ message: 'TRAACS login is required.' }));
     return;
   }
 

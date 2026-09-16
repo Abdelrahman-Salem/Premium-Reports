@@ -3,9 +3,13 @@ import { request } from 'node:https';
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
 const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
+const costCentrePeriodicalTargetPath =
+  '/traacs/basic_costcenterwiseperiodicalreport_costcenterwiseperiodicalreport/getcostcenterwiseperiodicallist';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
 const monthlySaleReportPagePath =
   '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/servicemonthlysalereport/strMenuId/mnu_reports';
+const costCentrePeriodicalReportPagePath =
+  '/traacs/basic_costcenterwiseperiodicalreport_costcenterwiseperiodicalreport/costcenterwiseperiodicalreport/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
 const sessionCookieName = 'traacs_traacs_wave_firstpremium';
 let runtimeCookie = '';
@@ -490,6 +494,11 @@ export default async function handler(req, res) {
 
   if (action === 'monthly-service-report' && req.method === 'POST') {
     await proxyReportRequest(req, res, monthlySaleTargetPath, monthlySaleReportPagePath);
+    return;
+  }
+
+  if (action === 'cost-centre-periodical-report' && req.method === 'POST') {
+    await proxyReportRequest(req, res, costCentrePeriodicalTargetPath, costCentrePeriodicalReportPagePath);
     return;
   }
 
