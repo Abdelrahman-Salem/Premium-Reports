@@ -1,0 +1,206 @@
+<div class="comparison-toolbar">
+  <button
+    class="comparison-toggle"
+    type="button"
+    (click)="toggle()"
+    [attr.aria-expanded]="open()"
+    aria-controls="year-comparison-panel"
+  >
+    {{ text('مقارنة السنوات', 'Compare years') }}
+  </button>
+</div>
+@if (open()) {
+  <section
+    id="year-comparison-panel"
+    class="year-comparison"
+    aria-labelledby="year-comparison-title"
+    [attr.aria-busy]="busy()"
+  >
+    <header>
+      <h2 id="year-comparison-title">{{ text('مقارنة السنوات', 'Year comparison') }}</h2>
+      <span
+        >{{
+          filters().costCenterName === 'ALL'
+            ? text('كل المراكز', 'All centres')
+            : filters().costCenterName
+        }}
+        · {{ filters().departmentName }} · SAR</span
+      >
+    </header>
+    <form (ngSubmit)="compare()">
+      <label
+        >{{ text('من سنة', 'From year')
+        }}<input
+          name="comparisonFrom"
+          type="number"
+          min="1900"
+          max="2099"
+          step="1"
+          required
+          [ngModel]="fromYear()"
+          (ngModelChange)="updateYears('from', $event)"
+          [disabled]="busy()"
+      /></label>
+      <label
+        >{{ text('إلى سنة', 'To year')
+        }}<input
+          name="comparisonTo"
+          type="number"
+          min="1901"
+          max="2100"
+          step="1"
+          required
+          [ngModel]="toYear()"
+          (ngModelChange)="updateYears('to', $event)"
+          [disabled]="busy()"
+      /></label>
+      <fieldset [disabled]="busy()">
+        <legend>{{ text('فترة المقارنة', 'Comparison period') }}</legend>
+        <label
+          ><input
+            type="radio"
+            name="comparisonMode"
+            value="period"
+            [checked]="mode() === 'period'"
+            (change)="updateMode('period')"
+          />{{ text('نفس الفترة المحددة', 'Same selected period') }}</label
+        >
+        <label
+          ><input
+            type="radio"
+            name="comparisonMode"
+            value="full"
+            [checked]="mode() === 'full'"
+            (change)="updateMode('full')"
+          />{{ text('سنوات كاملة', 'Full years') }}</label
+        >
+      </fieldset>
+      <button class="compare-submit" type="submit" [disabled]="!valid() || busy()">
+        {{ busy() ? text('جاري التحميل', 'Loading') : text('عرض المقارنة', 'Load comparison') }}
+      </button>
+    </form>
+    @if (mode() === 'period') {
+      <p class="period-label">
+        <bdi>{{ filters().fromDate.slice(5) }} / {{ filters().toDate.slice(5) }}</bdi> ·
+        {{ text('شهر-يوم في كل سنة', 'Month-day in each year') }}
+      </p>
+    }
+    @if (!valid()) {
+      <p class="message" role="alert">
+        {{
+          text(
+            'اختر من سنتين إلى 5 سنوات (1900–2100). مقارنة نفس الفترة تتطلب تاريخ بداية ونهاية داخل سنة واحدة.',
+            'Choose 2 to 5 years (1900–2100). Same-period comparison requires start and end dates within one year.'
+          )
+        }}
+      </p>
+    }
+    @if (busy()) {
+      <p class="message" role="status">
+        {{ text('جاري جلب بيانات السنوات', 'Loading yearly reports') }}: {{ results().length }} /
+        {{ years().length }}
+      </p>
+    }
+    @if (requested() && !busy()) {
+      @if (readyRows().length) {
+        <div class="legend">
+          @for (metric of metrics; track metric.key) {
+            <span><i [class]="metric.key"></i>{{ text(metric.ar, metric.en) }}</span>
+          }
+          <span><i class="negative"></i>{{ text('قيمة سالبة', 'Negative value') }}</span>
+        </div>
+        <div
+          class="chart-scroll"
+          tabindex="0"
+          [attr.aria-label]="text('مخطط مقارنة السنوات بالأعمدة', 'Year comparison column chart')"
+        >
+          <div class="chart" [style.min-width.px]="readyRows().length * 246 + 92">
+            <div class="grid-lines">
+              @for (tick of ticks(); track tick.position) {
+                <div [style.top.%]="tick.position">
+                  <span>{{ tick.value | number: '1.0-0' }}</span>
+                </div>
+              }
+              <div class="zero-line" [style.top.%]="baseline()"></div>
+            </div>
+            <div
+              class="year-groups"
+              [style.grid-template-columns]="'repeat(' + readyRows().length + ', minmax(0, 1fr))'"
+            >
+              @for (row of readyRows(); track row.year) {
+                <div class="year-group">
+                  <div class="bars">
+                    @for (metric of metrics; track metric.key) {
+                      <div class="bar-slot">
+                        <div
+                          class="bar"
+                          [class]="'bar ' + metric.key"
+                          [class.negative]="row[metric.key] < 0"
+                          [style.top.%]="top(row[metric.key])"
+                          [style.height.%]="height(row[metric.key])"
+                          [attr.aria-label]="
+                            row.year + ' ' + text(metric.ar, metric.en) + ': SAR ' + row[metric.key]
+                          "
+                        >
+                          <b>{{ row[metric.key] | number: '1.0-0' }}</b>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                  <strong class="year-label">{{ row.year }}</strong
+                  ><small>{{ row.fromDate }} / {{ row.toDate }}</small>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+      <div class="table-scroll">
+        <table>
+          <caption>
+            {{
+              text('قيم المقارنة بالريال السعودي', 'Comparison values in SAR')
+            }}
+          </caption>
+          <thead>
+            <tr>
+              <th>{{ text('السنة / الفترة', 'Year / period') }}</th>
+              @for (metric of metrics; track metric.key) {
+                <th>{{ text(metric.ar, metric.en) }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.year) {
+              <tr>
+                <th>
+                  {{ row.year }}<small dir="ltr">{{ row.fromDate }} / {{ row.toDate }}</small>
+                </th>
+                @if (row.status === 'ready') {
+                  @for (metric of metrics; track metric.key) {
+                    <td>
+                      <bdi [class.loss]="row[metric.key] < 0"
+                        >SAR {{ row[metric.key] | number: '1.0-0' }}</bdi
+                      >
+                    </td>
+                  }
+                } @else {
+                  <td colspan="3" class="unavailable">
+                    {{
+                      row.status === 'empty'
+                        ? text('لا توجد بيانات لهذه الفترة', 'No data for this period')
+                        : text(
+                            'تعذر تحميل السنة. افحص جلسة TRAACS وأعد المقارنة.',
+                            'Year could not be loaded. Check the TRAACS session and retry.'
+                          )
+                    }}
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

@@ -1,0 +1,283 @@
+:host {
+  display: block;
+  margin-bottom: 12px;
+  color: #26343a;
+  font-size: 12px;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 9px 16px;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+button:focus-visible,
+input:focus-visible,
+.chart-scroll:focus-visible {
+  outline: 2px solid #08636b;
+  outline-offset: 3px;
+}
+.comparison-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+.comparison-toggle {
+  border: 1px solid #08636b;
+  color: #08636b;
+  background: white;
+  font-weight: 600;
+}
+.comparison-toggle[aria-expanded='true'] {
+  background: #08636b;
+  color: white;
+}
+.year-comparison {
+  margin-top: 12px;
+  border-block: 1px solid #dce1e4;
+  background: white;
+  padding: 18px;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  margin-bottom: 18px;
+}
+h2 {
+  margin: 0;
+  font-size: 17px;
+}
+header span {
+  color: #647078;
+  overflow-wrap: anywhere;
+}
+form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+form > label {
+  display: grid;
+  gap: 6px;
+  width: 115px;
+}
+input[type='number'] {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #cbd3d7;
+  border-radius: 3px;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+legend {
+  margin-bottom: 8px;
+}
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+input[type='radio'] {
+  accent-color: #08636b;
+}
+.compare-submit {
+  background: #08636b;
+  color: white;
+  border: 1px solid #08636b;
+}
+.message {
+  background: #f4f6f7;
+  padding: 12px;
+  line-height: 1.7;
+  margin-block: 14px 0;
+}
+.period-label {
+  color: #647078;
+  margin-top: 12px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 22px;
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.revenue {
+  background: #ee7925;
+}
+.expense {
+  background: #08636b;
+}
+.net {
+  background: #719449;
+}
+.negative {
+  background: #ba5154;
+}
+.chart-scroll {
+  direction: ltr;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+.chart {
+  position: relative;
+  direction: ltr;
+  padding: 30px 12px 0 80px;
+}
+.grid-lines {
+  position: absolute;
+  top: 30px;
+  left: 80px;
+  right: 12px;
+  height: 280px;
+}
+.grid-lines > div {
+  position: absolute;
+  width: 100%;
+  border-top: 1px solid #e5e9eb;
+}
+.grid-lines span {
+  position: absolute;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: #647078;
+  white-space: nowrap;
+}
+.grid-lines .zero-line {
+  border-top: 1px solid #76838a;
+}
+.year-groups {
+  display: grid;
+  gap: 20px;
+  position: relative;
+}
+.year-group {
+  text-align: center;
+  min-width: 0;
+}
+.bars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  height: 280px;
+}
+.bar-slot {
+  position: relative;
+}
+.bar {
+  position: absolute;
+  width: 58%;
+  left: 21%;
+}
+.bar b {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #26343a;
+}
+.bar.negative b {
+  top: calc(100% + 7px);
+  bottom: auto;
+  color: #b23d41;
+}
+.year-label {
+  display: block;
+  margin-top: 38px;
+  font-size: 14px;
+}
+.year-group small {
+  display: block;
+  font-size: 10px;
+  color: #647078;
+  margin: 5px 0 12px;
+}
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+caption {
+  text-align: start;
+  color: #647078;
+  font-size: 11px;
+  padding: 8px 0;
+}
+th,
+td {
+  padding: 10px;
+  text-align: start;
+  border-bottom: 1px solid #e5e9eb;
+}
+thead {
+  background: #f4f6f7;
+}
+th small {
+  display: block;
+  font-weight: 400;
+  font-size: 10px;
+  color: #647078;
+  white-space: nowrap;
+  margin-top: 5px;
+}
+td bdi {
+  white-space: nowrap;
+}
+.loss {
+  color: #b23d41;
+}
+.unavailable {
+  color: #806013;
+  min-width: 220px;
+}
+@media (max-width: 580px) {
+  .year-comparison {
+    padding: 12px;
+  }
+  form > label {
+    width: calc(50% - 10px);
+  }
+  fieldset {
+    width: 100%;
+  }
+  .compare-submit {
+    width: 100%;
+  }
+}

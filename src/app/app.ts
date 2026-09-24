@@ -3,6 +3,7 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { FormsModule } from '@angular/forms';
 
 import { DsrReportService } from './core/services/dsr-report.service';
+import { CostCentreOverview } from './cost-centre-overview/cost-centre-overview';
 import {
   CostCentreAccountRow,
   CostCentrePeriodicalDashboardView,
@@ -213,7 +214,7 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [DecimalPipe, FormsModule, PercentPipe],
+  imports: [DecimalPipe, FormsModule, PercentPipe, CostCentreOverview],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

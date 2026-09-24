@@ -1,0 +1,564 @@
+<app-year-comparison [filters]="filters()" [language]="language()" />
+<div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
+  <span>{{ text('السنة', 'Year') }}</span>
+  @for (item of years(); track item) {
+    <button
+      type="button"
+      [class.selected]="year() === item"
+      [attr.aria-pressed]="year() === item"
+      (click)="selectYear(item)"
+      [disabled]="loading()"
+    >
+      {{ item }}
+    </button>
+  }
+</div>
+
+<div class="workspace" [attr.aria-busy]="loading()">
+  <div class="canvas">
+    <header class="summary">
+      <div class="report-heading">
+        <span>TRAACS / {{ text('التقارير المالية', 'Financial reports') }}</span>
+        <h1>{{ text('تحليل مراكز التكلفة', 'Cost Centre Dashboard') }}</h1>
+        <bdi>{{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}</bdi>
+      </div>
+      <div class="metric revenue">
+        <span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span>
+        <strong>{{ data() ? (data()!.totalRevenue | number: '1.0-0') : '-' }}</strong
+        ><small>SAR</small>
+      </div>
+      <div class="metric expense">
+        <span>{{ text('إجمالي المصروفات', 'Total expense') }}</span>
+        <strong>{{ data() ? (data()!.totalExpense | number: '1.0-0') : '-' }}</strong
+        ><small>SAR</small>
+      </div>
+      <div class="metric net" [class.loss]="(data()?.netProfit ?? 0) < 0">
+        <span>{{ text('صافي الربح', 'Net profit') }}</span>
+        <strong>{{ data() ? (data()!.netProfit | number: '1.0-0') : '-' }}</strong
+        ><small>SAR</small>
+      </div>
+    </header>
+
+    @if (data(); as report) {
+      <div class="context-line">
+        <span
+          >{{ text('مراكز التشغيل النشطة', 'Active operating centres') }}
+          <b>{{ report.activeCenterCount }} / {{ report.operatingCenterCount }}</b></span
+        >
+        <span
+          >{{ text('هامش صافي الربح', 'Net profit margin') }}
+          <b dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</b></span
+        >
+        <span
+          >{{ text('الحسابات', 'Accounts') }} <b>{{ report.accountCount }}</b></span
+        >
+      </div>
+      <nav class="section-nav" [attr.aria-label]="text('أقسام التحليل', 'Analysis sections')">
+        <a href="#cost-revenue">{{ text('الإيرادات', 'Revenue') }}</a>
+        <a href="#cost-profit">{{ text('الأرباح', 'Profit') }}</a>
+        <a href="#cost-expense">{{ text('المصروفات', 'Expenses') }}</a>
+      </nav>
+
+      <section
+        id="cost-revenue"
+        class="analysis-section revenue-section"
+        aria-labelledby="revenue-heading"
+      >
+        <header class="section-heading">
+          <h2 id="revenue-heading">{{ text('الإيرادات', 'Revenue') }}</h2>
+          <div>
+            <span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span
+            ><strong dir="ltr">SAR {{ report.totalRevenue | number: '1.0-0' }}</strong>
+          </div>
+        </header>
+        <div class="charts">
+          <section class="chart distribution">
+            <header>
+              <h3>{{ text('توزيع الإيرادات', 'Revenue distribution') }}</h3>
+              <span>{{ text('حسب الحساب', 'By account') }}</span>
+            </header>
+            <div
+              class="pie"
+              [style.background]="pie()"
+              role="img"
+              [attr.aria-label]="
+                text(
+                  'توزيع الإيرادات حسب الحساب، القيم موضحة أدناه',
+                  'Revenue distribution by account, values listed below'
+                )
+              "
+            ></div>
+            @if (hasRevenueAdjustments()) {
+              <p class="basis">
+                {{ text('النسب حسب القيمة المطلقة للأرصدة', 'Shares based on absolute balances') }}
+              </p>
+            }
+            <div class="legend-list">
+              @for (account of revenueAccounts(); track account.id; let index = $index) {
+                <div>
+                  <i [style.background]="color(index)"></i><bdi>{{ account.name }}</bdi
+                  ><b dir="ltr">{{
+                    (revenueMagnitude() ? width(account.total, revenueMagnitude()) / 100 : 0)
+                      | percent: '1.1-1'
+                  }}</b>
+                </div>
+              } @empty {
+                <p class="basis">
+                  {{ text('لا توجد إيرادات للفترة', 'No revenue for this period') }}
+                </p>
+              }
+            </div>
+          </section>
+
+          <section class="chart centre-revenue">
+            <header>
+              <h3>{{ text('الإيرادات حسب المركز', 'Revenue by centre') }}</h3>
+              <span>SAR</span>
+            </header>
+            <div
+              class="columns"
+              [style.grid-template-columns]="
+                'repeat(' + report.centers.length + ', minmax(0, 1fr))'
+              "
+            >
+              @for (center of report.centers; track center.id) {
+                <div class="column">
+                  <div class="column-track">
+                    <div
+                      class="column-fill"
+                      [class.admin]="!center.isOperating"
+                      [style.height.%]="width(center.revenue, report.maxCenterRevenue)"
+                    ></div>
+                    <b dir="ltr">{{ center.revenue | number: '1.0-0' }}</b>
+                  </div>
+                  <bdi>{{ center.name }}</bdi>
+                  @if (!center.isOperating) {
+                    <small>{{ text('إدارة', 'Admin') }}</small>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="chart account-revenue">
+            <header>
+              <h3>{{ text('إيرادات الحسابات', 'Revenue by account') }}</h3>
+              <span>SAR</span>
+            </header>
+            <div class="horizontal-bars">
+              @for (account of revenueAccounts(); track account.id; let index = $index) {
+                <div class="account-bar">
+                  <bdi>{{ account.name }}</bdi
+                  ><strong dir="ltr">{{ account.total | number: '1.0-0' }}</strong>
+                  <div class="track">
+                    <i
+                      [style.width.%]="width(account.total, maxRevenue())"
+                      [style.background]="color(index)"
+                    ></i>
+                  </div>
+                </div>
+              } @empty {
+                <p class="basis">
+                  {{ text('لا توجد إيرادات للفترة', 'No revenue for this period') }}
+                </p>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section
+        id="cost-profit"
+        class="analysis-section profit-section"
+        aria-labelledby="profit-heading"
+      >
+        <header class="section-heading">
+          <h2 id="profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
+          <div>
+            <span>{{ text('صافي الربح', 'Net profit') }}</span
+            ><strong dir="ltr" [class.negative]="report.netProfit < 0"
+              >SAR {{ report.netProfit | number: '1.0-0' }}</strong
+            >
+          </div>
+          <div>
+            <span>{{ text('هامش صافي الربح', 'Net profit margin') }}</span
+            ><strong dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</strong>
+          </div>
+        </header>
+        <div class="charts profit-charts">
+          <section class="chart net-chart">
+            <header>
+              <h3>{{ text('الربح والعجز حسب المركز', 'Profit and loss by centre') }}</h3>
+              <span>SAR</span>
+            </header>
+            <div class="series-legend">
+              <span><i class="net-key"></i>{{ text('ربح', 'Profit') }}</span
+              ><span><i class="loss-key"></i>{{ text('عجز', 'Loss') }}</span>
+            </div>
+            <div class="signed-axis" dir="ltr">
+              <span>{{ text('عجز', 'Loss') }}</span
+              ><b>0</b><span>{{ text('ربح', 'Profit') }}</span>
+            </div>
+            <div class="signed-rows">
+              @for (center of report.centers; track center.id) {
+                <div class="signed-row">
+                  <div class="signed-label">
+                    <bdi>{{ center.name }}</bdi
+                    ><strong dir="ltr" [class.negative]="center.net < 0">{{
+                      center.net | number: '1.0-0'
+                    }}</strong>
+                  </div>
+                  <div class="signed-track" dir="ltr">
+                    <i
+                      [class]="center.net < 0 ? 'loss-key' : 'net-key'"
+                      [style.left.%]="
+                        center.net < 0 ? 50 - width(center.net, report.maxCenterNet) / 2 : 50
+                      "
+                      [style.width.%]="width(center.net, report.maxCenterNet) / 2"
+                    ></i>
+                  </div>
+                  @if (!center.isOperating) {
+                    <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+          <section class="chart margin-chart">
+            <header>
+              <h3>{{ text('هامش الربح حسب المركز', 'Profit margin by centre') }}</h3>
+              <span>{{ text('الصافي ÷ الإيراد', 'Net / revenue') }}</span>
+            </header>
+            <div class="signed-axis" dir="ltr">
+              <span>{{ text('هامش سالب', 'Negative margin') }}</span
+              ><b>0%</b><span>{{ text('هامش موجب', 'Positive margin') }}</span>
+            </div>
+            <div class="signed-rows">
+              @for (center of report.centers; track center.id) {
+                <div class="signed-row">
+                  <div class="signed-label">
+                    <bdi>{{ center.name }}</bdi
+                    ><strong dir="ltr" [class.negative]="center.revenue > 0 && center.margin < 0">{{
+                      center.revenue > 0 ? (center.margin | percent: '1.1-1') : '-'
+                    }}</strong>
+                  </div>
+                  @if (center.revenue > 0) {
+                    <div class="signed-track" dir="ltr">
+                      <i
+                        [class]="center.margin < 0 ? 'loss-key' : 'net-key'"
+                        [style.left.%]="
+                          center.margin < 0 ? 50 - width(center.margin, maxMargin()) / 2 : 50
+                        "
+                        [style.width.%]="width(center.margin, maxMargin()) / 2"
+                      ></i>
+                    </div>
+                  } @else {
+                    <small>{{
+                      text(
+                        'لا يُحسب الهامش بدون إيراد موجب',
+                        'Margin unavailable without positive revenue'
+                      )
+                    }}</small>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+          <section class="chart comparison">
+            <header>
+              <h3>{{ text('مقارنة أداء المراكز', 'Cost centre performance') }}</h3>
+              <span>SAR</span>
+            </header>
+            <div class="series-legend">
+              <span><i class="revenue-key"></i>{{ text('الإيرادات', 'Revenue') }}</span
+              ><span><i class="expense-key"></i>{{ text('المصروفات', 'Expense') }}</span
+              ><span><i class="net-key"></i>{{ text('صافي الربح', 'Net profit') }}</span
+              ><span><i class="loss-key"></i>{{ text('عجز', 'Loss') }}</span>
+            </div>
+            <div class="comparison-rows">
+              @for (center of report.centers; track center.id) {
+                <div class="comparison-row">
+                  <div class="center-name">
+                    <bdi>{{ center.name }}</bdi>
+                    @if (!center.isOperating) {
+                      <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small>
+                    }
+                  </div>
+                  <div class="series">
+                    <div>
+                      <span>{{ text('الإيراد', 'Revenue') }}</span
+                      ><i
+                        ><b
+                          class="revenue-key"
+                          [style.width.%]="width(center.revenue, maxComparison())"
+                        ></b></i
+                      ><strong dir="ltr">{{ center.revenue | number: '1.0-0' }}</strong>
+                    </div>
+                    <div>
+                      <span>{{ text('المصروف', 'Expense') }}</span
+                      ><i
+                        ><b
+                          class="expense-key"
+                          [style.width.%]="width(center.expense, maxComparison())"
+                        ></b></i
+                      ><strong dir="ltr">{{ center.expense | number: '1.0-0' }}</strong>
+                    </div>
+                    <div>
+                      <span>{{
+                        center.net < 0 ? text('العجز', 'Loss') : text('الصافي', 'Net')
+                      }}</span
+                      ><i
+                        ><b
+                          [class]="center.net < 0 ? 'loss-key' : 'net-key'"
+                          [style.width.%]="width(center.net, maxComparison())"
+                        ></b></i
+                      ><strong dir="ltr" [class.negative]="center.net < 0">{{
+                        center.net | number: '1.0-0'
+                      }}</strong>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section
+        id="cost-expense"
+        class="analysis-section expense-section"
+        aria-labelledby="expense-heading"
+      >
+        <header class="section-heading">
+          <h2 id="expense-heading">{{ text('المصروفات', 'Expenses') }}</h2>
+          <div>
+            <span>{{ text('إجمالي المصروفات', 'Total expense') }}</span
+            ><strong dir="ltr">SAR {{ report.totalExpense | number: '1.0-0' }}</strong>
+          </div>
+          <div>
+            <span>{{ text('حسابات المصروفات', 'Expense accounts') }}</span
+            ><strong>{{ report.expenseAccounts.length }}</strong>
+          </div>
+        </header>
+        <div class="charts">
+          <section class="chart expense-map">
+            <header>
+              <h3>{{ text('توزيع المصروفات', 'Expense composition') }}</h3>
+              <span>{{ text('حسب حجم الرصيد', 'By balance magnitude') }}</span>
+            </header>
+            <div
+              class="treemap"
+              role="img"
+              [attr.aria-label]="
+                text(
+                  'توزيع المصروفات، الأسماء والقيم في القائمة التالية',
+                  'Expense composition, names and amounts listed below'
+                )
+              "
+            >
+              @for (tile of expenseTiles(); track tile.id; let index = $index) {
+                <div
+                  class="tile"
+                  [style.left.%]="tile.x"
+                  [style.top.%]="tile.y"
+                  [style.width.%]="tile.width"
+                  [style.height.%]="tile.height"
+                  [style.background]="tile.color"
+                  [title]="tile.name + ': SAR ' + (tile.amount | number: '1.0-0')"
+                >
+                  @if (tile.width > 30 && tile.height > 30) {
+                    <div class="tile-label">
+                      <bdi>{{ index + 1 }}. {{ tile.name }}</bdi>
+                      <small dir="ltr">SAR {{ tile.amount | number: '1.0-0' }}</small>
+                    </div>
+                  } @else if (tile.width > 18 && tile.height > 18) {
+                    <span>{{ index + 1 }}</span>
+                  }
+                </div>
+              }
+            </div>
+            <div class="legend-list expense-legend">
+              @for (tile of expenseTiles(); track tile.id; let index = $index) {
+                <div>
+                  <i [style.background]="tile.color"></i><bdi>{{ index + 1 }}. {{ tile.name }}</bdi
+                  ><b dir="ltr">{{ tile.amount | number: '1.0-0' }}</b>
+                </div>
+              } @empty {
+                <p class="basis">
+                  {{ text('لا توجد مصروفات للفترة', 'No expenses for this period') }}
+                </p>
+              }
+            </div>
+          </section>
+
+          <section class="chart centre-expense">
+            <header>
+              <h3>{{ text('المصروفات حسب المركز', 'Expense by centre') }}</h3>
+              <span>SAR</span>
+            </header>
+            <div class="horizontal-bars">
+              @for (center of report.centers; track center.id) {
+                <div class="account-bar">
+                  <bdi>{{ center.name }}</bdi
+                  ><strong dir="ltr" [class.negative]="center.expense < 0">{{
+                    center.expense | number: '1.0-0'
+                  }}</strong>
+                  <div class="track">
+                    <i
+                      class="expense-key"
+                      [style.width.%]="width(center.expense, report.maxCenterExpense)"
+                    ></i>
+                  </div>
+                  @if (!center.isOperating) {
+                    <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+          <section class="chart account-expense">
+            <header>
+              <h3>{{ text('المصروفات حسب الحساب', 'Expense by account') }}</h3>
+              <span>SAR</span>
+            </header>
+            <div
+              class="horizontal-bars expense-account-bars"
+              tabindex="0"
+              [attr.aria-label]="text('حسابات المصروفات', 'Expense accounts')"
+            >
+              @for (account of expenseAccounts(); track account.id; let index = $index) {
+                <div class="account-bar">
+                  <bdi>{{ account.name }}</bdi
+                  ><strong dir="ltr" [class.negative]="account.total < 0">{{
+                    account.total | number: '1.0-0'
+                  }}</strong>
+                  <div class="track">
+                    <i
+                      [style.width.%]="width(account.total, maxExpense())"
+                      [style.background]="color(index)"
+                    ></i>
+                  </div>
+                </div>
+              } @empty {
+                <p class="basis">
+                  {{ text('لا توجد مصروفات للفترة', 'No expenses for this period') }}
+                </p>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+    } @else {
+      <div class="empty-overview" role="status">
+        <h2>
+          {{
+            loading()
+              ? text('جاري تحميل التقرير', 'Loading report')
+              : text('اختر الفترة والمراكز', 'Select a period and cost centres')
+          }}
+        </h2>
+        <p>
+          {{
+            loading()
+              ? text('TRAACS', 'TRAACS')
+              : text('لا توجد بيانات معروضة', 'No report data loaded')
+          }}
+        </p>
+      </div>
+    }
+  </div>
+
+  <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')">
+    <form (ngSubmit)="submit()">
+      <h2>{{ text('فلاتر التقرير', 'Report filters') }}</h2>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('الفترة', 'Period') }}</legend>
+        <label for="centre-from">{{ text('من تاريخ', 'From date') }}</label>
+        <input
+          id="centre-from"
+          name="from"
+          type="date"
+          required
+          [ngModel]="filters().fromDate"
+          (ngModelChange)="update('fromDate', $event)"
+        />
+        <label for="centre-to">{{ text('إلى تاريخ', 'To date') }}</label>
+        <input
+          id="centre-to"
+          name="to"
+          type="date"
+          required
+          [min]="filters().fromDate"
+          [ngModel]="filters().toDate"
+          (ngModelChange)="update('toDate', $event)"
+        />
+        @if (invalidDates()) {
+          <p class="validation" role="alert">
+            {{ text('اختر فترة صحيحة', 'Select a valid date range') }}
+          </p>
+        }
+      </fieldset>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('الربع السنوي', 'Quarter') }}</legend>
+        <div class="quarters">
+          @for (item of [1, 2, 3, 4]; track item) {
+            <label
+              ><input
+                type="radio"
+                name="quarter"
+                [value]="item"
+                [checked]="quarter() === item"
+                (change)="selectQuarter(item)"
+              />{{ text('الربع', 'Quarter') }} {{ item }}</label
+            >
+          }
+        </div>
+      </fieldset>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('مركز التكلفة', 'Cost centre') }}</legend>
+        <label class="radio-option"
+          ><input
+            type="radio"
+            name="center"
+            value=""
+            [checked]="filters().costCenterId === ''"
+            (change)="selectCenter('')"
+          />{{ text('كل المراكز', 'All centres') }}</label
+        >
+        @for (option of options(); track option.id) {
+          <label class="radio-option"
+            ><input
+              type="radio"
+              name="center"
+              [value]="option.id"
+              [checked]="filters().costCenterId === option.id"
+              (change)="selectCenter(option.id)"
+            /><bdi>{{ option.label }}</bdi></label
+          >
+        }
+      </fieldset>
+      <div class="rail-meta">
+        <span>{{ text('القسم', 'Department') }}</span
+        ><b>{{ filters().departmentName }}</b
+        ><span>{{ text('العملة', 'Currency') }}</span
+        ><b>SAR</b>
+      </div>
+      <button class="apply" type="submit" [disabled]="loading() || invalidDates()">
+        {{ loading() ? text('جاري البحث', 'Searching') : text('عرض التقرير', 'Run report') }}
+      </button>
+    </form>
+    @if (data(); as report) {
+      <section class="rail-summary">
+        <h2>{{ text('صافي الربح حسب المركز', 'Net profit by centre') }}</h2>
+        @for (center of report.centers; track center.id) {
+          <div>
+            <bdi>{{ center.name }}</bdi
+            ><strong dir="ltr" [class.negative]="center.net < 0"
+              >SAR {{ center.net | number: '1.0-0' }}</strong
+            >
+          </div>
+        }
+      </section>
+    }
+  </aside>
+</div>
