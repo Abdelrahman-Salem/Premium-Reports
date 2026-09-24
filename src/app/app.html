@@ -1,4 +1,4 @@
-<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'">
+<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'" [class.cost-workspace]="reportMode() === 'costCentre'">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-badge">PR</div>
@@ -130,6 +130,7 @@
       </div>
     </section>
 
+    @if (reportMode() !== 'costCentre') {
     <div class="filters">
       @if (reportMode() === 'monthly') {
         <div class="field">
@@ -196,43 +197,6 @@
         </div>
 
         <button class="search-btn" type="button" (click)="refreshMonthlyReport()" [disabled]="loading()">
-          {{ loading() ? t('searching') : t('search') }}
-        </button>
-      } @else if (reportMode() === 'costCentre') {
-        <div class="field">
-          <label>{{ t('from') }}</label>
-          <input
-            type="date"
-            [ngModel]="costCentreFilters().fromDate"
-            (ngModelChange)="updateCostCentreFilter('fromDate', $event)"
-          />
-        </div>
-
-        <div class="field">
-          <label>{{ t('to') }}</label>
-          <input
-            type="date"
-            [ngModel]="costCentreFilters().toDate"
-            (ngModelChange)="updateCostCentreFilter('toDate', $event)"
-          />
-        </div>
-
-        <div class="field">
-          <label>{{ t('costCentre') }}</label>
-          <select [ngModel]="costCentreFilters().costCenterId" (ngModelChange)="updateCostCentreSelection($event)">
-            <option value="">{{ t('allSelected') }}</option>
-            @for (option of costCentreOptions; track option.id) {
-              <option [value]="option.id">{{ option.label }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="field">
-          <label>{{ language() === 'ar' ? 'القسم' : 'Department' }}</label>
-          <input type="text" [ngModel]="costCentreFilters().departmentName" disabled />
-        </div>
-
-        <button class="search-btn" type="button" (click)="refreshCostCentreReport()" [disabled]="loading()">
           {{ loading() ? t('searching') : t('search') }}
         </button>
       } @else {
@@ -315,11 +279,23 @@
       }
     </div>
 
+    } @else {
+      <app-cost-centre-overview
+        [data]="costCentreDashboard()"
+        [filters]="costCentreFilters()"
+        [options]="costCentreOptions"
+        [language]="language()"
+        [loading]="loading()"
+        (filtersChange)="costCentreFilters.set($event)"
+        (search)="refreshCostCentreReport()"
+      />
+    }
+
     @if (error()) {
       <div class="notice" role="status">{{ error() }}</div>
     }
 
-    @if (loading() && !hasActiveReport()) {
+    @if (reportMode() !== 'costCentre' && loading() && !hasActiveReport()) {
       <section class="loading-grid" [attr.aria-label]="t('loadingReport')">
         @for (item of [1, 2, 3, 4]; track item) {
           <div class="skeleton"></div>
@@ -327,7 +303,7 @@
       </section>
     }
 
-    @if (!loading() && !hasActiveReport() && !hasSearched()) {
+    @if (reportMode() !== 'costCentre' && !loading() && !hasActiveReport() && !hasSearched()) {
       <section class="empty-card">
         <h2>{{ t('noReportTitle') }}</h2>
         <p>{{ t('noReportSubtitle') }}</p>
@@ -692,6 +668,8 @@
     }
 
     @if (reportMode() === 'costCentre' && costCentreDashboard(); as cost) {
+      <details class="cost-details">
+        <summary>{{ language() === 'ar' ? 'التحليل التفصيلي والحسابات' : 'Detailed analysis and accounts' }}</summary>
       <div class="report-context">
         <span>{{ language() === 'ar' ? 'القسم: Default' : 'Department: Default' }}</span>
         <span>{{ language() === 'ar' ? '100 - Head Quarter: إدارة / مصروفات فقط' : '100 - Head Quarter: admin overhead' }}</span>
@@ -972,6 +950,7 @@
           </table>
         </div>
       </section>
+      </details>
     }
 
     @if (reportMode() === 'dsr' && dashboard(); as view) {

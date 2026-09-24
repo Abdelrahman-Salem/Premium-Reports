@@ -351,6 +351,83 @@ button:disabled {
   background: rgb(255 255 255 / 72%);
 }
 
+.cost-workspace .content {
+  padding: 20px 22px 40px;
+  background: #eef0f2;
+}
+
+.cost-workspace .topbar > div:first-child {
+  display: none;
+}
+
+.cost-workspace .topbar {
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.cost-workspace .auth-panel {
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.cost-workspace .auth-panel p {
+  display: none;
+}
+
+.cost-details {
+  margin-top: 18px;
+}
+
+.cost-details > summary {
+  padding: 16px 0;
+  border-block: 1px solid #dce1e4;
+  margin-bottom: 16px;
+  cursor: pointer;
+  color: #08636b;
+  font-weight: 700;
+}
+
+@media (min-width: 1101px) {
+  .cost-workspace .sidebar {
+    width: 220px;
+    padding: 24px 14px;
+  }
+}
+
+@media (max-width: 880px) {
+  .cost-workspace .sidebar {
+    padding: 14px;
+  }
+
+  .cost-workspace .sidebar .brand {
+    margin-bottom: 12px;
+  }
+
+  .cost-workspace .sidebar .nav:first-of-type {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .cost-workspace .sidebar .nav:first-of-type .nav-button {
+    width: auto;
+    flex: none;
+    font-size: 12px;
+    border-radius: 4px;
+  }
+
+  .cost-workspace .sidebar .nav-label,
+  .cost-workspace .sidebar .nav-divider,
+  .cost-workspace .sidebar .nav:last-of-type,
+  .cost-workspace .sidebar .nav-item:not(button),
+  .cost-workspace .sidebar-foot {
+    display: none;
+  }
+
+  .cost-workspace .content {
+    padding: 16px 12px 32px;
+  }
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
