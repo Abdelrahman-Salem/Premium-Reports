@@ -26,20 +26,6 @@ input:focus-visible,
   outline: 2px solid #08636b;
   outline-offset: 3px;
 }
-.comparison-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-.comparison-toggle {
-  border: 1px solid #08636b;
-  color: #08636b;
-  background: white;
-  font-weight: 600;
-}
-.comparison-toggle[aria-expanded='true'] {
-  background: #08636b;
-  color: white;
-}
 .year-comparison {
   margin-top: 12px;
   border-block: 1px solid #dce1e4;
@@ -151,11 +137,11 @@ input[type='radio'] {
 .chart {
   position: relative;
   direction: ltr;
-  padding: 30px 12px 0 80px;
+  padding: 24px 12px 0 80px;
 }
 .grid-lines {
   position: absolute;
-  top: 30px;
+  top: 73px;
   left: 80px;
   right: 12px;
   height: 280px;
@@ -178,12 +164,29 @@ input[type='radio'] {
 }
 .year-groups {
   display: grid;
-  gap: 20px;
+  gap: 14px;
   position: relative;
 }
 .year-group {
   text-align: center;
   min-width: 0;
+  padding-inline: 12px;
+  border-inline-start: 1px solid #dce1e4;
+  border-inline-end: 1px solid #dce1e4;
+}
+.year-band {
+  display: grid;
+  place-items: center;
+  height: 49px;
+  color: #08636b;
+  background: #e9f1f2;
+  border-top: 2px solid #08636b;
+  font-size: 16px;
+}
+.year-group:nth-child(even) .year-band {
+  color: #a44d13;
+  background: #fff2e8;
+  border-top-color: #ee7925;
 }
 .bars {
   display: grid;

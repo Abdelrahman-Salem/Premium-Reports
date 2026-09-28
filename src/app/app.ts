@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 
 import { DsrReportService } from './core/services/dsr-report.service';
 import { CostCentreOverview } from './cost-centre-overview/cost-centre-overview';
+import { YearComparison } from './cost-centre-overview/year-comparison';
 import {
-  CostCentreAccountRow,
   CostCentrePeriodicalDashboardView,
   CostCentrePeriodicalFilters,
   CostCentreOption,
@@ -214,7 +214,7 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [DecimalPipe, FormsModule, PercentPipe, CostCentreOverview],
+  imports: [DecimalPipe, FormsModule, PercentPipe, CostCentreOverview, YearComparison],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -223,14 +223,13 @@ export class App {
   private readonly chartColors = ['#2e6f73', '#c77b32', '#6c5b9e', '#4c7fae', '#9b9483', '#b14b4e', '#4f9d6e', '#1e8f6f'];
 
   protected readonly reportMode = signal<ReportMode>('monthly');
+  protected readonly costCentreView = signal<'report' | 'comparison'>('report');
   protected readonly language = signal<Language>('ar');
   protected readonly costCentreOpen = signal(false);
   protected readonly hasSearched = signal(false);
   protected readonly sessionChecking = signal(false);
   protected readonly sessionReady = signal(false);
   protected readonly sessionMessage = signal<string | null>(null);
-  protected readonly costAccountSearch = signal('');
-  protected readonly costAccountTypeFilter = signal<'all' | 'revenue' | 'expense'>('all');
   protected readonly costCentreOptions: CostCentreOption[] = [
     { id: '1', label: '100 - Head Quarter' },
     { id: '73', label: '808 - AirPort Jeddah' },
@@ -338,23 +337,6 @@ export class App {
       (this.reportMode() === 'dsr' && Boolean(this.report())) ||
       (this.reportMode() === 'costCentre' && Boolean(this.costCentreDashboard())),
   );
-  protected readonly filteredCostCentreAccounts = computed(() => {
-    const dashboard = this.costCentreDashboard();
-    const query = this.costAccountSearch().trim().toLowerCase();
-    const type = this.costAccountTypeFilter();
-
-    if (!dashboard) {
-      return [];
-    }
-
-    return dashboard.accounts.filter((account) => {
-      const matchesType = type === 'all' || account.type === type;
-      const matchesQuery =
-        !query || account.name.toLowerCase().includes(query) || account.code.toLowerCase().includes(query);
-      return matchesType && matchesQuery;
-    });
-  });
-
   protected readonly selectedCostCentreLabel = computed(() => {
     const selected = this.filters().costCenters;
 
@@ -455,7 +437,7 @@ export class App {
     });
   }
 
-  protected refreshCostCentreReport(): void {
+  protected refreshCostCentreReport(filters: CostCentrePeriodicalFilters = this.costCentreFilters()): void {
     if (!this.sessionReady()) {
       this.hasSearched.set(true);
       this.costCentreReport.set(null);
@@ -469,9 +451,9 @@ export class App {
     this.error.set(null);
     this.costCentreReport.set(null);
 
-    this.dsrReportService.getCostCentrePeriodicalReport(this.costCentreFilters()).subscribe({
+    this.dsrReportService.getCostCentrePeriodicalReport(filters).subscribe({
       next: (response) => {
-        const view = this.dsrReportService.toCostCentrePeriodicalDashboardView(response, this.costCentreFilters());
+        const view = this.dsrReportService.toCostCentrePeriodicalDashboardView(response, filters);
         if (view.accounts.length === 0) {
           this.error.set(this.t('noDataOrSession'));
           this.loading.set(false);
@@ -488,6 +470,11 @@ export class App {
         this.checkSession();
       },
     });
+  }
+
+  protected showCostCentreYear(filters: CostCentrePeriodicalFilters): void {
+    this.costCentreFilters.set(filters);
+    this.refreshCostCentreReport(filters);
   }
 
   protected openTraacsLogin(): void {
@@ -637,24 +624,6 @@ export class App {
     return this.chartColors[index % this.chartColors.length];
   }
 
-  protected accountDonutGradient(accounts: CostCentreAccountRow[]): string {
-    const total = accounts.reduce((sum, account) => sum + Math.abs(account.total), 0);
-
-    if (total === 0) {
-      return 'conic-gradient(#d8dee7 0deg 360deg)';
-    }
-
-    let start = 0;
-    const segments = accounts.map((account, index) => {
-      const end = start + (Math.abs(account.total) / total) * 360;
-      const segment = `${this.serviceColor(index)} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
-      start = end;
-      return segment;
-    });
-
-    return `conic-gradient(${segments.join(', ')})`;
-  }
-
   protected shareDonutGradient(services: MonthlySaleServiceRow[]): string {
     let start = 0;
     const segments = services.map((service, index) => {
@@ -693,14 +662,6 @@ export class App {
     }
 
     return value === 0 ? 'dim' : '';
-  }
-
-  protected accountAmountForCenter(account: CostCentreAccountRow, centerId: string): number {
-    return account.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0;
-  }
-
-  protected centerExpenseShare(account: CostCentreAccountRow, centerExpense: number, centerId: string): number {
-    return Math.abs(this.accountAmountForCenter(account, centerId)) / Math.max(Math.abs(centerExpense), 1);
   }
 
   protected exportReport(): void {

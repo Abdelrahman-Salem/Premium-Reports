@@ -76,15 +76,46 @@ describe('CostCentreOverview', () => {
     expect(element.querySelector('.metric.net strong')?.textContent?.trim()).toBe('1,250');
   });
 
-  it('sizes expense tiles by absolute balance while displaying signed amounts', () => {
+  it('uses the treemap for revenue-generating centres only', () => {
     const fixture = render();
-    const tiles = [
-      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.tile'),
-    ];
-    const areas = tiles.map((tile) => parseFloat(tile.style.width) * parseFloat(tile.style.height));
-    expect(areas.reduce((sum, area) => sum + area, 0)).toBeCloseTo(10000);
-    expect(areas[0] / areas[1]).toBeCloseTo(6);
-    expect(fixture.nativeElement.querySelector('.expense-legend').textContent).toContain('-50');
+    const element: HTMLElement = fixture.nativeElement;
+    const tiles = [...element.querySelectorAll<HTMLElement>('.centre-tile')];
+    expect(tiles).toHaveLength(1);
+    expect(parseFloat(tiles[0].style.width)).toBe(100);
+    expect(element.querySelector('.revenue-centre-legend')?.textContent).toContain('SAR 1,500');
+    expect(element.querySelector('.revenue-centre-legend')?.textContent).not.toContain(
+      'Head Quarter',
+    );
+    expect(element.querySelectorAll('.centre-revenue-columns .column')).toHaveLength(2);
+  });
+
+  it('groups smaller expense accounts without hiding negative adjustments', () => {
+    const fixture = render({
+      ...response,
+      arrCostCenterWiseDetailsPhpKey: [
+        ...response.arrCostCenterWiseDetailsPhpKey!,
+        ...[40, 30, 20, 10, 5].map((amount, index) => ({
+          bint_category: 4,
+          vchr_account_name: `Expense ${index}`,
+          dbl_base_currency_debit_credt73: amount,
+        })),
+      ],
+    });
+    const element: HTMLElement = fixture.nativeElement;
+    const shares = [...element.querySelectorAll<HTMLElement>('.expense-share-row')];
+    expect(shares).toHaveLength(6);
+    expect(shares[5].textContent).toContain('Other accounts');
+    expect(shares[5].textContent).toContain('15');
+    expect(shares[1].textContent).toContain('-50');
+    expect(
+      shares.reduce(
+        (sum, row) =>
+          sum + parseFloat(row.querySelector<HTMLElement>('.expense-share-track i')!.style.width),
+        0,
+      ),
+    ).toBeCloseTo(100);
+    expect(element.querySelectorAll('.expense-account-bars .account-bar')).toHaveLength(7);
+    expect(element.querySelectorAll('.expense-columns .column')).toHaveLength(2);
   });
 
   it('groups charts into three sections and distinguishes losses from undefined margins', () => {
@@ -92,13 +123,18 @@ describe('CostCentreOverview', () => {
       ...response,
       arrCostCenterWiseDetailsPhpKey: [
         ...response.arrCostCenterWiseDetailsPhpKey!,
-        { bint_category: 4, vchr_account_name: 'Operating costs', dbl_base_currency_debit_credt73: 4000 },
+        {
+          bint_category: 4,
+          vchr_account_name: 'Operating costs',
+          dbl_base_currency_debit_credt73: 4000,
+        },
       ],
     });
     const element: HTMLElement = fixture.nativeElement;
-    expect([...element.querySelectorAll('.analysis-section')].map(section => section.id))
-      .toEqual(['cost-revenue', 'cost-profit', 'cost-expense']);
-    expect(element.querySelectorAll('#cost-revenue .chart')).toHaveLength(3);
+    expect([...element.querySelectorAll('.analysis-section')].map((section) => section.id)).toEqual(
+      ['cost-revenue', 'cost-profit', 'cost-expense'],
+    );
+    expect(element.querySelectorAll('#cost-revenue .chart')).toHaveLength(4);
     expect(element.querySelectorAll('#cost-profit .chart')).toHaveLength(3);
     expect(element.querySelectorAll('#cost-expense .chart')).toHaveLength(3);
     const losses = [...element.querySelectorAll<HTMLElement>('.net-chart .signed-track i')];
@@ -129,6 +165,19 @@ describe('CostCentreOverview', () => {
     );
   });
 
+  it('emits a ready-to-search year range from the year strip', () => {
+    const fixture = render();
+    let selected: CostCentrePeriodicalFilters | undefined;
+    fixture.componentInstance.yearSelected.subscribe((value) => (selected = value));
+    const year = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '.year-strip button',
+      ),
+    ].find((button) => button.textContent?.trim() === '2025')!;
+    year.click();
+    expect(selected).toEqual({ ...filters, fromDate: '2025-01-01', toDate: '2025-12-31' });
+  });
+
   it('blocks invalid dates and renders zero data without invalid chart styles', () => {
     const fixture = render({
       arrCostCentersPhpKey: response.arrCostCentersPhpKey,
@@ -137,7 +186,7 @@ describe('CostCentreOverview', () => {
     fixture.componentRef.setInput('filters', { ...filters, fromDate: '2026-10-01' });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.apply').disabled).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('.tile')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll('.expense-share-row')).toHaveLength(0);
     expect(fixture.nativeElement.innerHTML).not.toMatch(/NaN|Infinity/);
   });
 });

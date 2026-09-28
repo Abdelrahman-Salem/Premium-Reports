@@ -1,4 +1,3 @@
-<app-year-comparison [filters]="filters()" [language]="language()" />
 <div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
   <span>{{ text('السنة', 'Year') }}</span>
   @for (item of years(); track item) {
@@ -112,13 +111,65 @@
 
           <section class="chart centre-revenue">
             <header>
+              <h3>{{ text('مساهمة المراكز في الإيرادات', 'Revenue share by centre') }}</h3>
+              <span>{{ text('المراكز ذات الإيراد', 'Revenue-generating centres') }}</span>
+            </header>
+            <div
+              class="centre-treemap"
+              role="img"
+              [attr.aria-label]="
+                text(
+                  'حصة كل مركز من الإيرادات موضحة بالأرقام أدناه',
+                  'Centre revenue shares are listed below'
+                )
+              "
+            >
+              @for (tile of revenueCentreTiles(); track tile.id) {
+                <div
+                  class="centre-tile"
+                  [style.left.%]="tile.x"
+                  [style.top.%]="tile.y"
+                  [style.width.%]="tile.width"
+                  [style.height.%]="tile.height"
+                  [style.background]="tile.color"
+                  [title]="tile.name + ': SAR ' + (tile.amount | number: '1.0-0')"
+                >
+                  @if (tile.width > 18 && tile.height > 18) {
+                    <b dir="ltr">{{ tile.share | percent: '1.0-0' }}</b>
+                  }
+                </div>
+              }
+            </div>
+            <div class="revenue-centre-legend">
+              @for (tile of revenueCentreTiles(); track tile.id) {
+                <div>
+                  <i [style.background]="tile.color"></i>
+                  <bdi>{{ tile.name }}</bdi>
+                  <strong dir="ltr">{{ tile.share | percent: '1.1-1' }}</strong>
+                  <span dir="ltr">SAR {{ tile.amount | number: '1.0-0' }}</span>
+                </div>
+              } @empty {
+                <p class="basis">
+                  {{
+                    text(
+                      'لا توجد إيرادات للمراكز في هذه الفترة',
+                      'No centre revenue for this period'
+                    )
+                  }}
+                </p>
+              }
+            </div>
+          </section>
+
+          <section class="chart centre-revenue-columns">
+            <header>
               <h3>{{ text('الإيرادات حسب المركز', 'Revenue by centre') }}</h3>
               <span>SAR</span>
             </header>
             <div
-              class="columns"
+              class="columns revenue-columns"
               [style.grid-template-columns]="
-                'repeat(' + report.centers.length + ', minmax(0, 1fr))'
+                'repeat(' + report.centers.length + ', minmax(90px, 1fr))'
               "
             >
               @for (center of report.centers; track center.id) {
@@ -344,44 +395,21 @@
           <section class="chart expense-map">
             <header>
               <h3>{{ text('توزيع المصروفات', 'Expense composition') }}</h3>
-              <span>{{ text('حسب حجم الرصيد', 'By balance magnitude') }}</span>
+              <span>{{ text('أكبر 5 حسابات وباقي الحسابات', 'Top 5 accounts and the rest') }}</span>
             </header>
-            <div
-              class="treemap"
-              role="img"
-              [attr.aria-label]="
-                text(
-                  'توزيع المصروفات، الأسماء والقيم في القائمة التالية',
-                  'Expense composition, names and amounts listed below'
-                )
-              "
-            >
-              @for (tile of expenseTiles(); track tile.id; let index = $index) {
-                <div
-                  class="tile"
-                  [style.left.%]="tile.x"
-                  [style.top.%]="tile.y"
-                  [style.width.%]="tile.width"
-                  [style.height.%]="tile.height"
-                  [style.background]="tile.color"
-                  [title]="tile.name + ': SAR ' + (tile.amount | number: '1.0-0')"
-                >
-                  @if (tile.width > 30 && tile.height > 30) {
-                    <div class="tile-label">
-                      <bdi>{{ index + 1 }}. {{ tile.name }}</bdi>
-                      <small dir="ltr">SAR {{ tile.amount | number: '1.0-0' }}</small>
-                    </div>
-                  } @else if (tile.width > 18 && tile.height > 18) {
-                    <span>{{ index + 1 }}</span>
-                  }
-                </div>
-              }
-            </div>
-            <div class="legend-list expense-legend">
-              @for (tile of expenseTiles(); track tile.id; let index = $index) {
-                <div>
-                  <i [style.background]="tile.color"></i><bdi>{{ index + 1 }}. {{ tile.name }}</bdi
-                  ><b dir="ltr">{{ tile.amount | number: '1.0-0' }}</b>
+            <div class="expense-share-list">
+              @for (item of expenseShareRows(); track item.id) {
+                <div class="expense-share-row" [class.other]="item.isOther">
+                  <div class="expense-share-label">
+                    <bdi>{{
+                      item.isOther ? text('باقي الحسابات', 'Other accounts') : item.name
+                    }}</bdi>
+                    <strong dir="ltr" [class.negative]="item.amount < 0"
+                      >SAR {{ item.amount | number: '1.0-0' }}</strong
+                    >
+                  </div>
+                  <div class="expense-share-track"><i [style.width.%]="item.share * 100"></i></div>
+                  <b dir="ltr">{{ item.share | percent: '1.1-1' }}</b>
                 </div>
               } @empty {
                 <p class="basis">
@@ -389,6 +417,16 @@
                 </p>
               }
             </div>
+            @if (hasExpenseAdjustments()) {
+              <p class="basis">
+                {{
+                  text(
+                    'النسب حسب القيمة المطلقة للأرصدة، والتصحيحات السالبة ظاهرة بإشارتها.',
+                    'Shares use absolute balances; negative adjustments retain their sign.'
+                  )
+                }}
+              </p>
+            }
           </section>
 
           <section class="chart centre-expense">
@@ -396,19 +434,26 @@
               <h3>{{ text('المصروفات حسب المركز', 'Expense by centre') }}</h3>
               <span>SAR</span>
             </header>
-            <div class="horizontal-bars">
+            <div
+              class="columns expense-columns"
+              [style.grid-template-columns]="
+                'repeat(' + report.centers.length + ', minmax(90px, 1fr))'
+              "
+            >
               @for (center of report.centers; track center.id) {
-                <div class="account-bar">
-                  <bdi>{{ center.name }}</bdi
-                  ><strong dir="ltr" [class.negative]="center.expense < 0">{{
-                    center.expense | number: '1.0-0'
-                  }}</strong>
-                  <div class="track">
-                    <i
-                      class="expense-key"
-                      [style.width.%]="width(center.expense, report.maxCenterExpense)"
-                    ></i>
+                <div class="column">
+                  <div class="column-track">
+                    <div
+                      class="column-fill"
+                      [class.admin]="!center.isOperating"
+                      [class.negative]="center.expense < 0"
+                      [style.height.%]="width(center.expense, report.maxCenterExpense)"
+                    ></div>
+                    <b dir="ltr" [class.negative]="center.expense < 0">{{
+                      center.expense | number: '1.0-0'
+                    }}</b>
                   </div>
+                  <bdi>{{ center.name }}</bdi>
                   @if (!center.isOperating) {
                     <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small>
                   }
@@ -426,7 +471,7 @@
               tabindex="0"
               [attr.aria-label]="text('حسابات المصروفات', 'Expense accounts')"
             >
-              @for (account of expenseAccounts(); track account.id; let index = $index) {
+              @for (account of expenseAccounts(); track account.id) {
                 <div class="account-bar">
                   <bdi>{{ account.name }}</bdi
                   ><strong dir="ltr" [class.negative]="account.total < 0">{{
@@ -434,8 +479,9 @@
                   }}</strong>
                   <div class="track">
                     <i
+                      class="expense-key"
+                      [class.negative]="account.total < 0"
                       [style.width.%]="width(account.total, maxExpense())"
-                      [style.background]="color(index)"
                     ></i>
                   </div>
                 </div>

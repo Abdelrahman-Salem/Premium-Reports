@@ -1,18 +1,25 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { YearComparison } from './year-comparison';
 import {
   CostCentreOption,
   CostCentrePeriodicalDashboardView,
   CostCentrePeriodicalFilters,
 } from '../models/dsr-report.models';
 
-interface AccountTile {
+interface ExpenseShareRow {
   id: string;
   name: string;
   amount: number;
-  weight: number;
+  share: number;
+  isOther: boolean;
+}
+
+interface RevenueCentreTile {
+  id: string;
+  name: string;
+  amount: number;
+  share: number;
   color: string;
   x: number;
   y: number;
@@ -22,7 +29,7 @@ interface AccountTile {
 
 @Component({
   selector: 'app-cost-centre-overview',
-  imports: [DecimalPipe, PercentPipe, FormsModule, YearComparison],
+  imports: [DecimalPipe, PercentPipe, FormsModule],
   templateUrl: './cost-centre-overview.html',
   styleUrl: './cost-centre-overview.css',
 })
@@ -33,6 +40,7 @@ export class CostCentreOverview {
   readonly language = input<'ar' | 'en'>('ar');
   readonly loading = input(false);
   readonly filtersChange = output<CostCentrePeriodicalFilters>();
+  readonly yearSelected = output<CostCentrePeriodicalFilters>();
   readonly search = output<void>();
   protected readonly colors = [
     '#ee7925',
@@ -86,6 +94,52 @@ export class CostCentreOverview {
   protected readonly maxRevenue = computed(() =>
     Math.max(1, ...this.revenueAccounts().map((account) => Math.abs(account.total))),
   );
+  protected readonly revenueCentreTiles = computed<RevenueCentreTile[]>(() => {
+    const centers = (this.data()?.centers ?? []).filter((center) => center.revenue > 0);
+    const total = centers.reduce((sum, center) => sum + center.revenue, 0);
+    if (!total) return [];
+    const tiles = centers.map((center, index) => ({
+      id: center.id,
+      name: center.name,
+      amount: center.revenue,
+      share: center.revenue / total,
+      color: this.color(index),
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    }));
+    const result: RevenueCentreTile[] = [];
+    const partition = (
+      items: RevenueCentreTile[],
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ): void => {
+      if (!items.length) return;
+      if (items.length === 1) {
+        result.push({ ...items[0], x, y, width, height });
+        return;
+      }
+      const weight = items.reduce((sum, item) => sum + item.amount, 0);
+      let split = 1;
+      let firstWeight = items[0].amount;
+      while (split < items.length - 1 && firstWeight + items[split].amount <= weight / 2) {
+        firstWeight += items[split++].amount;
+      }
+      const ratio = firstWeight / weight;
+      if (width >= height) {
+        partition(items.slice(0, split), x, y, width * ratio, height);
+        partition(items.slice(split), x + width * ratio, y, width * (1 - ratio), height);
+      } else {
+        partition(items.slice(0, split), x, y, width, height * ratio);
+        partition(items.slice(split), x, y + height * ratio, width, height * (1 - ratio));
+      }
+    };
+    partition(tiles, 0, 0, 100, 100);
+    return result;
+  });
   protected readonly expenseAccounts = computed(() => this.data()?.expenseAccounts ?? []);
   protected readonly maxExpense = computed(() =>
     Math.max(1, ...this.expenseAccounts().map((account) => Math.abs(account.total))),
@@ -108,51 +162,33 @@ export class CostCentreOverview {
       ]),
     ),
   );
-  protected readonly expenseTiles = computed(() => {
-    const accounts = (this.data()?.expenseAccounts ?? []).filter((account) => account.total !== 0);
-    const result: AccountTile[] = [];
-    const items = accounts.map((account, index) => ({
+  protected readonly expenseShareRows = computed<ExpenseShareRow[]>(() => {
+    const accounts = this.expenseAccounts().filter((account) => account.total !== 0);
+    const magnitude = accounts.reduce((total, account) => total + Math.abs(account.total), 0);
+    if (!magnitude) return [];
+    const top = accounts.slice(0, 5).map((account) => ({
       id: account.id,
       name: account.name,
       amount: account.total,
-      weight: Math.abs(account.total),
-      color: this.color(index),
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
+      share: Math.abs(account.total) / magnitude,
+      isOther: false,
     }));
-    // Split near half the value at each step so tile area remains proportional to amount.
-    const partition = (
-      rows: AccountTile[],
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ): void => {
-      if (!rows.length) return;
-      if (rows.length === 1) {
-        result.push({ ...rows[0], x, y, width, height });
-        return;
-      }
-      const total = rows.reduce((sum, row) => sum + row.weight, 0);
-      let split = 1;
-      let subtotal = rows[0].weight;
-      while (split < rows.length - 1 && subtotal + rows[split].weight <= total / 2) {
-        subtotal += rows[split++].weight;
-      }
-      const ratio = subtotal / total;
-      if (width >= height) {
-        partition(rows.slice(0, split), x, y, width * ratio, height);
-        partition(rows.slice(split), x + width * ratio, y, width * (1 - ratio), height);
-      } else {
-        partition(rows.slice(0, split), x, y, width, height * ratio);
-        partition(rows.slice(split), x, y + height * ratio, width, height * (1 - ratio));
-      }
-    };
-    partition(items, 0, 0, 100, 100);
-    return result;
+    const remaining = accounts
+      .slice(5)
+      .reduce((total, account) => total + Math.abs(account.total), 0);
+    if (remaining)
+      top.push({
+        id: 'other-expenses',
+        name: '',
+        amount: remaining,
+        share: remaining / magnitude,
+        isOther: true,
+      });
+    return top;
   });
+  protected readonly hasExpenseAdjustments = computed(() =>
+    this.expenseAccounts().some((account) => account.total < 0),
+  );
 
   protected text(ar: string, en: string): string {
     return this.language() === 'ar' ? ar : en;
@@ -174,7 +210,7 @@ export class CostCentreOverview {
     });
   }
   protected selectYear(year: number): void {
-    this.filtersChange.emit({
+    this.yearSelected.emit({
       ...this.filters(),
       fromDate: `${year}-01-01`,
       toDate: `${year}-12-31`,

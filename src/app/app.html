@@ -94,6 +94,7 @@
 
       <div class="topbar-actions">
         <button class="light-btn" type="button" (click)="toggleLanguage()">{{ t('language') }}</button>
+        @if (reportMode() !== 'costCentre' || costCentreView() === 'report') {
         @if (hasActiveReport()) {
           <span class="live-pill">{{ sourceLabel() }}</span>
         }
@@ -108,6 +109,7 @@
           </svg>
           {{ t('exportReport') }}
         </button>
+        }
       </div>
     </div>
 
@@ -280,6 +282,15 @@
     </div>
 
     } @else {
+      <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض مراكز التكلفة' : 'Cost centre view'">
+        <button type="button" [attr.aria-pressed]="costCentreView() === 'report'" (click)="costCentreView.set('report')">
+          {{ language() === 'ar' ? 'التقرير العادي' : 'Standard report' }}
+        </button>
+        <button type="button" [attr.aria-pressed]="costCentreView() === 'comparison'" (click)="costCentreView.set('comparison')">
+          {{ language() === 'ar' ? 'مقارنة السنوات' : 'Compare years' }}
+        </button>
+      </div>
+      @if (costCentreView() === 'report') {
       <app-cost-centre-overview
         [data]="costCentreDashboard()"
         [filters]="costCentreFilters()"
@@ -287,11 +298,15 @@
         [language]="language()"
         [loading]="loading()"
         (filtersChange)="costCentreFilters.set($event)"
+        (yearSelected)="showCostCentreYear($event)"
         (search)="refreshCostCentreReport()"
       />
+      } @else {
+        <app-year-comparison [filters]="costCentreFilters()" [language]="language()" />
+      }
     }
 
-    @if (error()) {
+    @if (error() && (reportMode() !== 'costCentre' || costCentreView() === 'report')) {
       <div class="notice" role="status">{{ error() }}</div>
     }
 
@@ -665,292 +680,6 @@
           </table>
         </div>
       </section>
-    }
-
-    @if (reportMode() === 'costCentre' && costCentreDashboard(); as cost) {
-      <details class="cost-details">
-        <summary>{{ language() === 'ar' ? 'التحليل التفصيلي والحسابات' : 'Detailed analysis and accounts' }}</summary>
-      <div class="report-context">
-        <span>{{ language() === 'ar' ? 'القسم: Default' : 'Department: Default' }}</span>
-        <span>{{ language() === 'ar' ? '100 - Head Quarter: إدارة / مصروفات فقط' : '100 - Head Quarter: admin overhead' }}</span>
-        <span>{{ language() === 'ar' ? '808 + 810: مركز تشغيل واحد' : '808 + 810: one operating centre' }}</span>
-        <span>{{ language() === 'ar' ? 'العملة: SAR' : 'Currency: SAR' }}</span>
-        <b>{{ cost.periodLabel }}</b>
-      </div>
-
-      <div class="kpi-grid monthly-kpis">
-        <div class="kpi-card tone-sale">
-          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5m0 14h16M7 15l3-4 4 2 4-7" /></svg></div>
-          <div class="kpi-divider"></div>
-          <div class="kpi-body">
-            <div class="kpi-label">{{ t('revenue') }}</div>
-            <div class="kpi-amount"><span class="currency-code">SAR</span><span>{{ cost.totalRevenue | number: '1.0-2' }}</span></div>
-            <div class="kpi-foot">{{ cost.periodLabel }}</div>
-          </div>
-        </div>
-        <div class="kpi-card tone-refund">
-          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7" /></svg></div>
-          <div class="kpi-divider"></div>
-          <div class="kpi-body">
-            <div class="kpi-label">{{ t('totalExpense') }}</div>
-            <div class="kpi-amount"><span class="currency-code">SAR</span><span>{{ cost.totalExpense | number: '1.0-2' }}</span></div>
-            <div class="kpi-foot">{{ cost.expenseAccounts.length }} {{ t('accounts') }}</div>
-          </div>
-        </div>
-        <div class="kpi-card tone-profit">
-          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M7 8h7a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h8" /></svg></div>
-          <div class="kpi-divider"></div>
-          <div class="kpi-body">
-            <div class="kpi-label">{{ t('netProfit') }}</div>
-            <div class="kpi-amount" [class.negative]="cost.netProfit < 0"><span class="currency-code">SAR</span><span>{{ cost.netProfit | number: '1.0-2' }}</span></div>
-            <div class="kpi-foot">{{ t('grossMargin') }} {{ cost.profitMargin | percent: '1.1-1' }}</div>
-          </div>
-        </div>
-        <div class="kpi-card tone-net">
-          <div class="kpi-stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" /></svg></div>
-          <div class="kpi-divider"></div>
-          <div class="kpi-body">
-            <div class="kpi-label">{{ t('activeCostCentres') }}</div>
-            <div class="kpi-amount"><span>{{ cost.activeCenterCount }} / {{ cost.operatingCenterCount }}</span></div>
-            <div class="kpi-foot">{{ cost.accountCount }} {{ t('accounts') }} · {{ language() === 'ar' ? 'الإدارة مستبعدة من التشغيل' : 'admin excluded from operations' }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="monthly-hero-grid">
-        <section class="panel mix-panel">
-          <div class="panel-head">
-            <div class="panel-title">{{ language() === 'ar' ? 'توزيع الإيرادات حسب الحساب' : 'Revenue distribution by account' }}</div>
-            <div class="panel-meta">{{ cost.revenueAccounts.length }} {{ t('accounts') }}</div>
-          </div>
-          <div class="share-donut" [style.background]="accountDonutGradient(cost.topRevenueAccounts)">
-            <div>
-              <strong>{{ cost.revenueAccounts.length }}</strong>
-              <span>{{ t('accounts') }}</span>
-            </div>
-          </div>
-          <div class="donut-wrap all-services">
-            @for (account of cost.topRevenueAccounts; track account.id; let accountIndex = $index) {
-              <div class="mix-row">
-                <span class="mix-dot" [style.background]="serviceColor(accountIndex)"></span>
-                <span>{{ account.name }}</span>
-                <b>{{ account.share | percent: '1.1-1' }}</b>
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <div class="panel-title">{{ language() === 'ar' ? 'صافي الربح لكل مركز تكلفة' : 'Net profit by cost centre' }}</div>
-            <div class="panel-meta">{{ language() === 'ar' ? 'إيراد ناقص مصروف' : 'Revenue minus expense' }}</div>
-          </div>
-          <div class="cost-net-list">
-            @for (center of cost.centers; track center.id) {
-              <div class="cost-net-row" [class.loss]="center.net < 0" [class.admin-center]="!center.isOperating">
-                <div class="cost-net-title">
-                  <strong>{{ center.name }}</strong>
-                  <span>{{ t('revenue') }} {{ formatMoney(center.revenue) }}</span>
-                  @if (!center.isOperating) {
-                    <em>{{ language() === 'ar' ? 'إدارة / غير تشغيلي' : 'Admin / non-operating' }}</em>
-                  }
-                </div>
-                <div class="cost-net-visual">
-                  <i class="cost-net-meter">
-                    <b [class.negative]="center.net < 0" [style.width]="monthlyBarWidth(center.net, cost.maxCenterNet)"></b>
-                  </i>
-                  <span>{{ center.net < 0 ? (language() === 'ar' ? 'عجز' : 'loss') : (language() === 'ar' ? 'ربح' : 'profit') }}</span>
-                </div>
-                <div class="cost-net-values">
-                  <span>{{ t('expense') }} <b>{{ formatMoney(center.expense) }}</b></span>
-                  <strong [class.neg]="center.net < 0">{{ t('netProfit') }} <b>{{ formatMoney(center.net) }}</b></strong>
-                </div>
-              </div>
-            }
-          </div>
-        </section>
-      </div>
-
-      <div class="monthly-analytics-grid">
-        <section class="panel">
-          <div class="panel-head">
-            <div class="panel-title">{{ t('costCentrePerformance') }}</div>
-            <div class="panel-meta">{{ t('revenueVsExpense') }}</div>
-          </div>
-          <div class="ranking-list">
-            @for (center of cost.centers; track center.id) {
-              <div class="ranking-row dual-ranking-row cost-centre-row">
-                <div>
-                  <strong>{{ center.name }}</strong>
-                  <span>{{ t('grossMargin') }} {{ center.margin | percent: '1.1-1' }}</span>
-                </div>
-                <div class="dual-meters">
-                  <div class="dual-meter"><span>{{ t('revenue') }}</span><i><b [style.width]="monthlyBarWidth(center.revenue, cost.maxCenterRevenue)"></b></i></div>
-                  <div class="dual-meter profit"><span>{{ t('expense') }}</span><i><b [style.width]="monthlyBarWidth(center.expense, cost.maxCenterExpense)"></b></i></div>
-                  <div class="dual-meter net-meter"><span>{{ t('net') }}</span><i><b [style.width]="monthlyBarWidth(center.net, cost.maxCenterNet)"></b></i></div>
-                </div>
-                <b [class.neg]="center.net < 0">{{ formatMoney(center.net) }}</b>
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="panel cost-highlights-panel">
-          <div class="panel-head">
-            <div class="panel-title">{{ language() === 'ar' ? 'ملخص أقوى المراكز' : 'Cost centre highlights' }}</div>
-            <div class="panel-meta">{{ language() === 'ar' ? 'حسب الربح والمصروف' : 'By profit and expense' }}</div>
-          </div>
-          <div class="cost-centre-snapshot">
-            <div class="highlight-tile profit-tile">
-              <span>{{ language() === 'ar' ? 'أعلى صافي ربح' : 'Highest net profit' }}</span>
-              <strong>{{ cost.strongestCenter?.name || '-' }}</strong>
-              <b>{{ formatMoney(cost.strongestCenter?.net || 0) }}</b>
-            </div>
-            <div class="highlight-tile expense-tile">
-              <span>{{ language() === 'ar' ? 'أعلى مصروف' : 'Highest expense' }}</span>
-              <strong>{{ cost.highestExpenseCenter?.name || '-' }}</strong>
-              <b>{{ formatMoney(cost.highestExpenseCenter?.expense || 0) }}</b>
-            </div>
-          </div>
-          <div class="centre-account-list">
-            @for (center of cost.centers; track center.id) {
-              <div class="centre-account-card" [class.admin-center]="!center.isOperating">
-                <div class="centre-account-head">
-                  <strong>{{ center.name }}</strong>
-                  @if (!center.isOperating) {
-                    <span>{{ language() === 'ar' ? 'غير تشغيلي' : 'Non-operating' }}</span>
-                  }
-                </div>
-                <div class="centre-account-metrics">
-                  <div>
-                    <em>{{ language() === 'ar' ? 'أعلى إيراد' : 'Top revenue' }}</em>
-                    <b>{{ center.topRevenueAccount }}</b>
-                  </div>
-                  <div>
-                    <em>{{ language() === 'ar' ? 'أعلى مصروف' : 'Top expense' }}</em>
-                    <b>{{ center.topExpenseAccount }}</b>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </section>
-      </div>
-
-      <div class="monthly-analytics-grid">
-        <section class="panel">
-          <div class="panel-head">
-            <div class="panel-title">{{ language() === 'ar' ? 'أعلى حسابات الإيراد' : 'Top revenue accounts' }}</div>
-            <div class="panel-meta">{{ t('accountBreakdown') }}</div>
-          </div>
-          <div class="ranking-list">
-            @for (account of cost.topRevenueAccounts; track account.id) {
-              <div class="ranking-row account-row">
-                <div>
-                  <strong>{{ account.name }}</strong>
-                  <span>{{ account.code }} · {{ account.share | percent: '1.1-1' }}</span>
-                </div>
-                <i class="ranking-meter"><b [style.width]="monthlyBarWidth(account.total, cost.maxAccountAmount)"></b></i>
-                <b>{{ formatMoney(account.total) }}</b>
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <div class="panel-title">{{ language() === 'ar' ? 'أعلى حسابات المصروف' : 'Top expense accounts' }}</div>
-            <div class="panel-meta">{{ t('accountBreakdown') }}</div>
-          </div>
-          <div class="ranking-list">
-            @for (account of cost.topExpenseAccounts; track account.id) {
-              <div class="ranking-row account-row expense-account-row">
-                <div>
-                  <strong>{{ account.name }}</strong>
-                  <span>{{ account.code }} · {{ account.share | percent: '1.1-1' }}</span>
-                </div>
-                <i class="ranking-meter"><b [style.width]="monthlyBarWidth(account.total, cost.maxAccountAmount)"></b></i>
-                <b>{{ formatMoney(account.total) }}</b>
-              </div>
-            }
-          </div>
-        </section>
-      </div>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div class="panel-title">{{ language() === 'ar' ? 'بصمة المصروفات لكل مركز تكلفة' : 'Expense footprint by cost centre' }}</div>
-          <div class="panel-meta">{{ language() === 'ar' ? 'النسبة من إجمالي مصروفات المركز' : 'Share of each centre expense total' }}</div>
-        </div>
-        <div class="heatmap" [style.grid-template-columns]="heatmapColumns(cost.centers.length)">
-          <div class="heatmap-head"></div>
-          @for (center of cost.centers; track center.id) {
-            <div class="heatmap-head">{{ center.name }}</div>
-          }
-          @for (account of cost.topExpenseAccounts.slice(0, 8); track account.id) {
-            <div class="heat-label">{{ account.name }}</div>
-            @for (center of cost.centers; track center.id) {
-              <div
-                class="heat-cell"
-                [class.neg]="accountAmountForCenter(account, center.id) < 0"
-                [style.opacity]="heatOpacity(accountAmountForCenter(account, center.id), center.expense)"
-                [title]="account.name + ' - ' + center.name"
-              >
-                <span>{{ accountAmountForCenter(account, center.id) | number: '1.0-0' }}</span>
-                <small>{{ centerExpenseShare(account, center.expense, center.id) | percent: '1.1-1' }}</small>
-              </div>
-            }
-          }
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div class="panel-title">{{ language() === 'ar' ? 'جدول الحسابات حسب مركز التكلفة' : 'Accounts by cost centre' }}</div>
-          <div class="filters">
-            <input
-              type="text"
-              [ngModel]="costAccountSearch()"
-              (ngModelChange)="costAccountSearch.set($event)"
-              [placeholder]="language() === 'ar' ? 'بحث عن حساب أو كود...' : 'Search account or code...'"
-            />
-            <select [ngModel]="costAccountTypeFilter()" (ngModelChange)="costAccountTypeFilter.set($event)">
-              <option value="all">{{ language() === 'ar' ? 'كل الأنواع' : 'All types' }}</option>
-              <option value="revenue">{{ t('revenue') }}</option>
-              <option value="expense">{{ t('expense') }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="dsr cost-centre-table">
-            <thead>
-              <tr>
-                <th>{{ language() === 'ar' ? 'الحساب' : 'Account' }}</th>
-                <th>{{ language() === 'ar' ? 'النوع' : 'Type' }}</th>
-                @for (center of cost.centers; track center.id) {
-                  <th class="num">{{ center.name }}</th>
-                }
-                <th class="num">{{ language() === 'ar' ? 'الإجمالي' : 'Total' }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (account of filteredCostCentreAccounts(); track account.id) {
-                <tr>
-                  <td class="label">{{ account.name }} <span class="dim">{{ account.code }}</span></td>
-                  <td>{{ account.type }}</td>
-                  @for (center of cost.centers; track center.id) {
-                    <td class="num" [class.neg]="accountAmountForCenter(account, center.id) < 0" [class.dim]="accountAmountForCenter(account, center.id) === 0">
-                      {{ accountAmountForCenter(account, center.id) | number: '1.0-2' }}
-                    </td>
-                  }
-                  <td class="num" [class.neg]="account.total < 0">{{ account.total | number: '1.0-2' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-      </details>
     }
 
     @if (reportMode() === 'dsr' && dashboard(); as view) {
