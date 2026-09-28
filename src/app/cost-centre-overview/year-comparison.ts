@@ -27,7 +27,6 @@ export class YearComparison {
   readonly language = input<'ar' | 'en'>('ar');
   private readonly service = inject(DsrReportService);
   private subscription?: Subscription;
-  protected readonly open = signal(false);
   protected readonly fromYear = signal(new Date().getFullYear() - 1);
   protected readonly toYear = signal(new Date().getFullYear());
   protected readonly mode = signal<'period' | 'full'>('period');
@@ -100,10 +99,6 @@ export class YearComparison {
 
   protected text(ar: string, en: string): string {
     return this.language() === 'ar' ? ar : en;
-  }
-  protected toggle(): void {
-    this.open.update((value) => !value);
-    if (!this.open() && this.busy()) this.reset();
   }
   protected updateYears(key: 'from' | 'to', value: number): void {
     this.reset();

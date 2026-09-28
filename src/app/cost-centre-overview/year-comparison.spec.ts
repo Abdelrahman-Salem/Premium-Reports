@@ -36,8 +36,6 @@ describe('YearComparison', () => {
     fixture.componentRef.setInput('filters', input);
     fixture.componentRef.setInput('language', 'en');
     fixture.detectChanges();
-    fixture.nativeElement.querySelector('.comparison-toggle').click();
-    fixture.detectChanges();
     return fixture;
   }
   function submit(fixture: ReturnType<typeof render>) {
