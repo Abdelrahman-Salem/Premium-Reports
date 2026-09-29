@@ -89,33 +89,15 @@ describe('CostCentreOverview', () => {
     expect(element.querySelectorAll('.centre-revenue-columns .column')).toHaveLength(2);
   });
 
-  it('groups smaller expense accounts without hiding negative adjustments', () => {
-    const fixture = render({
-      ...response,
-      arrCostCenterWiseDetailsPhpKey: [
-        ...response.arrCostCenterWiseDetailsPhpKey!,
-        ...[40, 30, 20, 10, 5].map((amount, index) => ({
-          bint_category: 4,
-          vchr_account_name: `Expense ${index}`,
-          dbl_base_currency_debit_credt73: amount,
-        })),
-      ],
-    });
+  it('shows expense by centre without the two account-level charts', () => {
+    const fixture = render();
     const element: HTMLElement = fixture.nativeElement;
-    const shares = [...element.querySelectorAll<HTMLElement>('.expense-share-row')];
-    expect(shares).toHaveLength(6);
-    expect(shares[5].textContent).toContain('Other accounts');
-    expect(shares[5].textContent).toContain('15');
-    expect(shares[1].textContent).toContain('-50');
-    expect(
-      shares.reduce(
-        (sum, row) =>
-          sum + parseFloat(row.querySelector<HTMLElement>('.expense-share-track i')!.style.width),
-        0,
-      ),
-    ).toBeCloseTo(100);
-    expect(element.querySelectorAll('.expense-account-bars .account-bar')).toHaveLength(7);
+    expect(element.querySelectorAll('#cost-expense .chart')).toHaveLength(1);
+    expect(element.querySelector('.expense-map')).toBeNull();
+    expect(element.querySelector('.account-expense')).toBeNull();
     expect(element.querySelectorAll('.expense-columns .column')).toHaveLength(2);
+    expect(element.querySelector('.expense-columns')?.textContent).toContain('300');
+    expect(element.querySelector('.expense-columns')?.textContent).toContain('-50');
   });
 
   it('groups charts into three sections and distinguishes losses from undefined margins', () => {
@@ -136,7 +118,7 @@ describe('CostCentreOverview', () => {
     );
     expect(element.querySelectorAll('#cost-revenue .chart')).toHaveLength(4);
     expect(element.querySelectorAll('#cost-profit .chart')).toHaveLength(3);
-    expect(element.querySelectorAll('#cost-expense .chart')).toHaveLength(3);
+    expect(element.querySelectorAll('#cost-expense .chart')).toHaveLength(1);
     const losses = [...element.querySelectorAll<HTMLElement>('.net-chart .signed-track i')];
     expect(losses).toHaveLength(2);
     for (const loss of losses) {
@@ -148,7 +130,6 @@ describe('CostCentreOverview', () => {
     expect(marginRows[0].querySelector('strong')?.textContent).toContain('-163.3%');
     expect(marginRows[1].querySelector('.signed-track')).toBeNull();
     expect(marginRows[1].textContent).toContain('Margin unavailable');
-    expect(element.querySelectorAll('.expense-account-bars .account-bar')).toHaveLength(3);
   });
 
   it('changes quarter boundaries without replacing the loaded report period', () => {
@@ -165,6 +146,26 @@ describe('CostCentreOverview', () => {
     );
   });
 
+  it('selects nonconsecutive quarters independently and clears them for manual dates', () => {
+    const fixture = render();
+    let next: CostCentrePeriodicalFilters | undefined;
+    fixture.componentInstance.filtersChange.subscribe((value) => (next = value));
+    const element: HTMLElement = fixture.nativeElement;
+    const inputs = element.querySelectorAll<HTMLInputElement>('.quarters input');
+    inputs[0].click();
+    fixture.componentRef.setInput('filters', next);
+    fixture.detectChanges();
+    inputs[2].click();
+    expect(next?.quarters).toEqual([1, 3]);
+    expect(next?.fromDate).toBe('2026-01-01');
+    expect(next?.toDate).toBe('2026-09-30');
+    fixture.componentRef.setInput('filters', next);
+    fixture.detectChanges();
+    expect([...inputs].filter((input) => input.checked)).toHaveLength(2);
+    fixture.componentInstance['update']('fromDate', '2026-02-01');
+    expect(next?.quarters).toEqual([]);
+  });
+
   it('emits a ready-to-search year range from the year strip', () => {
     const fixture = render();
     let selected: CostCentrePeriodicalFilters | undefined;
@@ -175,7 +176,12 @@ describe('CostCentreOverview', () => {
       ),
     ].find((button) => button.textContent?.trim() === '2025')!;
     year.click();
-    expect(selected).toEqual({ ...filters, fromDate: '2025-01-01', toDate: '2025-12-31' });
+    expect(selected).toEqual({
+      ...filters,
+      fromDate: '2025-01-01',
+      toDate: '2025-12-31',
+      quarters: [],
+    });
   });
 
   it('blocks invalid dates and renders zero data without invalid chart styles', () => {
@@ -186,7 +192,7 @@ describe('CostCentreOverview', () => {
     fixture.componentRef.setInput('filters', { ...filters, fromDate: '2026-10-01' });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.apply').disabled).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('.expense-share-row')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll('.expense-columns .column')).toHaveLength(2);
     expect(fixture.nativeElement.innerHTML).not.toMatch(/NaN|Infinity/);
   });
 });

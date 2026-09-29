@@ -7,14 +7,6 @@ import {
   CostCentrePeriodicalFilters,
 } from '../models/dsr-report.models';
 
-interface ExpenseShareRow {
-  id: string;
-  name: string;
-  amount: number;
-  share: number;
-  isOther: boolean;
-}
-
 interface RevenueCentreTile {
   id: string;
   name: string;
@@ -58,14 +50,18 @@ export class CostCentreOverview {
     const last = Math.max(new Date().getFullYear(), this.year());
     return Array.from({ length: 6 }, (_, index) => last - 5 + index);
   });
-  protected readonly quarter = computed(() => {
+  protected readonly selectedQuarters = computed(() => {
+    if (this.filters().quarters !== undefined) return this.filters().quarters ?? [];
     for (let q = 1; q <= 4; q++) {
       const range = this.quarterRange(this.year(), q);
       if (range.fromDate === this.filters().fromDate && range.toDate === this.filters().toDate)
-        return q;
+        return [q];
     }
-    return 0;
+    return [];
   });
+  protected readonly selectedCenters = computed(() =>
+    this.filters().costCenterIds ?? (this.filters().costCenterId ? [this.filters().costCenterId] : []),
+  );
   protected readonly invalidDates = computed(
     () =>
       !this.filters().fromDate ||
@@ -140,10 +136,6 @@ export class CostCentreOverview {
     partition(tiles, 0, 0, 100, 100);
     return result;
   });
-  protected readonly expenseAccounts = computed(() => this.data()?.expenseAccounts ?? []);
-  protected readonly maxExpense = computed(() =>
-    Math.max(1, ...this.expenseAccounts().map((account) => Math.abs(account.total))),
-  );
   protected readonly maxMargin = computed(() =>
     Math.max(
       1,
@@ -162,34 +154,6 @@ export class CostCentreOverview {
       ]),
     ),
   );
-  protected readonly expenseShareRows = computed<ExpenseShareRow[]>(() => {
-    const accounts = this.expenseAccounts().filter((account) => account.total !== 0);
-    const magnitude = accounts.reduce((total, account) => total + Math.abs(account.total), 0);
-    if (!magnitude) return [];
-    const top = accounts.slice(0, 5).map((account) => ({
-      id: account.id,
-      name: account.name,
-      amount: account.total,
-      share: Math.abs(account.total) / magnitude,
-      isOther: false,
-    }));
-    const remaining = accounts
-      .slice(5)
-      .reduce((total, account) => total + Math.abs(account.total), 0);
-    if (remaining)
-      top.push({
-        id: 'other-expenses',
-        name: '',
-        amount: remaining,
-        share: remaining / magnitude,
-        isOther: true,
-      });
-    return top;
-  });
-  protected readonly hasExpenseAdjustments = computed(() =>
-    this.expenseAccounts().some((account) => account.total < 0),
-  );
-
   protected text(ar: string, en: string): string {
     return this.language() === 'ar' ? ar : en;
   }
@@ -200,13 +164,21 @@ export class CostCentreOverview {
     return Math.min(100, (Math.abs(value) / maximum) * 100);
   }
   protected update(key: keyof CostCentrePeriodicalFilters, value: string): void {
-    this.filtersChange.emit({ ...this.filters(), [key]: value });
+    this.filtersChange.emit({ ...this.filters(), [key]: value, quarters: [] });
   }
   protected selectCenter(id: string): void {
+    const selectedIds = this.selectedCenters();
+    const costCenterIds = id
+      ? selectedIds.includes(id)
+        ? selectedIds.filter((centerId) => centerId !== id)
+        : this.options().filter((option) => selectedIds.includes(option.id) || option.id === id).map((option) => option.id)
+      : [];
+    const names = this.options().filter((option) => costCenterIds.includes(option.id)).map((option) => option.label);
     this.filtersChange.emit({
       ...this.filters(),
-      costCenterId: id,
-      costCenterName: this.options().find((option) => option.id === id)?.label ?? 'ALL',
+      costCenterId: costCenterIds.length === 1 ? costCenterIds[0] : '',
+      costCenterIds,
+      costCenterName: names.length ? names.join(' + ') : 'ALL',
     });
   }
   protected selectYear(year: number): void {
@@ -214,10 +186,24 @@ export class CostCentreOverview {
       ...this.filters(),
       fromDate: `${year}-01-01`,
       toDate: `${year}-12-31`,
+      quarters: [],
     });
   }
   protected selectQuarter(quarter: number): void {
-    this.filtersChange.emit({ ...this.filters(), ...this.quarterRange(this.year(), quarter) });
+    const selected = this.selectedQuarters();
+    const quarters = selected.includes(quarter)
+      ? selected.filter((item) => item !== quarter)
+      : [...selected, quarter].sort((a, b) => a - b);
+    const from = quarters.length ? this.quarterRange(this.year(), quarters[0]) : null;
+    const to = quarters.length
+      ? this.quarterRange(this.year(), quarters[quarters.length - 1])
+      : null;
+    this.filtersChange.emit({
+      ...this.filters(),
+      fromDate: from?.fromDate ?? `${this.year()}-01-01`,
+      toDate: to?.toDate ?? `${this.year()}-12-31`,
+      quarters,
+    });
   }
   protected submit(): void {
     if (!this.invalidDates() && !this.loading()) this.search.emit();

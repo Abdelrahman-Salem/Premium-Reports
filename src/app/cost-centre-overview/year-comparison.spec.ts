@@ -118,4 +118,31 @@ describe('YearComparison', () => {
     expect(requests.every((request) => request.cancelled)).toBe(true);
     expect(fixture.nativeElement.querySelectorAll('.year-group')).toHaveLength(0);
   });
+
+  it('keeps multiple centres selected in year comparison and ignores quarter limits in full-year mode', () => {
+    const fixture = render({
+      ...filters,
+      costCenterId: '',
+      costCenterIds: ['73', '75'],
+      costCenterName: '808 + 810',
+      quarters: [1, 3],
+      toDate: '2026-09-30',
+    });
+    const periodRequests = submit(fixture);
+    expect(periodRequests).toHaveLength(4);
+    expect(periodRequests.map((request) => payload(request).datFromAjxKey)).toEqual([
+      '01/01/2025', '01/07/2025', '01/01/2026', '01/07/2026',
+    ]);
+    expect(periodRequests.every((request) => payload(request).intCostCenterAjxKey === '')).toBe(true);
+    periodRequests.forEach((request) => request.flush(response(1, 0)));
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('input[value="full"]').click();
+    fixture.detectChanges();
+    const fullRequests = submit(fixture);
+    expect(fullRequests).toHaveLength(2);
+    expect(fullRequests.map((request) => payload(request).datToAjxKey)).toEqual([
+      '31/12/2025', '31/12/2026',
+    ]);
+    fullRequests.forEach((request) => request.flush(response(1, 0)));
+  });
 });

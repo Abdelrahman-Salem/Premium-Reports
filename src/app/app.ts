@@ -55,7 +55,8 @@ const TRANSLATIONS = {
     profitVsRevenue: 'Profit vs revenue',
     monthlyServiceTable: 'Monthly service table',
     title: 'DSR Details Dashboard',
-    subtitle: 'Daily sales report summary for sale, refund, net, profit, tax, and payment movement.',
+    subtitle:
+      'Daily sales report summary for sale, refund, net, profit, tax, and payment movement.',
     liveApi: 'Live API',
     searching: 'Searching',
     search: 'Search',
@@ -67,9 +68,11 @@ const TRANSLATIONS = {
     sessionHint: 'Use this panel once after login or whenever the report stops loading.',
     sessionReady: 'TRAACS session is connected.',
     sessionMissing: 'Open TRAACS through this dashboard and sign in once.',
-    proxyMissing: 'TRAACS connection is not available right now. Try again after the deployment finishes.',
+    proxyMissing:
+      'TRAACS connection is not available right now. Try again after the deployment finishes.',
     signInFirst: 'Sign in to TRAACS first, then press Check session and search again.',
-    noDataOrSession: 'No report data was returned. If this period should have movement, sign in to TRAACS first and search again.',
+    noDataOrSession:
+      'No report data was returned. If this period should have movement, sign in to TRAACS first and search again.',
     from: 'From',
     to: 'To',
     costCentre: 'Cost Centre',
@@ -154,7 +157,8 @@ const TRANSLATIONS = {
     sessionMissing: 'افتح TRAACS من داخل الداشبورد وسجل الدخول مرة واحدة.',
     proxyMissing: 'اتصال TRAACS غير متاح حاليًا. جرّب مرة أخرى بعد اكتمال النشر.',
     signInFirst: 'سجل الدخول إلى TRAACS أولًا، ثم اضغط فحص الجلسة وابحث مرة أخرى.',
-    noDataOrSession: 'لم ترجع بيانات للتقرير. لو الفترة دي فيها حركة، سجل الدخول إلى TRAACS أولًا ثم ابحث مرة أخرى.',
+    noDataOrSession:
+      'لم ترجع بيانات للتقرير. لو الفترة دي فيها حركة، سجل الدخول إلى TRAACS أولًا ثم ابحث مرة أخرى.',
     from: 'من',
     to: 'إلى',
     costCentre: 'مركز التكلفة',
@@ -166,10 +170,12 @@ const TRANSLATIONS = {
     service: 'الخدمة',
     sales: 'مبيعات',
     refunds: 'مرتجعات',
-    loadError: 'تعذر تحميل تقرير DSR من API المباشر. افتح تسجيل دخول TRAACS من الداشبورد، سجل الدخول، ثم ابحث مرة أخرى.',
+    loadError:
+      'تعذر تحميل تقرير DSR من API المباشر. افتح تسجيل دخول TRAACS من الداشبورد، سجل الدخول، ثم ابحث مرة أخرى.',
     noCostCentreError: 'اختر مركز تكلفة واحد على الأقل قبل البحث.',
     noReportTitle: 'اختر الفلاتر واضغط بحث',
-    noReportSubtitle: 'ستظل اللوحة فارغة حتى يرجع API المباشر بيانات TRAACS للفترة ومراكز التكلفة المحددة.',
+    noReportSubtitle:
+      'ستظل اللوحة فارغة حتى يرجع API المباشر بيانات TRAACS للفترة ومراكز التكلفة المحددة.',
     loadingReport: 'تحميل التقرير',
     keyMetrics: 'المؤشرات الرئيسية',
     volumeComparison: 'مقارنة الحركة',
@@ -198,14 +204,19 @@ const TRANSLATIONS = {
     payableSummary: 'ملخص المستحقات',
     profitBreakdown: 'تفصيل الأرباح',
     normalizedResponse: 'الاستجابة المنظمة',
-    costCentrePeriodical: '\u062A\u0642\u0631\u064A\u0631 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
+    costCentrePeriodical:
+      '\u062A\u0642\u0631\u064A\u0631 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
     netProfit: '\u0635\u0627\u0641\u064A \u0627\u0644\u0631\u0628\u062D',
     totalExpense: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
-    activeCostCentres: '\u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0646\u0634\u0637\u0629',
+    activeCostCentres:
+      '\u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0646\u0634\u0637\u0629',
     accounts: '\u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A',
-    costCentrePerformance: '\u0623\u062F\u0627\u0621 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
-    revenueVsExpense: '\u0627\u0644\u0625\u064A\u0631\u0627\u062F \u0645\u0642\u0627\u0628\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
-    accountBreakdown: '\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A',
+    costCentrePerformance:
+      '\u0623\u062F\u0627\u0621 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
+    revenueVsExpense:
+      '\u0627\u0644\u0625\u064A\u0631\u0627\u062F \u0645\u0642\u0627\u0628\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
+    accountBreakdown:
+      '\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A',
     language: 'English',
   },
 } as const;
@@ -220,7 +231,16 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 })
 export class App {
   private readonly dsrReportService = inject(DsrReportService);
-  private readonly chartColors = ['#2e6f73', '#c77b32', '#6c5b9e', '#4c7fae', '#9b9483', '#b14b4e', '#4f9d6e', '#1e8f6f'];
+  private readonly chartColors = [
+    '#2e6f73',
+    '#c77b32',
+    '#6c5b9e',
+    '#4c7fae',
+    '#9b9483',
+    '#b14b4e',
+    '#4f9d6e',
+    '#1e8f6f',
+  ];
 
   protected readonly reportMode = signal<ReportMode>('monthly');
   protected readonly costCentreView = signal<'report' | 'comparison'>('report');
@@ -277,16 +297,32 @@ export class App {
     const report = this.report();
     return report ? this.dsrReportService.toDashboardView(report.data, this.language()) : null;
   });
-  protected readonly monthlyDashboard = computed<MonthlySaleDashboardView | null>(() => this.monthlyReport());
-  protected readonly costCentreDashboard = computed<CostCentrePeriodicalDashboardView | null>(() => this.costCentreReport());
+  protected readonly monthlyDashboard = computed<MonthlySaleDashboardView | null>(() =>
+    this.monthlyReport(),
+  );
+  protected readonly costCentreDashboard = computed<CostCentrePeriodicalDashboardView | null>(() =>
+    this.costCentreReport(),
+  );
 
-  protected readonly metricCards = computed<MetricCard[]>(() => this.dashboard()?.metricCards ?? []);
-  protected readonly comparisonRows = computed<DsrMetricRow[]>(() => this.dashboard()?.comparisonRows ?? []);
-  protected readonly paymentRows = computed<DsrMetricRow[]>(() => this.dashboard()?.paymentRows ?? []);
-  protected readonly profitRows = computed<DsrMetricRow[]>(() => this.dashboard()?.profitRows ?? []);
-  protected readonly payableRows = computed<DsrMetricRow[]>(() => this.dashboard()?.payableRows ?? []);
+  protected readonly metricCards = computed<MetricCard[]>(
+    () => this.dashboard()?.metricCards ?? [],
+  );
+  protected readonly comparisonRows = computed<DsrMetricRow[]>(
+    () => this.dashboard()?.comparisonRows ?? [],
+  );
+  protected readonly paymentRows = computed<DsrMetricRow[]>(
+    () => this.dashboard()?.paymentRows ?? [],
+  );
+  protected readonly profitRows = computed<DsrMetricRow[]>(
+    () => this.dashboard()?.profitRows ?? [],
+  );
+  protected readonly payableRows = computed<DsrMetricRow[]>(
+    () => this.dashboard()?.payableRows ?? [],
+  );
   protected readonly totalVolume = computed(() => this.dashboard()?.totalVolume ?? 0);
-  protected readonly displayCurrency = computed(() => (this.filters().currency === 'Base' ? 'SAR' : this.filters().currency));
+  protected readonly displayCurrency = computed(() =>
+    this.filters().currency === 'Base' ? 'SAR' : this.filters().currency,
+  );
   protected readonly monthlyDisplayCurrency = computed(() =>
     this.monthlyFilters().currency === 'Base' ? 'SAR' : this.monthlyFilters().currency,
   );
@@ -295,13 +331,21 @@ export class App {
   protected readonly typeOfSaleMax = computed(() =>
     Math.max(...(this.dashboard()?.typeOfSaleRows.map((row) => Math.abs(row.amount)) ?? [0]), 1),
   );
-  protected readonly periodLabel = computed(() => `${this.filters().fromDate} - ${this.filters().toDate}`);
+  protected readonly periodLabel = computed(
+    () => `${this.filters().fromDate} - ${this.filters().toDate}`,
+  );
   protected readonly monthlyPeriodLabel = computed(
-    () => `${this.monthlyFilters().fromMonth}/${this.monthlyFilters().fromYear} - ${this.monthlyFilters().toMonth}/${this.monthlyFilters().toYear}`,
+    () =>
+      `${this.monthlyFilters().fromMonth}/${this.monthlyFilters().fromYear} - ${this.monthlyFilters().toMonth}/${this.monthlyFilters().toYear}`,
   );
-  protected readonly costCentrePeriodLabel = computed(
-    () => `${this.costCentreFilters().fromDate} - ${this.costCentreFilters().toDate}`,
-  );
+  protected readonly costCentrePeriodLabel = computed(() => {
+    const filters = this.costCentreFilters();
+    if (filters.quarters?.length) {
+      const quarter = this.language() === 'ar' ? 'الربع' : 'Quarter';
+      return `${filters.quarters.map((item) => `${quarter} ${item}`).join(' + ')} (${filters.fromDate.slice(0, 4)})`;
+    }
+    return `${filters.fromDate} - ${filters.toDate}`;
+  });
   protected readonly visiblePeriodLabel = computed(() => {
     if (this.reportMode() === 'monthly') {
       return this.monthlyPeriodLabel();
@@ -345,7 +389,10 @@ export class App {
     }
 
     if (selected.length === 1) {
-      return this.costCentreOptions.find((option) => option.id === selected[0])?.label ?? this.t('costCentre');
+      return (
+        this.costCentreOptions.find((option) => option.id === selected[0])?.label ??
+        this.t('costCentre')
+      );
     }
 
     return `${selected.length} ${this.t('selected')}`;
@@ -437,7 +484,9 @@ export class App {
     });
   }
 
-  protected refreshCostCentreReport(filters: CostCentrePeriodicalFilters = this.costCentreFilters()): void {
+  protected refreshCostCentreReport(
+    filters: CostCentrePeriodicalFilters = this.costCentreFilters(),
+  ): void {
     if (!this.sessionReady()) {
       this.hasSearched.set(true);
       this.costCentreReport.set(null);
@@ -489,7 +538,9 @@ export class App {
       next: (status) => {
         this.sessionChecking.set(false);
         this.sessionReady.set(status.hasCookie);
-        this.sessionMessage.set(status.hasCookie ? this.t('sessionReady') : this.t('sessionMissing'));
+        this.sessionMessage.set(
+          status.hasCookie ? this.t('sessionReady') : this.t('sessionMissing'),
+        );
       },
       error: () => {
         this.sessionChecking.set(false);
@@ -507,7 +558,10 @@ export class App {
     this.filters.update((current) => ({ ...current, [key]: value }));
   }
 
-  protected updateMonthlyFilter<K extends keyof MonthlySaleFilters>(key: K, value: MonthlySaleFilters[K]): void {
+  protected updateMonthlyFilter<K extends keyof MonthlySaleFilters>(
+    key: K,
+    value: MonthlySaleFilters[K],
+  ): void {
     this.monthlyFilters.update((current) => ({ ...current, [key]: value }));
   }
 
@@ -551,7 +605,10 @@ export class App {
   }
 
   protected toggleAllCostCentres(checked: boolean): void {
-    this.updateFilter('costCenters', checked ? this.costCentreOptions.map((option) => option.id) : []);
+    this.updateFilter(
+      'costCenters',
+      checked ? this.costCentreOptions.map((option) => option.id) : [],
+    );
   }
 
   protected toggleCostCentre(id: string, checked: boolean): void {
@@ -637,7 +694,7 @@ export class App {
   }
 
   protected serviceBubbleLeft(service: MonthlySaleServiceRow): number {
-    return 12 + Math.max(0, Math.min(service.share, 0.42)) / 0.42 * 76;
+    return 12 + (Math.max(0, Math.min(service.share, 0.42)) / 0.42) * 76;
   }
 
   protected serviceBubbleTop(service: MonthlySaleServiceRow): number {
@@ -730,7 +787,7 @@ export class App {
   private hasReportData(result: DsrReportResult): boolean {
     return Boolean(
       result.data.arrDsrDetailsSummaryDataPhpKey?.arrDsrDetailsSummaryDesPhpKey ||
-        result.data.arrDsrTicketsPhpKey?.length,
+      result.data.arrDsrTicketsPhpKey?.length,
     );
   }
 }

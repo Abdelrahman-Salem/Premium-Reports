@@ -126,7 +126,7 @@ export class YearComparison {
         mergeMap((year) => {
           const fromDate = full ? `${year}-01-01` : this.dateInYear(base.fromDate, year);
           const toDate = full ? `${year}-12-31` : this.dateInYear(base.toDate, year);
-          const filters = { ...base, fromDate, toDate };
+          const filters = { ...base, fromDate, toDate, quarters: full ? [] : base.quarters };
           const initial: YearResult = {
             year,
             fromDate,
