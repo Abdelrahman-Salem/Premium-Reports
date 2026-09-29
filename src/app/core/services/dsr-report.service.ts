@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, forkJoin, map } from 'rxjs';
 
 import {
   CostCentreAccountRow,
@@ -107,13 +107,20 @@ export class DsrReportService {
   private readonly costCentrePeriodicalEndpoint = `${this.apiOrigin}/api/reports/finance/cost-centre-periodical`;
 
   updateSessionCookie(cookie: string): Observable<void> {
-    return this.http.post<void>(`${this.apiOrigin}/api/session/cookie`, { cookie }, { withCredentials: true });
+    return this.http.post<void>(
+      `${this.apiOrigin}/api/session/cookie`,
+      { cookie },
+      { withCredentials: true },
+    );
   }
 
   getSessionStatus(): Observable<{ hasCookie: boolean; loginUrl: string }> {
-    return this.http.get<{ hasCookie: boolean; loginUrl: string }>(`${this.apiOrigin}/api/session/status`, {
-      withCredentials: true,
-    });
+    return this.http.get<{ hasCookie: boolean; loginUrl: string }>(
+      `${this.apiOrigin}/api/session/status`,
+      {
+        withCredentials: true,
+      },
+    );
   }
 
   getTraacsLoginUrl(): string {
@@ -131,13 +138,19 @@ export class DsrReportService {
       'X-Requested-With': 'XMLHttpRequest',
     });
 
-    return this.http.post(this.endpoint, body.toString(), { headers, responseType: 'text', withCredentials: true }).pipe(
-      map((response) => ({
-        data: this.parseResponse(response),
-        source: 'api' as const,
-        receivedAt: new Date(),
-      })),
-    );
+    return this.http
+      .post(this.endpoint, body.toString(), {
+        headers,
+        responseType: 'text',
+        withCredentials: true,
+      })
+      .pipe(
+        map((response) => ({
+          data: this.parseResponse(response),
+          source: 'api' as const,
+          receivedAt: new Date(),
+        })),
+      );
   }
 
   getMonthlySaleReport(filters: MonthlySaleFilters): Observable<MonthlySaleReportResponse> {
@@ -153,13 +166,90 @@ export class DsrReportService {
     });
 
     return this.http
-      .post(this.monthlySaleEndpoint, body.toString(), { headers, responseType: 'text', withCredentials: true })
+      .post(this.monthlySaleEndpoint, body.toString(), {
+        headers,
+        responseType: 'text',
+        withCredentials: true,
+      })
       .pipe(map((response) => this.parseMonthlySaleResponse(response)));
   }
 
-  getCostCentrePeriodicalReport(filters: CostCentrePeriodicalFilters): Observable<CostCentrePeriodicalResponse> {
+  getCostCentrePeriodicalReport(
+    filters: CostCentrePeriodicalFilters,
+  ): Observable<CostCentrePeriodicalResponse> {
+    const selectedIds = filters.costCenterIds ?? (filters.costCenterId ? [filters.costCenterId] : []);
+    const quarters = [...new Set(filters.quarters ?? [])]
+      .filter((quarter) => Number.isInteger(quarter) && quarter >= 1 && quarter <= 4)
+      .sort();
+    if (!quarters.length) {
+      return this.requestCostCentrePeriodicalReport(filters).pipe(
+        map((response) => this.filterCostCentrePeriodicalResponse(response, selectedIds)),
+      );
+    }
+
+    const groups: number[][] = [];
+    for (const quarter of quarters) {
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup?.[lastGroup.length - 1] === quarter - 1) lastGroup.push(quarter);
+      else groups.push([quarter]);
+    }
+    const year = Number(filters.fromDate.slice(0, 4));
+    const requests = groups.map((group) => {
+      const startMonth = String((group[0] - 1) * 3 + 1).padStart(2, '0');
+      const endMonthNumber = group[group.length - 1] * 3;
+      const endMonth = String(endMonthNumber).padStart(2, '0');
+      const endDay = new Date(year, endMonthNumber, 0).getDate();
+      return this.requestCostCentrePeriodicalReport({
+        ...filters,
+        fromDate: `${year}-${startMonth}-01`,
+        toDate: `${year}-${endMonth}-${endDay}`,
+      });
+    });
+    const report = requests.length === 1
+      ? requests[0]
+      : forkJoin(requests).pipe(
+          map((responses) => this.mergeCostCentrePeriodicalResponses(responses)),
+        );
+    return report.pipe(map((response) => this.filterCostCentrePeriodicalResponse(response, selectedIds)));
+  }
+
+  private filterCostCentrePeriodicalResponse(
+    response: CostCentrePeriodicalResponse,
+    selectedIds: string[],
+  ): CostCentrePeriodicalResponse {
+    if (!selectedIds.length) return response;
+    const selected = new Set(selectedIds);
+    const availableCenters = new Map((response.arrCostCentersPhpKey ?? [])
+      .filter((center) => selected.has(String(center.pk_bint_cost_center_id ?? '')))
+      .map((center) => [String(center.pk_bint_cost_center_id), center]));
+    const centers = selectedIds.map((id) => availableCenters.get(id) ?? {
+      pk_bint_cost_center_id: id,
+      vchr_cost_center_name: `Cost centre ${id}`,
+    });
+    const rows = (response.arrCostCenterWiseDetailsPhpKey ?? [])
+      .map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => {
+        const centerId = /^dbl_base_currency_debit_credt(\d+)$/.exec(key)?.[1];
+        return !centerId || selected.has(centerId);
+      })) as CostCentrePeriodicalRawRow);
+    const activeRows = rows.filter((row) => selectedIds.some((id) => this.toNumber(row[`dbl_base_currency_debit_credt${id}`]) !== 0));
+    const visibleRows = activeRows.length
+      ? activeRows
+      : rows.filter((row) => selectedIds.some((id) => `dbl_base_currency_debit_credt${id}` in row));
+    return {
+      ...response,
+      arrCostCentersPhpKey: centers,
+      arrCostCenterWiseDetailsPhpKey: visibleRows,
+    };
+  }
+
+  private requestCostCentrePeriodicalReport(
+    filters: CostCentrePeriodicalFilters,
+  ): Observable<CostCentrePeriodicalResponse> {
     const body = new URLSearchParams();
-    body.set('arrSearchValueAjxKey', JSON.stringify(this.buildCostCentrePeriodicalSearchPayload(filters)));
+    body.set(
+      'arrSearchValueAjxKey',
+      JSON.stringify(this.buildCostCentrePeriodicalSearchPayload(filters)),
+    );
 
     const headers = new HttpHeaders({
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -168,8 +258,48 @@ export class DsrReportService {
     });
 
     return this.http
-      .post(this.costCentrePeriodicalEndpoint, body.toString(), { headers, responseType: 'text', withCredentials: true })
+      .post(this.costCentrePeriodicalEndpoint, body.toString(), {
+        headers,
+        responseType: 'text',
+        withCredentials: true,
+      })
       .pipe(map((response) => this.parseCostCentrePeriodicalResponse(response)));
+  }
+
+  private mergeCostCentrePeriodicalResponses(
+    responses: CostCentrePeriodicalResponse[],
+  ): CostCentrePeriodicalResponse {
+    const centers = new Map<
+      string,
+      NonNullable<CostCentrePeriodicalResponse['arrCostCentersPhpKey']>[number]
+    >();
+    const rows = new Map<string, CostCentrePeriodicalRawRow>();
+    for (const response of responses) {
+      for (const center of response.arrCostCentersPhpKey ?? []) {
+        centers.set(String(center.pk_bint_cost_center_id ?? center.vchr_cost_center_name), center);
+      }
+      for (const row of response.arrCostCenterWiseDetailsPhpKey ?? []) {
+        const key = JSON.stringify([
+          row.bint_category,
+          row.fk_bint_sub_ledger_id ?? row.vchr_account_code ?? row.vchr_account_name,
+        ]);
+        const existing = rows.get(key);
+        if (!existing) {
+          rows.set(key, { ...row });
+          continue;
+        }
+        for (const [metric, value] of Object.entries(row)) {
+          if (/^dbl_base_currency_debit_credt\d+$/.test(metric)) {
+            existing[metric] = this.toNumber(existing[metric]) + this.toNumber(value);
+          }
+        }
+      }
+    }
+    return {
+      ...responses[0],
+      arrCostCentersPhpKey: [...centers.values()],
+      arrCostCenterWiseDetailsPhpKey: [...rows.values()],
+    };
   }
 
   toDashboardView(response: DsrReportResponse, language: DashboardLanguage): DsrDashboardView {
@@ -182,12 +312,18 @@ export class DsrReportService {
     const profit = summary.arrDsrDetailsSummaryProfitPhpKey ?? {};
     const expense = summary.arrDsrDetailsSummaryExpensePhpKey ?? {};
 
-    const saleTotal = this.valueOf(description, 'Sale', 'dblTotal') || Math.max(detailAnalytics?.totalSelling ?? 0, 0);
+    const saleTotal =
+      this.valueOf(description, 'Sale', 'dblTotal') ||
+      Math.max(detailAnalytics?.totalSelling ?? 0, 0);
     const refundTotal = this.valueOf(description, 'Refund', 'dblTotal');
-    const netTotal = this.valueOf(description, 'Net', 'dblTotal') || detailAnalytics?.totalSelling || 0;
-    const netProfit = this.valueOf(description, 'Net', 'dblProfit') || detailAnalytics?.totalProfit || 0;
-    const billingTax = this.valueOf(description, 'Net', 'dblBillingTax') || detailAnalytics?.totalTax || 0;
-    const saleCount = this.valueOf(payment, 'Sale', 'intCreditCount') || detailAnalytics?.totalDocumentCount || 0;
+    const netTotal =
+      this.valueOf(description, 'Net', 'dblTotal') || detailAnalytics?.totalSelling || 0;
+    const netProfit =
+      this.valueOf(description, 'Net', 'dblProfit') || detailAnalytics?.totalProfit || 0;
+    const billingTax =
+      this.valueOf(description, 'Net', 'dblBillingTax') || detailAnalytics?.totalTax || 0;
+    const saleCount =
+      this.valueOf(payment, 'Sale', 'intCreditCount') || detailAnalytics?.totalDocumentCount || 0;
     const refundCount = Math.abs(this.valueOf(payment, 'Refund', 'intCreditCount'));
     const profitMargin = netTotal === 0 ? 0 : netProfit / netTotal;
 
@@ -195,14 +331,20 @@ export class DsrReportService {
       {
         label: language === 'ar' ? 'صافي الربح' : 'Net profit',
         value: netProfit,
-        helper: language === 'ar' ? `هامش ${(profitMargin * 100).toFixed(1)}%` : `${(profitMargin * 100).toFixed(1)}% margin`,
+        helper:
+          language === 'ar'
+            ? `هامش ${(profitMargin * 100).toFixed(1)}%`
+            : `${(profitMargin * 100).toFixed(1)}% margin`,
         tone: 'net',
         icon: 'net',
       },
       {
         label: language === 'ar' ? 'حجم المبيعات' : 'Sales volume',
         value: saleTotal,
-        helper: language === 'ar' ? `${saleCount.toLocaleString()} مستند` : `${saleCount.toLocaleString()} documents`,
+        helper:
+          language === 'ar'
+            ? `${saleCount.toLocaleString()} مستند`
+            : `${saleCount.toLocaleString()} documents`,
         tone: 'sale',
         icon: 'sale',
       },
@@ -253,7 +395,10 @@ export class DsrReportService {
       },
     ];
 
-    const expenseRows = this.buildSummaryRows(expense, language, ['dblExpenseTax', 'dblBankCharge']);
+    const expenseRows = this.buildSummaryRows(expense, language, [
+      'dblExpenseTax',
+      'dblBankCharge',
+    ]);
 
     return {
       metricCards,
@@ -286,7 +431,12 @@ export class DsrReportService {
       payableSummaryRows: this.buildPayableRows(payable, language),
       typeOfSaleRows: this.buildTypeOfSaleRows(typeOfSale, language),
       hasExpenses: expenseRows.some((row) => row.sale !== 0 || row.refund !== 0 || row.net !== 0),
-      totalVolume: Math.max(Math.abs(saleTotal), Math.abs(refundTotal), Math.abs(netTotal), Math.abs(netProfit)),
+      totalVolume: Math.max(
+        Math.abs(saleTotal),
+        Math.abs(refundTotal),
+        Math.abs(netTotal),
+        Math.abs(netProfit),
+      ),
       saleCount,
       refundCount,
       profitMargin,
@@ -313,13 +463,30 @@ export class DsrReportService {
       this.toNumber(response.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey) ||
       rows.length;
     const documents = rows.slice(0, 80).map((row) => this.toDsrDocumentRow(row));
-    const services = this.groupDsrRows(rows, (row) => row.strServiceName || row.strSectorPhpKey || 'Unclassified service');
-    const customers = this.groupDsrRows(rows, (row) => row.strCustomerNamePhpKey || 'Unclassified customer').slice(0, 12);
-    const costCenters = this.groupDsrRows(rows, (row) => row.strCostCenterNamePhpKey || 'Unclassified cost center');
-    const agents = this.groupDsrRows(rows, (row) => row.strBookingStaffName || row.strAgentNamePhpKey || 'Unassigned');
+    const services = this.groupDsrRows(
+      rows,
+      (row) => row.strServiceName || row.strSectorPhpKey || 'Unclassified service',
+    );
+    const customers = this.groupDsrRows(
+      rows,
+      (row) => row.strCustomerNamePhpKey || 'Unclassified customer',
+    ).slice(0, 12);
+    const costCenters = this.groupDsrRows(
+      rows,
+      (row) => row.strCostCenterNamePhpKey || 'Unclassified cost center',
+    );
+    const agents = this.groupDsrRows(
+      rows,
+      (row) => row.strBookingStaffName || row.strAgentNamePhpKey || 'Unassigned',
+    );
     const taxRegions = this.groupDsrRows(rows, (row) => row.strTaxRegionPhpKey || 'No tax region');
-    const saleRefundRows = this.groupDsrRows(rows, (row) => row.strSalesRefundsTypePhpKey || 'Unknown');
-    const months = this.groupDsrRows(rows, (row) => this.monthLabelFromDsrDate(row.datDatePhpKey || row.datIssueDatePhpKey || ''));
+    const saleRefundRows = this.groupDsrRows(
+      rows,
+      (row) => row.strSalesRefundsTypePhpKey || 'Unknown',
+    );
+    const months = this.groupDsrRows(rows, (row) =>
+      this.monthLabelFromDsrDate(row.datDatePhpKey || row.datIssueDatePhpKey || ''),
+    );
 
     return {
       hasDetails: true,
@@ -347,7 +514,10 @@ export class DsrReportService {
     };
   }
 
-  private groupDsrRows(rows: DsrTicketRawRow[], labelOf: (row: DsrTicketRawRow) => string): DsrDetailAggregateRow[] {
+  private groupDsrRows(
+    rows: DsrTicketRawRow[],
+    labelOf: (row: DsrTicketRawRow) => string,
+  ): DsrDetailAggregateRow[] {
     const groups = new Map<string, DsrDetailAggregateRow>();
 
     for (const row of rows) {
@@ -422,7 +592,9 @@ export class DsrReportService {
   }
 
   private isDsrRefund(row: DsrTicketRawRow): boolean {
-    return /refund/i.test(String(row.strSalesRefundsTypePhpKey || row.strSaleRefundTypePhpKey || ''));
+    return /refund/i.test(
+      String(row.strSalesRefundsTypePhpKey || row.strSaleRefundTypePhpKey || ''),
+    );
   }
 
   private monthLabelFromDsrDate(value: string): string {
@@ -443,21 +615,39 @@ export class DsrReportService {
       fromDate: period.datFromDate || '',
       toDate: period.datToDate || '',
     }));
-    const monthCount = Math.max(labels.length, this.detectMonthCount(response.arrSupplierMonthlySaleReportPhpKey ?? []));
-    const monthLabels = Array.from({ length: monthCount }, (_, index) => labels[index] ?? {
-      label: `Month ${index + 1}`,
-      fromDate: '',
-      toDate: '',
-    });
-    const services = this.buildMonthlyServiceRows(response.arrSupplierMonthlySaleReportPhpKey ?? [], monthLabels);
+    const monthCount = Math.max(
+      labels.length,
+      this.detectMonthCount(response.arrSupplierMonthlySaleReportPhpKey ?? []),
+    );
+    const monthLabels = Array.from(
+      { length: monthCount },
+      (_, index) =>
+        labels[index] ?? {
+          label: `Month ${index + 1}`,
+          fromDate: '',
+          toDate: '',
+        },
+    );
+    const services = this.buildMonthlyServiceRows(
+      response.arrSupplierMonthlySaleReportPhpKey ?? [],
+      monthLabels,
+    );
     const months = monthLabels.map((period, index) => {
       const amount = services.reduce((total, service) => total + service.months[index].amount, 0);
       const profit = services.reduce((total, service) => total + service.months[index].profit, 0);
       const count = services.reduce((total, service) => total + service.months[index].count, 0);
-      const saleCount = services.reduce((total, service) => total + service.months[index].saleCount, 0);
-      const refundCount = services.reduce((total, service) => total + service.months[index].refundCount, 0);
+      const saleCount = services.reduce(
+        (total, service) => total + service.months[index].saleCount,
+        0,
+      );
+      const refundCount = services.reduce(
+        (total, service) => total + service.months[index].refundCount,
+        0,
+      );
       const previousAmount =
-        index === 0 ? null : services.reduce((total, service) => total + service.months[index - 1].amount, 0);
+        index === 0
+          ? null
+          : services.reduce((total, service) => total + service.months[index - 1].amount, 0);
 
       return {
         ...period,
@@ -467,7 +657,10 @@ export class DsrReportService {
         saleCount,
         refundCount,
         margin: amount === 0 ? 0 : profit / amount,
-        change: previousAmount === null || previousAmount === 0 ? null : (amount - previousAmount) / Math.abs(previousAmount),
+        change:
+          previousAmount === null || previousAmount === 0
+            ? null
+            : (amount - previousAmount) / Math.abs(previousAmount),
       };
     });
     const totalAmount = months.reduce((total, month) => total + month.amount, 0);
@@ -510,7 +703,10 @@ export class DsrReportService {
       maxServiceProfit: Math.max(...services.map((service) => Math.abs(service.profit)), 1),
       maxServiceCount: Math.max(...services.map((service) => Math.abs(service.count)), 1),
       maxServiceMargin: Math.max(...services.map((service) => Math.abs(service.margin)), 1),
-      maxHeatAmount: Math.max(...services.flatMap((service) => service.months.map((month) => Math.abs(month.amount))), 1),
+      maxHeatAmount: Math.max(
+        ...services.flatMap((service) => service.months.map((month) => Math.abs(month.amount))),
+        1,
+      ),
       amountTrendPoints: this.toTrendPoints(months.map((month) => month.amount)),
       profitTrendPoints: this.toTrendPoints(months.map((month) => month.profit)),
       periodLabel: `${months[0]?.label ?? ''} - ${months[months.length - 1]?.label ?? ''}`,
@@ -526,7 +722,9 @@ export class DsrReportService {
     const rows = response.arrCostCenterWiseDetailsPhpKey ?? [];
     const centers = rawCenters.map((center) => ({
       id: String(center.pk_bint_cost_center_id ?? ''),
-      name: String(center.vchr_cost_center_name || center.pk_bint_cost_center_id || 'Unclassified cost centre'),
+      name: String(
+        center.vchr_cost_center_name || center.pk_bint_cost_center_id || 'Unclassified cost centre',
+      ),
     }));
     const detectedCenterIds = this.detectCostCentreIds(rows);
     const sourceCenters =
@@ -543,11 +741,15 @@ export class DsrReportService {
     const performanceRows = centerList
       .map((center) => {
         const revenue = revenueAccounts.reduce(
-          (total, account) => total + (account.centerValues.find((value) => value.costCenterId === center.id)?.amount ?? 0),
+          (total, account) =>
+            total +
+            (account.centerValues.find((value) => value.costCenterId === center.id)?.amount ?? 0),
           0,
         );
         const expense = expenseAccounts.reduce(
-          (total, account) => total + (account.centerValues.find((value) => value.costCenterId === center.id)?.amount ?? 0),
+          (total, account) =>
+            total +
+            (account.centerValues.find((value) => value.costCenterId === center.id)?.amount ?? 0),
           0,
         );
         const topRevenueAccount = this.topAccountNameForCenter(revenueAccounts, center.id);
@@ -574,6 +776,8 @@ export class DsrReportService {
 
     return {
       periodLabel: `${filters.fromDate} - ${filters.toDate}`,
+      periodQuarters: filters.quarters?.length ? [...filters.quarters] : undefined,
+      periodYear: filters.quarters?.length ? Number(filters.fromDate.slice(0, 4)) : undefined,
       centers: performanceRows,
       accounts,
       revenueAccounts,
@@ -586,7 +790,9 @@ export class DsrReportService {
       profitMargin: totalRevenue === 0 ? 0 : netProfit / totalRevenue,
       strongestCenter: this.pickBestCenter(operatingPerformanceRows, 'net'),
       highestExpenseCenter: this.pickBestCenter(performanceRows, 'expense'),
-      activeCenterCount: operatingPerformanceRows.filter((center) => center.revenue !== 0 || center.expense !== 0).length,
+      activeCenterCount: operatingPerformanceRows.filter(
+        (center) => center.revenue !== 0 || center.expense !== 0,
+      ).length,
       operatingCenterCount: operatingPerformanceRows.length,
       accountCount: accounts.length,
       maxCenterRevenue: Math.max(...performanceRows.map((center) => Math.abs(center.revenue)), 1),
@@ -634,7 +840,9 @@ export class DsrReportService {
     const serviceMap = new Map<string, MonthlySaleServiceRow>();
 
     for (const row of rows) {
-      const code = String(row.vchr_account_code || row.pk_bint_service_id || row.fk_bint_service_id || 'NA');
+      const code = String(
+        row.vchr_account_code || row.pk_bint_service_id || row.fk_bint_service_id || 'NA',
+      );
       const name = String(row.vchr_account_name || 'Unclassified service');
       const id = `${code}-${name}`;
       const current =
@@ -664,8 +872,12 @@ export class DsrReportService {
 
       monthLabels.forEach((_, index) => {
         const count = this.toNumber(row[`dblCount${index}`] as number | string | undefined);
-        current.months[index].amount += this.toNumber(row[`dblSUMAmt${index}`] as number | string | undefined);
-        current.months[index].profit += this.toNumber(row[`dblSUMProfit${index}`] as number | string | undefined);
+        current.months[index].amount += this.toNumber(
+          row[`dblSUMAmt${index}`] as number | string | undefined,
+        );
+        current.months[index].profit += this.toNumber(
+          row[`dblSUMProfit${index}`] as number | string | undefined,
+        );
         current.months[index].count += count;
 
         if (count < 0) {
@@ -684,7 +896,10 @@ export class DsrReportService {
         return {
           ...month,
           margin: month.amount === 0 ? 0 : month.profit / month.amount,
-          change: previous === null || previous === 0 ? null : (month.amount - previous) / Math.abs(previous),
+          change:
+            previous === null || previous === 0
+              ? null
+              : (month.amount - previous) / Math.abs(previous),
         };
       });
       service.amount = service.months.reduce((total, month) => total + month.amount, 0);
@@ -692,7 +907,10 @@ export class DsrReportService {
       service.count = service.months.reduce((total, month) => total + month.count, 0);
       service.margin = service.amount === 0 ? 0 : service.profit / service.amount;
       service.avgTicket = service.count === 0 ? 0 : service.amount / service.count;
-      service.maxMonthAmount = Math.max(...service.months.map((month) => Math.abs(month.amount)), 0);
+      service.maxMonthAmount = Math.max(
+        ...service.months.map((month) => Math.abs(month.amount)),
+        0,
+      );
       return service;
     });
     const grandTotal = services.reduce((total, service) => total + service.amount, 0);
@@ -715,7 +933,11 @@ export class DsrReportService {
         costCenterId: center.id,
         costCenterName: center.name,
         amount: center.sourceIds.reduce(
-          (sum, sourceId) => sum + this.toNumber(row[`dbl_base_currency_debit_credt${sourceId}`] as number | string | undefined),
+          (sum, sourceId) =>
+            sum +
+            this.toNumber(
+              row[`dbl_base_currency_debit_credt${sourceId}`] as number | string | undefined,
+            ),
           0,
         ),
       }));
@@ -743,13 +965,20 @@ export class DsrReportService {
     return accounts
       .map((account) => ({
         ...account,
-        share: (totalsByType[account.type] ?? 0) === 0 ? 0 : Math.abs(account.total) / (totalsByType[account.type] ?? 1),
+        share:
+          (totalsByType[account.type] ?? 0) === 0
+            ? 0
+            : Math.abs(account.total) / (totalsByType[account.type] ?? 1),
       }))
       .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
   }
 
-  private buildCostCentreReportingCenters(centers: Array<{ id: string; name: string }>): CostCentreReportingCenter[] {
-    const sourceMap = new Map(centers.filter((center) => center.id).map((center) => [center.id, center]));
+  private buildCostCentreReportingCenters(
+    centers: Array<{ id: string; name: string }>,
+  ): CostCentreReportingCenter[] {
+    const sourceMap = new Map(
+      centers.filter((center) => center.id).map((center) => [center.id, center]),
+    );
     const reportingCenters: CostCentreReportingCenter[] = [];
     const usedIds = new Set<string>();
 
@@ -768,7 +997,9 @@ export class DsrReportService {
     if (jeddahGseIds.length > 0) {
       reportingCenters.push({
         id: '73+75',
-        name: '808 - AirPort Jeddah + 810 - G.S.E',
+        name: jeddahGseIds.length === 2
+          ? '808 - AirPort Jeddah + 810 - G.S.E'
+          : sourceMap.get(jeddahGseIds[0])!.name,
         sourceIds: jeddahGseIds,
         isOperating: true,
       });
@@ -806,8 +1037,12 @@ export class DsrReportService {
 
   private topAccountNameForCenter(accounts: CostCentreAccountRow[], centerId: string): string {
     const topAccount = accounts.reduce<CostCentreAccountRow | null>((best, account) => {
-      const amount = Math.abs(account.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0);
-      const bestAmount = Math.abs(best?.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0);
+      const amount = Math.abs(
+        account.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0,
+      );
+      const bestAmount = Math.abs(
+        best?.centerValues.find((value) => value.costCenterId === centerId)?.amount ?? 0,
+      );
       return !best || amount > bestAmount ? account : best;
     }, null);
 
@@ -903,12 +1138,31 @@ export class DsrReportService {
     }));
   }
 
-  private buildTypeOfSaleRows(typeOfSale: DsrMetricGroup, language: DashboardLanguage): DsrTypeOfSaleRow[] {
+  private buildTypeOfSaleRows(
+    typeOfSale: DsrMetricGroup,
+    language: DashboardLanguage,
+  ): DsrTypeOfSaleRow[] {
     return [
-      { label: TYPE_OF_SALE_LABELS[language]['Ticket'], countMetric: 'intTicketCount', amountMetric: 'dblTicketAmount' },
-      { label: TYPE_OF_SALE_LABELS[language]['Hotel'], countMetric: 'intHotelCount', amountMetric: 'dblHotelAmount' },
-      { label: TYPE_OF_SALE_LABELS[language]['Car'], countMetric: 'intCarCount', amountMetric: 'dblCarAmount' },
-      { label: TYPE_OF_SALE_LABELS[language]['Stock'], countMetric: 'intStockCount', amountMetric: 'dblStockAmount' },
+      {
+        label: TYPE_OF_SALE_LABELS[language]['Ticket'],
+        countMetric: 'intTicketCount',
+        amountMetric: 'dblTicketAmount',
+      },
+      {
+        label: TYPE_OF_SALE_LABELS[language]['Hotel'],
+        countMetric: 'intHotelCount',
+        amountMetric: 'dblHotelAmount',
+      },
+      {
+        label: TYPE_OF_SALE_LABELS[language]['Car'],
+        countMetric: 'intCarCount',
+        amountMetric: 'dblCarAmount',
+      },
+      {
+        label: TYPE_OF_SALE_LABELS[language]['Stock'],
+        countMetric: 'intStockCount',
+        amountMetric: 'dblStockAmount',
+      },
       {
         label: TYPE_OF_SALE_LABELS[language]['OtherService'],
         countMetric: 'intOtherServiceCount',
@@ -1072,13 +1326,17 @@ export class DsrReportService {
     };
   }
 
-  private buildCostCentrePeriodicalSearchPayload(filters: CostCentrePeriodicalFilters): Record<string, unknown> {
+  private buildCostCentrePeriodicalSearchPayload(
+    filters: CostCentrePeriodicalFilters,
+  ): Record<string, unknown> {
+    const selectedIds = filters.costCenterIds ?? (filters.costCenterId ? [filters.costCenterId] : []);
+    const costCenterId = selectedIds.length === 1 ? selectedIds[0] : '';
     return {
       datFromAjxKey: this.toTraacsDate(filters.fromDate),
       datToAjxKey: this.toTraacsDate(filters.toDate),
-      intCostCenterAjxKey: filters.costCenterId,
+      intCostCenterAjxKey: costCenterId,
       intDeptAjxKey: filters.departmentId,
-      strCostCenterNameAjxKey: filters.costCenterName,
+      strCostCenterNameAjxKey: costCenterId ? filters.costCenterName : 'ALL',
       strDepartmentNameAjxKey: filters.departmentName,
       intAccountIdAjaxKey: '',
       strTransCategoryAjaxKey: '',

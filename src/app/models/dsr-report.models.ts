@@ -290,7 +290,9 @@ export interface MonthlySaleDashboardView {
 export interface CostCentrePeriodicalFilters {
   fromDate: string;
   toDate: string;
+  quarters?: number[];
   costCenterId: string;
+  costCenterIds?: string[];
   costCenterName: string;
   departmentId: string;
   departmentName: string;
@@ -348,6 +350,8 @@ export interface CostCentrePerformanceRow {
 
 export interface CostCentrePeriodicalDashboardView {
   periodLabel: string;
+  periodQuarters?: number[];
+  periodYear?: number;
   centers: CostCentrePerformanceRow[];
   accounts: CostCentreAccountRow[];
   revenueAccounts: CostCentreAccountRow[];

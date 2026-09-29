@@ -19,7 +19,16 @@
       <div class="report-heading">
         <span>TRAACS / {{ text('التقارير المالية', 'Financial reports') }}</span>
         <h1>{{ text('تحليل مراكز التكلفة', 'Cost Centre Dashboard') }}</h1>
-        <bdi>{{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}</bdi>
+        <bdi>
+          @if (data()?.periodQuarters?.length) {
+            @for (item of data()!.periodQuarters!; track item; let last = $last) {
+              {{ text('الربع', 'Quarter') }} {{ item }}{{ last ? '' : ' + ' }}
+            }
+            ({{ data()!.periodYear }})
+          } @else {
+            {{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}
+          }
+        </bdi>
       </div>
       <div class="metric revenue">
         <span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span>
@@ -392,43 +401,6 @@
           </div>
         </header>
         <div class="charts">
-          <section class="chart expense-map">
-            <header>
-              <h3>{{ text('توزيع المصروفات', 'Expense composition') }}</h3>
-              <span>{{ text('أكبر 5 حسابات وباقي الحسابات', 'Top 5 accounts and the rest') }}</span>
-            </header>
-            <div class="expense-share-list">
-              @for (item of expenseShareRows(); track item.id) {
-                <div class="expense-share-row" [class.other]="item.isOther">
-                  <div class="expense-share-label">
-                    <bdi>{{
-                      item.isOther ? text('باقي الحسابات', 'Other accounts') : item.name
-                    }}</bdi>
-                    <strong dir="ltr" [class.negative]="item.amount < 0"
-                      >SAR {{ item.amount | number: '1.0-0' }}</strong
-                    >
-                  </div>
-                  <div class="expense-share-track"><i [style.width.%]="item.share * 100"></i></div>
-                  <b dir="ltr">{{ item.share | percent: '1.1-1' }}</b>
-                </div>
-              } @empty {
-                <p class="basis">
-                  {{ text('لا توجد مصروفات للفترة', 'No expenses for this period') }}
-                </p>
-              }
-            </div>
-            @if (hasExpenseAdjustments()) {
-              <p class="basis">
-                {{
-                  text(
-                    'النسب حسب القيمة المطلقة للأرصدة، والتصحيحات السالبة ظاهرة بإشارتها.',
-                    'Shares use absolute balances; negative adjustments retain their sign.'
-                  )
-                }}
-              </p>
-            }
-          </section>
-
           <section class="chart centre-expense">
             <header>
               <h3>{{ text('المصروفات حسب المركز', 'Expense by centre') }}</h3>
@@ -458,37 +430,6 @@
                     <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small>
                   }
                 </div>
-              }
-            </div>
-          </section>
-          <section class="chart account-expense">
-            <header>
-              <h3>{{ text('المصروفات حسب الحساب', 'Expense by account') }}</h3>
-              <span>SAR</span>
-            </header>
-            <div
-              class="horizontal-bars expense-account-bars"
-              tabindex="0"
-              [attr.aria-label]="text('حسابات المصروفات', 'Expense accounts')"
-            >
-              @for (account of expenseAccounts(); track account.id) {
-                <div class="account-bar">
-                  <bdi>{{ account.name }}</bdi
-                  ><strong dir="ltr" [class.negative]="account.total < 0">{{
-                    account.total | number: '1.0-0'
-                  }}</strong>
-                  <div class="track">
-                    <i
-                      class="expense-key"
-                      [class.negative]="account.total < 0"
-                      [style.width.%]="width(account.total, maxExpense())"
-                    ></i>
-                  </div>
-                </div>
-              } @empty {
-                <p class="basis">
-                  {{ text('لا توجد مصروفات للفترة', 'No expenses for this period') }}
-                </p>
               }
             </div>
           </section>
@@ -550,34 +491,42 @@
           @for (item of [1, 2, 3, 4]; track item) {
             <label
               ><input
-                type="radio"
-                name="quarter"
+                type="checkbox"
+                [name]="'quarter-' + item"
                 [value]="item"
-                [checked]="quarter() === item"
+                [checked]="selectedQuarters().includes(item)"
                 (change)="selectQuarter(item)"
               />{{ text('الربع', 'Quarter') }} {{ item }}</label
             >
           }
         </div>
+        @if (selectedQuarters().length > 0) {
+          <p class="quarter-selection">
+            {{ text('الأرباع المحددة فقط:', 'Selected quarters only:') }}
+            @for (item of selectedQuarters(); track item; let last = $last) {
+              {{ text('الربع', 'Quarter') }} {{ item }}{{ last ? '' : ' + ' }}
+            }
+          </p>
+        }
       </fieldset>
       <fieldset [disabled]="loading()">
         <legend>{{ text('مركز التكلفة', 'Cost centre') }}</legend>
         <label class="radio-option"
           ><input
-            type="radio"
-            name="center"
+            type="checkbox"
+            name="center-all"
             value=""
-            [checked]="filters().costCenterId === ''"
+            [checked]="selectedCenters().length === 0"
             (change)="selectCenter('')"
           />{{ text('كل المراكز', 'All centres') }}</label
         >
         @for (option of options(); track option.id) {
           <label class="radio-option"
             ><input
-              type="radio"
-              name="center"
+              type="checkbox"
+              [name]="'center-' + option.id"
               [value]="option.id"
-              [checked]="filters().costCenterId === option.id"
+              [checked]="selectedCenters().includes(option.id)"
               (change)="selectCenter(option.id)"
             /><bdi>{{ option.label }}</bdi></label
           >
