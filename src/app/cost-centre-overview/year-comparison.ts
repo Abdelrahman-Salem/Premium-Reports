@@ -67,6 +67,7 @@ export class YearComparison {
   protected readonly readyRows = computed(() =>
     this.rows().filter((row) => row.status === 'ready'),
   );
+  readonly printReady = computed(() => !this.busy() && this.readyRows().length > 0);
   protected readonly scale = computed(() => {
     const values = this.readyRows().flatMap((row) => this.metrics.map((metric) => row[metric.key]));
     const positive = Math.max(0, ...values);

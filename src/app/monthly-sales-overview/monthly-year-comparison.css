@@ -1,0 +1,120 @@
+:host {
+  --teal: #08636b;
+  --orange: #ee7925;
+  --border: #dce1e4;
+  display: block;
+}
+.monthly-comparison {
+  color: #26343a;
+}
+.comparison-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px;
+  background: #fff;
+  border-block: 1px solid var(--border);
+}
+.comparison-header span,
+.comparison-header strong {
+  color: #647078;
+  font-size: 11px;
+}
+.comparison-header h2 {
+  color: #bc5712;
+  font-size: 22px;
+  margin-top: 5px;
+}
+.comparison-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 15px 0;
+}
+.comparison-filters > label {
+  display: grid;
+  gap: 5px;
+}
+.comparison-filters input[type='number'] {
+  width: 115px;
+  border: 1px solid var(--border);
+  padding: 8px;
+  background: #fff;
+}
+.comparison-filters fieldset {
+  display: flex;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+}
+.comparison-filters fieldset label {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  white-space: nowrap;
+}
+.comparison-filters .apply {
+  width: auto;
+  margin: 0;
+  padding-inline: 20px;
+}
+.comparison-period {
+  color: #647078;
+  margin-bottom: 12px;
+}
+.comparison-charts {
+  display: grid;
+  gap: 12px;
+}
+.comparison-chart {
+  overflow-x: auto;
+}
+.comparison-bars {
+  display: grid;
+  gap: 16px;
+  min-width: max-content;
+  padding: 10px;
+  direction: ltr;
+}
+.comparison-year {
+  min-width: 100px;
+  text-align: center;
+  background: #f4f6f7;
+  padding: 9px;
+}
+.comparison-track {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  position: relative;
+  height: 190px;
+  border-bottom: 1px solid #aab5b9;
+  background: repeating-linear-gradient(to top, transparent 0, transparent 46px, #e4e9eb 47px, transparent 48px);
+}
+.comparison-fill {
+  width: 60%;
+  max-width: 105px;
+  flex: none;
+  background: var(--teal);
+}
+.comparison-fill.negative-fill {
+  background: #ba5154;
+}
+.comparison-track strong {
+  position: absolute;
+  bottom: 100%;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.comparison-year > b {
+  display: block;
+  margin-top: 9px;
+}
+.comparison-year small {
+  display: block;
+  margin-top: 5px;
+  color: #647078;
+}

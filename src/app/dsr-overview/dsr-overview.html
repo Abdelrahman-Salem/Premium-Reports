@@ -1,0 +1,225 @@
+<div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
+  <span>{{ text('السنة', 'Year') }}</span>
+  @for (item of years(); track item) {
+    <button type="button" [class.selected]="year() === item" [attr.aria-pressed]="year() === item"
+      [disabled]="loading()" (click)="selectYear(item)">{{ item }}</button>
+  }
+</div>
+
+<div class="workspace" [attr.aria-busy]="loading()">
+  <div class="canvas">
+    <header class="summary">
+      <div class="report-heading">
+        <span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span>
+        <h1>{{ text('لوحة تفاصيل DSR', 'DSR Details Dashboard') }}</h1>
+        <bdi>{{ filters().fromDate }} - {{ filters().toDate }}</bdi>
+      </div>
+      <div class="metric revenue">
+        <span>{{ text('صافي الإيراد', 'Net revenue') }}</span>
+        <strong>{{ data() ? (metric(3) | number: '1.0-0') : '-' }}</strong>
+        <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
+      </div>
+      <div class="metric net" [class.loss]="metric(0) < 0">
+        <span>{{ text('مجمل الربح', 'Gross profit') }}</span>
+        <strong>{{ data() ? (metric(0) | number: '1.0-0') : '-' }}</strong>
+        <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
+      </div>
+      <div class="metric expense">
+        <span>{{ text('المستندات', 'Documents') }}</span>
+        <strong>{{ documentCount() === null ? '-' : (documentCount() | number) }}</strong>
+        <small>{{ text('مستند', 'documents') }}</small>
+      </div>
+    </header>
+
+    @if (data(); as report) {
+      <div class="context-line">
+        @if (report.detailAnalytics) { <span>{{ text('الصفوف المحملة', 'Loaded rows') }} <b>{{ report.detailAnalytics.rowCount | number }}</b></span> }
+        <span>{{ text('هامش الربح', 'Profit margin') }} <b dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</b></span>
+        <span>{{ text('ضريبة الفاتورة', 'Billing tax') }} <b dir="ltr">{{ filters().currency === 'Base' ? 'SAR' : filters().currency }} {{ metric(4) | number: '1.0-0' }}</b></span>
+      </div>
+      @if (report.detailAnalytics && report.detailAnalytics.rowCount < report.detailAnalytics.totalDocumentCount) {
+        <p class="dsr-data-note">{{ text('الرسومات التفصيلية مبنية على الصفوف المحملة فقط:', 'Detailed charts use only the loaded rows:') }} {{ report.detailAnalytics.rowCount | number }} / {{ report.detailAnalytics.totalDocumentCount | number }}</p>
+      } @else if (!report.detailAnalytics) {
+        <p class="dsr-data-note">{{ text('لم يرجع TRAACS صفوف مستندات تفصيلية لهذه الفترة؛ المعروض هو الملخص المتاح فقط.', 'TRAACS returned no document rows for this period; only the available summary is shown.') }}</p>
+      }
+      <nav class="section-nav" [attr.aria-label]="text('أقسام التحليل', 'Analysis sections')">
+        <a href="#dsr-revenue">{{ text('الإيرادات', 'Revenue') }}</a>
+        <a href="#dsr-profit">{{ text('الأرباح', 'Profit') }}</a>
+        @if (report.hasExpenses) { <a href="#dsr-expense">{{ text('المصروفات', 'Expenses') }}</a> }
+        <a href="#dsr-operations">{{ text('المستندات', 'Documents') }}</a>
+      </nav>
+
+      <section id="dsr-revenue" class="analysis-section revenue-section" aria-labelledby="dsr-revenue-heading">
+        <header class="section-heading">
+          <h2 id="dsr-revenue-heading">{{ text('الإيرادات', 'Revenue') }}</h2>
+          <div><span>{{ text('صافي الإيراد', 'Net revenue') }}</span><strong dir="ltr">{{ filters().currency === 'Base' ? 'SAR' : filters().currency }} {{ metric(3) | number: '1.0-0' }}</strong></div>
+          <div><span>{{ text('المستندات', 'Documents') }}</span><strong>{{ documentCount() === null ? '-' : (documentCount() | number) }}</strong></div>
+        </header>
+        <div class="charts">
+          <section class="chart dsr-wide">
+            <header><h3>{{ text('المبيعات والمرتجعات وصافي الإيراد', 'Sales, refunds and net revenue') }}</h3><span>{{ report.detailAnalytics ? text('من الصفوف المحملة', 'Loaded rows') : (filters().currency === 'Base' ? 'SAR' : filters().currency) }}</span></header>
+            <div class="dsr-bars">
+              @for (row of movementRows(); track row.label) {
+                <div class="dsr-bar-row"><bdi>{{ movementLabel(row.label) }}</bdi><div class="dsr-bar-track"><i [class.dsr-refund-fill]="row.value < 0" [style.width.%]="width(row.value, maxMovement())"></i></div><strong dir="ltr" [class.negative]="row.value < 0">{{ row.value | number: '1.0-0' }}</strong></div>
+              }
+            </div>
+          </section>
+          @if (report.detailAnalytics; as details) {
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('الإيرادات حسب الشهر', 'Revenue by month') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              <div class="columns dsr-columns" [style.grid-template-columns]="'repeat(' + months().length + ', minmax(92px, 1fr))'">
+                @for (month of months(); track month.label) {
+                  <div class="column"><div class="column-track"><div class="column-fill" [class.dsr-negative-fill]="month.amount < 0" [style.height.%]="width(month.amount, details.maxMonthAmount) * 0.82"></div><b dir="ltr">{{ month.amount | number: '1.0-0' }}</b></div><bdi>{{ month.label }}</bdi></div>
+                }
+              </div>
+            </section>
+            <section class="chart">
+              <header><h3>{{ text('توزيع الإيرادات حسب الخدمة', 'Revenue share by service') }}</h3><span>{{ details.services.length }} {{ text('خدمات', 'services') }}</span></header>
+              <div class="dsr-donut" [style.background]="serviceMix()" role="img" [attr.aria-label]="text('توزيع الإيرادات حسب الخدمة', 'Revenue share by service')"><div><strong>{{ details.services.length }}</strong><small>{{ text('خدمات', 'services') }}</small></div></div>
+              <div class="legend-list dsr-service-legend">
+                @for (service of details.services; track service.label; let index = $index) {
+                  <div><i [style.background]="color(index)"></i><bdi>{{ service.label }}</bdi><b dir="ltr">{{ positiveShare(service) | percent: '1.1-1' }}</b></div>
+                }
+              </div>
+            </section>
+            <section class="chart">
+              <header><h3>{{ text('الإيرادات حسب الخدمة', 'Revenue by service') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              <div class="dsr-bars">
+                @for (service of details.services; track service.label) {
+                  <div class="dsr-bar-row"><bdi>{{ service.label }}</bdi><div class="dsr-bar-track"><i [style.width.%]="width(service.amount, details.maxServiceAmount)"></i></div><strong dir="ltr">{{ service.amount | number: '1.0-0' }}</strong></div>
+                }
+              </div>
+            </section>
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('الإيرادات حسب مركز التكلفة', 'Revenue by cost centre') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              <div class="columns dsr-columns" [style.grid-template-columns]="'repeat(' + centerRows().length + ', minmax(110px, 1fr))'">
+                @for (center of centerRows(); track center.label) {
+                  <div class="column"><div class="column-track"><div class="column-fill" [class.dsr-negative-fill]="center.amount < 0" [style.height.%]="width(center.amount, maxCenterAmount()) * 0.82"></div><b dir="ltr">{{ center.amount | number: '1.0-0' }}</b></div><bdi>{{ center.label }}</bdi></div>
+                }
+              </div>
+            </section>
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('أعلى العملاء حسب الإيراد', 'Top customers by revenue') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              <div class="dsr-bars dsr-customer-bars">
+                @for (customer of details.customers; track customer.label) {
+                  <div class="dsr-bar-row"><bdi>{{ customer.label }}</bdi><div class="dsr-bar-track"><i [style.width.%]="width(customer.amount, details.maxCustomerAmount)"></i></div><strong dir="ltr">{{ customer.amount | number: '1.0-0' }}</strong></div>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </section>
+
+      <section id="dsr-profit" class="analysis-section profit-section" aria-labelledby="dsr-profit-heading">
+        <header class="section-heading">
+          <h2 id="dsr-profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
+          <div><span>{{ text('مجمل الربح', 'Gross profit') }}</span><strong dir="ltr">{{ filters().currency === 'Base' ? 'SAR' : filters().currency }} {{ metric(0) | number: '1.0-0' }}</strong></div>
+          <div><span>{{ text('هامش الربح', 'Profit margin') }}</span><strong dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</strong></div>
+        </header>
+        <div class="charts">
+          @if (report.detailAnalytics; as details) {
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('الربح حسب الشهر', 'Profit by month') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              <div class="columns dsr-columns" [style.grid-template-columns]="'repeat(' + months().length + ', minmax(92px, 1fr))'">
+                @for (month of months(); track month.label) {
+                  <div class="column"><div class="column-track"><div class="column-fill dsr-profit-fill" [class.dsr-negative-fill]="month.profit < 0" [style.height.%]="width(month.profit, maxMonthProfit()) * 0.82"></div><b dir="ltr" [class.negative]="month.profit < 0">{{ month.profit | number: '1.0-0' }}</b></div><bdi>{{ month.label }}</bdi></div>
+                }
+              </div>
+            </section>
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('ربح الخدمات', 'Profit by service') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              <div class="columns dsr-columns" [style.grid-template-columns]="'repeat(' + details.services.length + ', minmax(118px, 1fr))'">
+                @for (service of details.services; track service.label) {
+                  <div class="column"><div class="column-track"><div class="column-fill dsr-profit-fill" [class.dsr-negative-fill]="service.profit < 0" [style.height.%]="width(service.profit, maxServiceProfit()) * 0.82"></div><b dir="ltr" [class.negative]="service.profit < 0">{{ service.profit | number: '1.0-0' }}</b></div><bdi>{{ service.label }}</bdi></div>
+                }
+              </div>
+            </section>
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('هامش الربح حسب الخدمة', 'Margin by service') }}</h3><span>{{ text('من الإيراد', 'Of revenue') }}</span></header>
+              <div class="dsr-margin-axis" aria-hidden="true"><div><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>
+              <div class="dsr-margin-chart">
+                @for (service of details.services; track service.label) {
+                  <div class="dsr-margin-row"><bdi>{{ service.label }}</bdi><div class="dsr-margin-scale" [class.dsr-negative-margin]="service.margin < 0" role="img" [attr.aria-label]="service.label + ': ' + (service.margin | percent: '1.1-1')"><i [style.width.%]="marginPosition(service.margin)"></i><span [style.left.%]="marginPosition(service.margin)"></span></div><strong dir="ltr" [class.negative]="service.margin < 0">{{ service.margin | percent: '1.1-1' }}</strong></div>
+                }
+              </div>
+            </section>
+          } @else {
+            <section class="chart dsr-wide">
+              <header><h3>{{ text('ملخص الربح', 'Profit summary') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              @if (visibleProfitRows().length === 1) { <p class="dsr-breakdown-note">{{ text('بند واحد فقط له قيمة في ملخص الربح الذي أرسله TRAACS.', 'Only one profit item has a value in the TRAACS summary.') }}</p> }
+              @if (visibleProfitRows().length) {
+                <div class="dsr-bars">@for (row of visibleProfitRows(); track row.label) { <div class="dsr-bar-row"><bdi>{{ row.label }}</bdi><div class="dsr-bar-track"><i class="dsr-profit-fill" [style.width.%]="width(row.net, metric(0))"></i></div><strong dir="ltr">{{ row.net | number: '1.0-0' }}</strong></div> }</div>
+              } @else { <p class="dsr-breakdown-note">{{ text('لم يرجع TRAACS بنود ربح تفصيلية لهذه الفترة.', 'TRAACS returned no profit line-item breakdown for this period.') }}</p> }
+            </section>
+          }
+          <section class="chart dsr-wide">
+            <header><h3>{{ text('الربح والضريبة', 'Profit and tax') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+            <div class="dsr-bars"><div class="dsr-bar-row"><bdi>{{ text('مجمل الربح', 'Gross profit') }}</bdi><div class="dsr-bar-track"><i class="dsr-profit-fill" [style.width.%]="width(metric(0), report.totalVolume)"></i></div><strong dir="ltr">{{ metric(0) | number: '1.0-0' }}</strong></div><div class="dsr-bar-row"><bdi>{{ text('الضريبة', 'Tax') }}</bdi><div class="dsr-bar-track"><i class="dsr-tax-fill" [style.width.%]="width(metric(4), report.totalVolume)"></i></div><strong dir="ltr">{{ metric(4) | number: '1.0-0' }}</strong></div></div>
+          </section>
+        </div>
+      </section>
+
+      @if (report.hasExpenses) {
+        <section id="dsr-expense" class="analysis-section expense-section" aria-labelledby="dsr-expense-heading">
+          <header class="section-heading"><h2 id="dsr-expense-heading">{{ text('المصروفات', 'Expenses') }}</h2></header>
+          <div class="charts"><section class="chart dsr-wide"><header><h3>{{ text('المصروفات حسب البند', 'Expense by item') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+            <div class="dsr-bars">@for (row of report.expenseRows; track row.label) { <div class="dsr-bar-row"><bdi>{{ row.label }}</bdi><div class="dsr-bar-track"><i class="dsr-expense-fill" [style.width.%]="width(row.net, metric(3))"></i></div><strong dir="ltr">{{ row.net | number: '1.0-0' }}</strong></div> }</div>
+          </section></div>
+        </section>
+      }
+
+      <section id="dsr-operations" class="analysis-section expense-section" aria-labelledby="dsr-operations-heading">
+        <header class="section-heading"><h2 id="dsr-operations-heading">{{ text('المستندات والعمليات', 'Documents and operations') }}</h2><div><span>{{ text('عدد المستندات', 'Documents') }}</span><strong>{{ documentCount() === null ? '-' : (documentCount() | number) }}</strong></div></header>
+        <div class="charts">
+          @if (report.detailAnalytics; as details) {
+            <section class="chart dsr-wide"><header><h3>{{ text('المستندات حسب الشهر', 'Documents by month') }}</h3><span>{{ text('عدد المستندات', 'Documents') }}</span></header>
+              <div class="columns dsr-columns" [style.grid-template-columns]="'repeat(' + months().length + ', minmax(92px, 1fr))'">
+                @for (month of months(); track month.label) {
+                  <div class="column"><div class="column-track"><div class="column-fill dsr-count-fill" [style.height.%]="width(month.count, maxMonthCount()) * 0.82"></div><b>{{ month.count | number }}</b></div><bdi>{{ month.label }}</bdi></div>
+                }
+              </div>
+            </section>
+          }
+          @if (hasTypeSummary()) {
+            <section class="chart"><header><h3>{{ text('أنواع المبيعات', 'Sale types') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header>
+              @if (visibleTypeRows().length === 1) { <p class="dsr-breakdown-note">{{ text('فئة واحدة فقط لها قيمة في ملخص أنواع المبيعات الذي أرسله TRAACS.', 'Only one sale type has a value in the TRAACS summary.') }}</p> }
+              <div class="dsr-bars">@for (row of visibleTypeRows(); track row.label) { <div class="dsr-bar-row"><bdi>{{ row.label }}</bdi><div class="dsr-bar-track"><i [style.width.%]="width(row.amount, metric(1))"></i></div><strong dir="ltr">{{ row.amount | number: '1.0-0' }}</strong></div> }</div>
+            </section>
+          } @else if (report.detailAnalytics; as details) {
+            <section class="chart"><header><h3>{{ text('المستندات حسب الخدمة', 'Documents by service') }}</h3><span>{{ text('من الصفوف المحملة', 'Loaded rows') }}</span></header><div class="dsr-bars">@for (row of details.services; track row.label) { <div class="dsr-bar-row"><bdi>{{ row.label }}</bdi><div class="dsr-bar-track"><i class="dsr-count-fill" [style.width.%]="width(row.saleCount + row.refundCount, maxServiceDocuments())"></i></div><strong>{{ row.saleCount + row.refundCount | number }}</strong></div> }</div></section>
+          }
+          @if (hasPaymentSummary()) {
+            <section class="chart"><header><h3>{{ text('طرق الدفع', 'Payment methods') }}</h3><span>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</span></header><div class="dsr-bars">@for (row of report.paymentSummaryRows; track row.label) { <div class="dsr-bar-row"><bdi>{{ row.label }}</bdi><div class="dsr-bar-track"><i [style.width.%]="width(row.amount, metric(1))"></i></div><strong dir="ltr">{{ row.amount | number: '1.0-0' }}</strong></div> }</div></section>
+          } @else if (report.detailAnalytics; as details) {
+            <section class="chart"><header><h3>{{ text('المستندات حسب', 'Documents by') }} {{ operationDimension() }}</h3><span>{{ text('من الصفوف المحملة', 'Loaded rows') }}</span></header><div class="dsr-bars">@for (row of operationRows(); track row.label) { <div class="dsr-bar-row"><bdi>{{ row.label }}</bdi><div class="dsr-bar-track"><i class="dsr-count-fill" [style.width.%]="width(row.saleCount + row.refundCount, maxOperationDocuments())"></i></div><strong>{{ row.saleCount + row.refundCount | number }}</strong></div> }</div></section>
+          }
+        </div>
+      </section>
+    } @else {
+      <div class="empty-overview" role="status"><h2>{{ loading() ? text('جاري تحميل التقرير', 'Loading report') : text('اختر الفترة واضغط عرض التقرير', 'Select a period and run the report') }}</h2></div>
+    }
+  </div>
+
+  <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')">
+    <form (ngSubmit)="submit()">
+      <h2>{{ text('فلاتر التقرير', 'Report filters') }}</h2>
+      <fieldset [disabled]="loading()"><legend>{{ text('الفترة', 'Period') }}</legend>
+        <label for="dsr-from-date">{{ text('من تاريخ', 'From date') }}</label><input id="dsr-from-date" name="fromDate" type="date" [ngModel]="filters().fromDate" (ngModelChange)="update('fromDate', $event)" />
+        <label for="dsr-to-date">{{ text('إلى تاريخ', 'To date') }}</label><input id="dsr-to-date" name="toDate" type="date" [ngModel]="filters().toDate" (ngModelChange)="update('toDate', $event)" />
+      </fieldset>
+      <fieldset [disabled]="loading()"><legend>{{ text('مراكز التكلفة', 'Cost centres') }}</legend>
+        <div class="dsr-center-filters"><label><input type="checkbox" [checked]="filters().costCenters.length === options().length" (change)="toggleAllCenters($any($event.target).checked)" />{{ text('كل المراكز', 'All centres') }}</label>
+          @for (option of options(); track option.id) { <label><input type="checkbox" [checked]="filters().costCenters.includes(option.id)" (change)="toggleCenter(option.id, $any($event.target).checked)" />{{ option.label }}</label> }
+        </div>
+      </fieldset>
+      <fieldset [disabled]="loading()"><legend>{{ text('خيارات التقرير', 'Report options') }}</legend>
+        <label for="dsr-date-type">{{ text('نوع التاريخ', 'Date type') }}</label><select id="dsr-date-type" name="dateType" [ngModel]="filters().dateType" (ngModelChange)="update('dateType', $event)"><option value="DOCUMENT">{{ text('تاريخ المستند', 'Document date') }}</option><option value="SERVICE">{{ text('تاريخ الخدمة', 'Service date') }}</option></select>
+        <label for="dsr-currency">{{ text('العملة', 'Currency') }}</label><select id="dsr-currency" name="currency" [ngModel]="filters().currency" (ngModelChange)="update('currency', $event)"><option value="SAR">SAR</option><option value="Base">{{ text('العملة الأساسية', 'Base currency') }}</option></select>
+        <label class="dsr-check"><input type="checkbox" name="showSales" [ngModel]="filters().showSales" (ngModelChange)="update('showSales', $event)" />{{ text('المبيعات', 'Sales') }}</label>
+        <label class="dsr-check"><input type="checkbox" name="showRefunds" [ngModel]="filters().showRefunds" (ngModelChange)="update('showRefunds', $event)" />{{ text('المرتجعات', 'Refunds') }}</label>
+      </fieldset>
+      @if (invalidFilters()) { <p class="validation" role="alert">{{ text('اختر فترة ومركز تكلفة ونوع حركة واحد على الأقل', 'Select a valid period, cost centre and transaction type') }}</p> }
+      <button class="apply" type="submit" [disabled]="loading() || invalidFilters()">{{ loading() ? text('جاري البحث', 'Searching') : text('عرض التقرير', 'Run report') }}</button>
+    </form>
+  </aside>
+</div>

@@ -1,10 +1,12 @@
-import { DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 
 import { DsrReportService } from './core/services/dsr-report.service';
 import { CostCentreOverview } from './cost-centre-overview/cost-centre-overview';
 import { YearComparison } from './cost-centre-overview/year-comparison';
+import { MonthlySalesOverview } from './monthly-sales-overview/monthly-sales-overview';
+import { MonthlyYearComparison } from './monthly-sales-overview/monthly-year-comparison';
+import { DsrOverview } from './dsr-overview/dsr-overview';
+import { DsrYearComparison } from './dsr-overview/dsr-year-comparison';
 import {
   CostCentrePeriodicalDashboardView,
   CostCentrePeriodicalFilters,
@@ -60,7 +62,7 @@ const TRANSLATIONS = {
     liveApi: 'Live API',
     searching: 'Searching',
     search: 'Search',
-    exportReport: 'Export report',
+    exportReport: 'Export PDF',
     openTraacs: 'Open TRAACS login',
     checkSession: 'Check session',
     checkingSession: 'Checking',
@@ -147,7 +149,7 @@ const TRANSLATIONS = {
     liveApi: 'بيانات مباشرة',
     searching: 'جاري البحث',
     search: 'بحث',
-    exportReport: 'تصدير التقرير',
+    exportReport: 'تصدير PDF',
     openTraacs: 'فتح تسجيل دخول TRAACS',
     checkSession: 'فحص الجلسة',
     checkingSession: 'جاري الفحص',
@@ -225,12 +227,15 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [DecimalPipe, FormsModule, PercentPipe, CostCentreOverview, YearComparison],
+  imports: [CostCentreOverview, YearComparison, MonthlySalesOverview, MonthlyYearComparison, DsrOverview, DsrYearComparison],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App {
   private readonly dsrReportService = inject(DsrReportService);
+  private readonly monthlyComparison = viewChild(MonthlyYearComparison);
+  private readonly dsrComparison = viewChild(DsrYearComparison);
+  private readonly costCentreComparison = viewChild(YearComparison);
   private readonly chartColors = [
     '#2e6f73',
     '#c77b32',
@@ -244,6 +249,8 @@ export class App {
 
   protected readonly reportMode = signal<ReportMode>('monthly');
   protected readonly costCentreView = signal<'report' | 'comparison'>('report');
+  protected readonly monthlyView = signal<'report' | 'comparison'>('report');
+  protected readonly dsrView = signal<'report' | 'comparison'>('report');
   protected readonly language = signal<Language>('ar');
   protected readonly costCentreOpen = signal(false);
   protected readonly hasSearched = signal(false);
@@ -376,10 +383,18 @@ export class App {
     return this.t('subtitle');
   });
   protected readonly hasActiveReport = computed(
-    () =>
-      (this.reportMode() === 'monthly' && Boolean(this.monthlyDashboard())) ||
-      (this.reportMode() === 'dsr' && Boolean(this.report())) ||
-      (this.reportMode() === 'costCentre' && Boolean(this.costCentreDashboard())),
+    () => {
+      if (this.reportMode() === 'monthly') {
+        return this.monthlyView() === 'comparison'
+          ? Boolean(this.monthlyComparison()?.printReady()) : Boolean(this.monthlyDashboard());
+      }
+      if (this.reportMode() === 'dsr') {
+        return this.dsrView() === 'comparison'
+          ? Boolean(this.dsrComparison()?.printReady()) : Boolean(this.report());
+      }
+      return this.costCentreView() === 'comparison'
+        ? Boolean(this.costCentreComparison()?.printReady()) : Boolean(this.costCentreDashboard());
+    },
   );
   protected readonly selectedCostCentreLabel = computed(() => {
     const selected = this.filters().costCenters;
@@ -407,8 +422,8 @@ export class App {
     this.checkSession();
   }
 
-  protected refreshReport(): void {
-    if (this.filters().costCenters.length === 0) {
+  protected refreshReport(filters: DsrFilters = this.filters()): void {
+    if (filters.costCenters.length === 0) {
       this.error.set(this.t('noCostCentreError'));
       return;
     }
@@ -427,7 +442,7 @@ export class App {
     this.report.set(null);
     this.costCentreOpen.set(false);
 
-    this.dsrReportService.getDsrReport(this.filters()).subscribe({
+    this.dsrReportService.getDsrReport(filters).subscribe({
       next: (result) => {
         if (!this.hasReportData(result)) {
           this.report.set(null);
@@ -449,7 +464,12 @@ export class App {
     });
   }
 
-  protected refreshMonthlyReport(): void {
+  protected showDsrYear(filters: DsrFilters): void {
+    this.filters.set(filters);
+    this.refreshReport(filters);
+  }
+
+  protected refreshMonthlyReport(filters: MonthlySaleFilters = this.monthlyFilters()): void {
     if (!this.sessionReady()) {
       this.hasSearched.set(true);
       this.monthlyReport.set(null);
@@ -463,7 +483,7 @@ export class App {
     this.error.set(null);
     this.monthlyReport.set(null);
 
-    this.dsrReportService.getMonthlySaleReport(this.monthlyFilters()).subscribe({
+    this.dsrReportService.getMonthlySaleReport(filters).subscribe({
       next: (response) => {
         const view = this.dsrReportService.toMonthlySaleDashboardView(response);
         if (view.services.length === 0) {
@@ -482,6 +502,11 @@ export class App {
         this.checkSession();
       },
     });
+  }
+
+  protected showMonthlyYear(filters: MonthlySaleFilters): void {
+    this.monthlyFilters.set(filters);
+    this.refreshMonthlyReport(filters);
   }
 
   protected refreshCostCentreReport(
@@ -721,63 +746,14 @@ export class App {
     return value === 0 ? 'dim' : '';
   }
 
-  protected exportReport(): void {
-    const report = this.report();
-    if (!report) {
-      return;
-    }
-
-    const blob = new Blob([JSON.stringify(report.data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dsr-report-${this.filters().fromDate}-${this.filters().toDate}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  protected exportMonthlyReport(): void {
-    const report = this.monthlyReport();
-    if (!report) {
-      return;
-    }
-
-    const blob = new Blob([report.rawPreview], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `monthly-service-sales-${this.monthlyFilters().fromYear}-${this.monthlyFilters().fromMonth}-${this.monthlyFilters().toMonth}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  protected exportCostCentreReport(): void {
-    const report = this.costCentreReport();
-    if (!report) {
-      return;
-    }
-
-    const blob = new Blob([report.rawPreview], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cost-centre-periodical-${this.costCentreFilters().fromDate}-${this.costCentreFilters().toDate}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
   protected exportCurrentReport(): void {
-    if (this.reportMode() === 'monthly') {
-      this.exportMonthlyReport();
-      return;
-    }
-
-    if (this.reportMode() === 'costCentre') {
-      this.exportCostCentreReport();
-      return;
-    }
-
-    this.exportReport();
+    if (!this.hasActiveReport() || this.loading()) return;
+    const previousTitle = document.title;
+    const mode = this.reportMode();
+    const view = mode === 'monthly' ? this.monthlyView() : mode === 'dsr' ? this.dsrView() : this.costCentreView();
+    document.title = `Premium Reports - ${mode} - ${view}${view === 'report' ? ` - ${this.visiblePeriodLabel()}` : ''}`;
+    window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
+    window.print();
   }
 
   protected trackByLabel(_: number, row: DsrMetricRow | MetricCard): string {

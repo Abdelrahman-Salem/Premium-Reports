@@ -1,0 +1,38 @@
+<section class="monthly-comparison" [attr.aria-busy]="busy()">
+  <header class="comparison-header">
+    <div><span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span><h2>{{ text('مقارنة تفاصيل DSR بين السنوات', 'DSR year comparison') }}</h2></div>
+    <strong>{{ mode() === 'full' ? text('السنة كاملة', 'Full year') : text('نفس التواريخ من كل سنة', 'Same dates each year') }}</strong>
+  </header>
+  <form class="comparison-filters" (ngSubmit)="compare()">
+    <label>{{ text('من سنة', 'From year') }}<input name="dsrComparisonFrom" type="number" min="1900" max="2100" [ngModel]="fromYear()" (ngModelChange)="updateYear('from', +$event)" /></label>
+    <label>{{ text('إلى سنة', 'To year') }}<input name="dsrComparisonTo" type="number" min="1900" max="2100" [ngModel]="toYear()" (ngModelChange)="updateYear('to', +$event)" /></label>
+    <fieldset><legend>{{ text('الفترة', 'Period') }}</legend>
+      <label><input type="radio" name="dsrComparisonMode" value="period" [checked]="mode() === 'period'" (change)="updateMode('period')" />{{ text('التواريخ المحددة', 'Selected dates') }}</label>
+      <label><input type="radio" name="dsrComparisonMode" value="full" [checked]="mode() === 'full'" (change)="updateMode('full')" />{{ text('السنة كاملة', 'Full year') }}</label>
+    </fieldset>
+    <button class="apply" type="submit" [disabled]="!valid() || busy()">{{ busy() ? text('جاري التحميل', 'Loading') : text('عرض المقارنة', 'Show comparison') }}</button>
+  </form>
+  @if (mode() === 'period') { <p class="comparison-period">{{ text('الفترة', 'Period') }} {{ filters().fromDate.slice(5) }} - {{ filters().toDate.slice(5) }}</p> }
+  @if (!valid()) { <p class="comparison-period" role="alert">{{ text('اختر سنوات متتالية وفترة صالحة داخل السنة', 'Select consecutive years and a valid within-year period') }}</p> }
+  @if (requested() && !busy()) {
+    <div class="comparison-charts">
+      @for (metric of metrics; track metric.key) {
+        <section class="chart comparison-chart">
+          <header><h3>{{ text(metric.ar, metric.en) }}</h3><span>{{ metric.unit }}</span></header>
+          <div class="comparison-bars" [style.grid-template-columns]="'repeat(' + rows().length + ', minmax(100px, 1fr))'">
+            @for (row of rows(); track row.year) {
+              <div class="comparison-year">
+                <div class="comparison-track">
+                  @if (row.status === 'ready') { <div class="comparison-fill" [class.negative-fill]="row[metric.key] < 0" [style.height.%]="height(row[metric.key], metric.key)"></div> }
+                  <strong dir="ltr" [class.negative]="row[metric.key] < 0">{{ row.status === 'ready' ? (row[metric.key] | number: '1.0-0') : '-' }}</strong>
+                </div>
+                <b>{{ row.year }}</b>
+                @if (row.status !== 'ready') { <small>{{ row.status === 'empty' ? text('لا توجد بيانات', 'No data') : text('تعذر التحميل', 'Unavailable') }}</small> }
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+</section>

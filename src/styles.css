@@ -1,1 +1,85 @@
 /* You can add global styles to this file, and also import other style files */
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  html,
+  body,
+  app-root,
+  .app,
+  .content {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .app,
+  .workspace {
+    display: block !important;
+  }
+
+  .canvas {
+    width: 100% !important;
+  }
+
+  .sidebar,
+  .topbar,
+  .auth-panel,
+  .report-view-switch,
+  .year-strip,
+  .filter-rail,
+  .section-nav,
+  .comparison-filters,
+  .year-comparison > form,
+  .notice {
+    display: none !important;
+  }
+
+  .summary,
+  .section-heading,
+  .comparison-header,
+  .year-comparison > header {
+    break-inside: avoid-page;
+  }
+
+  .chart {
+    break-inside: avoid-page;
+    box-shadow: none !important;
+  }
+
+  .monthly-legend,
+  .monthly-ranking,
+  .monthly-columns,
+  .monthly-service-profit-chart,
+  .revenue-columns,
+  .expense-columns,
+  .comparison-chart,
+  .chart-scroll,
+  .table-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .monthly-columns {
+    display: flex !important;
+  }
+
+  .monthly-columns .column {
+    flex: 1 1 0;
+  }
+
+  .year-comparison .chart {
+    min-width: 0 !important;
+  }
+}
