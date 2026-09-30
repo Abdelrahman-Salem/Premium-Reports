@@ -1,0 +1,216 @@
+:host {
+  --orange: #ee7925;
+  --teal: #08636b;
+}
+.monthly-span {
+  grid-column: 1 / -1;
+}
+.monthly-columns {
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.monthly-columns .column-track {
+  height: 190px;
+}
+.monthly-columns .column-track b {
+  font-size: 10px;
+}
+.profit-fill {
+  background: #527d39;
+}
+.volume-fill {
+  background: var(--teal);
+}
+.negative-fill {
+  background: #ba5154 !important;
+}
+.monthly-donut {
+  width: min(100%, 190px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 12px auto 18px;
+}
+.monthly-donut > div {
+  width: 56%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.monthly-donut strong {
+  font-size: 24px;
+}
+.monthly-donut small {
+  color: var(--muted);
+}
+.monthly-legend {
+  max-height: 245px;
+  overflow-y: auto;
+}
+.monthly-ranking {
+  max-height: 440px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-inline-end: 6px;
+}
+.monthly-service-profit-chart {
+  overflow-x: auto;
+  padding-block-end: 8px;
+}
+.monthly-service-profit-track {
+  height: 205px;
+}
+.monthly-service-profit-track .column-fill {
+  background: #527d39;
+}
+.monthly-service-profit-chart .column > bdi {
+  min-height: 52px;
+  overflow-wrap: anywhere;
+}
+.monthly-margin-axis,
+.monthly-margin-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 28%) minmax(0, 1fr) 80px;
+  gap: 12px;
+  align-items: center;
+}
+.monthly-margin-axis {
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.monthly-margin-axis > div {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  direction: ltr;
+}
+.monthly-margin-chart {
+  display: grid;
+  gap: 0;
+}
+.monthly-margin-row {
+  min-height: 54px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.monthly-margin-row > bdi {
+  overflow-wrap: anywhere;
+}
+.monthly-margin-row > strong {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.monthly-margin-scale {
+  position: relative;
+  height: 26px;
+  direction: ltr;
+  background: repeating-linear-gradient(to right, #dce2e4 0 1px, #f1f4f4 1px 25%);
+}
+.monthly-margin-scale i {
+  position: absolute;
+  top: calc(50% - 3px);
+  left: 0;
+  height: 6px;
+  background: #459c85;
+}
+.monthly-margin-scale span {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #277b6f;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px #277b6f;
+}
+.monthly-margin-scale.negative-margin i,
+.monthly-margin-scale.negative-margin span {
+  background: #ba5154;
+}
+.monthly-stack-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 18px;
+}
+.monthly-stack-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+.monthly-stack-legend i {
+  width: 8px;
+  height: 8px;
+  flex: none;
+}
+.monthly-stacks {
+  display: grid;
+  gap: 14px;
+}
+.monthly-stack-row {
+  display: grid;
+  grid-template-columns: minmax(70px, 110px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 10px;
+}
+.monthly-stack-row > strong {
+  font-variant-numeric: tabular-nums;
+}
+.monthly-stack-track {
+  display: flex;
+  height: 18px;
+  overflow: hidden;
+  background: #edf0f1;
+  direction: ltr;
+}
+.monthly-stack-track i {
+  height: 100%;
+  flex: none;
+}
+.filter-rail select,
+.filter-rail input[type='number'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 7px;
+  margin-bottom: 10px;
+  background: #fff;
+  color: #26343a;
+}
+.filter-rail .monthly-check {
+  display: flex !important;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+  color: #26343a !important;
+}
+@media (max-width: 580px) {
+  .monthly-margin-axis,
+  .monthly-margin-row {
+    grid-template-columns: minmax(95px, 32%) minmax(0, 1fr) 54px;
+    gap: 6px;
+  }
+  .monthly-margin-row {
+    font-size: 10px;
+  }
+  .monthly-margin-axis {
+    font-size: 8px;
+  }
+  .monthly-stack-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .monthly-stack-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

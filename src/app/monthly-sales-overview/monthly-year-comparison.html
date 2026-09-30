@@ -1,0 +1,39 @@
+<section class="monthly-comparison" [attr.aria-busy]="busy()">
+  <header class="comparison-header">
+    <div><span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span><h2>{{ text('مقارنة مبيعات الخدمات بين السنوات', 'Monthly service year comparison') }}</h2></div>
+    <strong>{{ mode() === 'full' ? text('السنة كاملة', 'Full year') : text('نفس الشهور من كل سنة', 'Same months each year') }}</strong>
+  </header>
+  <form class="comparison-filters" (ngSubmit)="compare()">
+    <label>{{ text('من سنة', 'From year') }}<input name="monthlyComparisonFrom" type="number" min="1900" max="2100" [ngModel]="fromYear()" (ngModelChange)="updateYear('from', +$event)" /></label>
+    <label>{{ text('إلى سنة', 'To year') }}<input name="monthlyComparisonTo" type="number" min="1900" max="2100" [ngModel]="toYear()" (ngModelChange)="updateYear('to', +$event)" /></label>
+    <fieldset><legend>{{ text('الفترة', 'Period') }}</legend>
+      <label><input type="radio" name="monthlyComparisonMode" value="period" [checked]="mode() === 'period'" (change)="updateMode('period')" />{{ text('الشهور المحددة', 'Selected months') }}</label>
+      <label><input type="radio" name="monthlyComparisonMode" value="full" [checked]="mode() === 'full'" (change)="updateMode('full')" />{{ text('السنة كاملة', 'Full year') }}</label>
+    </fieldset>
+    <button class="apply" type="submit" [disabled]="!valid() || busy()">{{ busy() ? text('جاري التحميل', 'Loading') : text('عرض المقارنة', 'Show comparison') }}</button>
+  </form>
+  @if (mode() === 'period') { <p class="comparison-period">{{ text('الشهور', 'Months') }} {{ filters().fromMonth }} - {{ filters().toMonth }}</p> }
+  @if (requested() && !busy()) {
+    <div class="comparison-charts">
+      @for (metric of metrics; track metric.key) {
+        <section class="chart comparison-chart">
+          <header><h3>{{ text(metric.ar, metric.en) }}</h3><span>{{ metric.unit }}</span></header>
+          <div class="comparison-bars" [style.grid-template-columns]="'repeat(' + sortedResults().length + ', minmax(100px, 1fr))'">
+            @for (row of sortedResults(); track row.year) {
+              <div class="comparison-year">
+                <div class="comparison-track">
+                  @if (row.status === 'ready') {
+                    <div class="comparison-fill" [class.negative-fill]="row[metric.key] < 0" [style.height.%]="height(row[metric.key], metric.key)"></div>
+                  }
+                  <strong dir="ltr" [class.negative]="row[metric.key] < 0">{{ row.status === 'ready' ? (row[metric.key] | number: '1.0-0') : '-' }}</strong>
+                </div>
+                <b>{{ row.year }}</b>
+                @if (row.status !== 'ready') { <small>{{ row.status === 'empty' ? text('لا توجد بيانات', 'No data') : text('تعذر التحميل', 'Unavailable') }}</small> }
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+</section>

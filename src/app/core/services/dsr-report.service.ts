@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, map } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 
 import {
   CostCentreAccountRow,
@@ -128,29 +128,41 @@ export class DsrReportService {
   }
 
   getDsrReport(filters: DsrFilters): Observable<DsrReportResult> {
-    const body = new URLSearchParams();
-    body.set('arrSearchValueAjxKey', JSON.stringify(this.buildTraacsSearchPayload(filters)));
-    body.set('strStausAjxKey', 'S');
-
     const headers = new HttpHeaders({
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       Accept: '*/*',
       'X-Requested-With': 'XMLHttpRequest',
     });
-
-    return this.http
-      .post(this.endpoint, body.toString(), {
+    const search = JSON.stringify(this.buildTraacsSearchPayload(filters));
+    const request = (status: 'S' | 'D'): Observable<DsrReportResponse | null> => {
+      const body = new URLSearchParams();
+      body.set('arrSearchValueAjxKey', search);
+      body.set('strStausAjxKey', status);
+      if (status === 'D') body.set('tabClick', 'true');
+      return this.http.post(this.endpoint, body.toString(), {
         headers,
         responseType: 'text',
         withCredentials: true,
-      })
-      .pipe(
-        map((response) => ({
-          data: this.parseResponse(response),
-          source: 'api' as const,
-          receivedAt: new Date(),
-        })),
+      }).pipe(
+        map((response) => this.parseResponse(response)),
+        catchError(() => of(null)),
       );
+    };
+
+    return forkJoin({ summary: request('S'), details: request('D') }).pipe(
+      map(({ summary, details }) => {
+        if (!summary && !details) throw new Error('DSR summary and details requests failed.');
+        const data: DsrReportResponse = { ...(summary ?? {}) };
+        for (const [key, value] of Object.entries(details ?? {})) {
+          if (value !== null && value !== undefined) data[key] = value;
+        }
+        data.arrDsrDetailsSummaryDataPhpKey = summary?.arrDsrDetailsSummaryDataPhpKey ?? details?.arrDsrDetailsSummaryDataPhpKey;
+        if (!details?.arrDsrTicketsPhpKey?.length && summary?.arrDsrDetailsCountPhpKey) {
+          data.arrDsrDetailsCountPhpKey = summary.arrDsrDetailsCountPhpKey;
+        }
+        return { data, source: 'api' as const, receivedAt: new Date() };
+      }),
+    );
   }
 
   getMonthlySaleReport(filters: MonthlySaleFilters): Observable<MonthlySaleReportResponse> {

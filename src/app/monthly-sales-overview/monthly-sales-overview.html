@@ -1,0 +1,206 @@
+<div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
+  <span>{{ text('السنة', 'Year') }}</span>
+  @for (item of years(); track item) {
+    <button type="button" [class.selected]="year() === item" [attr.aria-pressed]="year() === item"
+      [disabled]="loading()" (click)="selectYear(item)">{{ item }}</button>
+  }
+</div>
+
+<div class="workspace" [attr.aria-busy]="loading()">
+  <div class="canvas">
+    <header class="summary">
+      <div class="report-heading">
+        <span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span>
+        <h1>{{ text('مبيعات الخدمات الشهرية', 'Monthly Service Sales') }}</h1>
+        <bdi>{{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}</bdi>
+      </div>
+      <div class="metric revenue">
+        <span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span>
+        <strong>{{ data() ? (data()!.totalAmount | number: '1.0-0') : '-' }}</strong>
+        <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
+      </div>
+      <div class="metric net" [class.loss]="(data()?.totalProfit ?? 0) < 0">
+        <span>{{ text('مجمل الربح', 'Gross profit') }}</span>
+        <strong>{{ data() && filters().showProfit ? (data()!.totalProfit | number: '1.0-0') : '-' }}</strong>
+        <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
+      </div>
+      <div class="metric expense">
+        <span>{{ text('عدد المستندات', 'Documents') }}</span>
+        <strong>{{ data() && filters().showCount ? (data()!.totalCount | number: '1.0-0') : '-' }}</strong>
+        <small>{{ text('مستند', 'documents') }}</small>
+      </div>
+    </header>
+
+    @if (data(); as report) {
+      <div class="context-line">
+        <span>{{ text('الخدمات النشطة', 'Active services') }} <b>{{ report.activeServiceCount }} / {{ report.services.length }}</b></span>
+        @if (filters().showProfit) { <span>{{ text('هامش مجمل الربح', 'Gross margin') }} <b dir="ltr">{{ report.grossMargin | percent: '1.1-1' }}</b></span> }
+        <span>{{ text('متوسط الإيراد الشهري', 'Average monthly revenue') }} <b dir="ltr">{{ report.avgMonthlyAmount | number: '1.0-0' }} SAR</b></span>
+      </div>
+      <nav class="section-nav" [attr.aria-label]="text('أقسام التحليل', 'Analysis sections')">
+        <a href="#monthly-revenue">{{ text('الإيرادات', 'Revenue') }}</a>
+        @if (filters().showProfit) { <a href="#monthly-profit">{{ text('الأرباح', 'Profit') }}</a> }
+        @if (filters().showCount) { <a href="#monthly-volume">{{ text('العمليات', 'Operations') }}</a> }
+      </nav>
+
+      <section id="monthly-revenue" class="analysis-section revenue-section" aria-labelledby="monthly-revenue-heading">
+        <header class="section-heading">
+          <h2 id="monthly-revenue-heading">{{ text('الإيرادات', 'Revenue') }}</h2>
+          <div><span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span><strong dir="ltr">SAR {{ report.totalAmount | number: '1.0-0' }}</strong></div>
+          <div><span>{{ text('أفضل شهر', 'Best month') }}</span><strong>{{ report.bestMonth?.label || '-' }}</strong></div>
+        </header>
+        <div class="charts">
+          <section class="chart monthly-span">
+            <header><h3>{{ text('الإيرادات حسب الشهر', 'Revenue by month') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(80px, 1fr))'">
+              @for (month of report.months; track month.label) {
+                <div class="column">
+                  <div class="column-track"><div class="column-fill" [class.negative-fill]="month.amount < 0" [style.height.%]="width(month.amount, report.maxMonthlyAmount)"></div><b dir="ltr">{{ month.amount | number: '1.0-0' }}</b></div>
+                  <bdi>{{ month.label }}</bdi>
+                  <small dir="ltr" [class.negative]="(month.change ?? 0) < 0">{{ month.change === null ? '-' : (month.change | percent: '1.0-0') }}</small>
+                </div>
+              }
+            </div>
+          </section>
+          <section class="chart">
+            <header><h3>{{ text('توزيع الإيرادات حسب الخدمة', 'Revenue share by service') }}</h3><span>{{ report.services.length }} {{ text('خدمات', 'services') }}</span></header>
+            <div class="monthly-donut" [style.background]="mix()" role="img" [attr.aria-label]="text('توزيع الإيرادات حسب الخدمة', 'Revenue share by service')"><div><strong>{{ report.services.length }}</strong><small>{{ text('خدمات', 'services') }}</small></div></div>
+            <div class="legend-list monthly-legend">
+              @for (service of report.services; track service.id; let index = $index) {
+                <div><i [style.background]="color(index)"></i><bdi>{{ service.name }}</bdi><b dir="ltr">{{ service.share | percent: '1.1-1' }}</b></div>
+              }
+            </div>
+          </section>
+          <section class="chart">
+            <header><h3>{{ text('الإيرادات حسب الخدمة', 'Revenue by service') }}</h3><span>SAR</span></header>
+            <div class="horizontal-bars monthly-ranking">
+              @for (service of report.services; track service.id) {
+                <div class="account-bar"><bdi>{{ service.name }}</bdi><strong dir="ltr">{{ service.amount | number: '1.0-0' }}</strong><div class="track"><i class="revenue-key" [style.width.%]="width(service.amount, report.maxServiceAmount)"></i></div></div>
+              }
+            </div>
+          </section>
+          <section class="chart monthly-span">
+            <header><h3>{{ text('مساهمة الخدمات في كل شهر', 'Service contribution by month') }}</h3><span>{{ text('نسبة من الإيراد الشهري', 'Share of monthly revenue') }}</span></header>
+            <div class="monthly-stack-legend">
+              @for (service of report.services; track service.id; let index = $index) {
+                <span><i [style.background]="color(index)"></i>{{ service.name }}</span>
+              }
+            </div>
+            <div class="monthly-stacks">
+              @for (month of report.months; track month.label; let monthIndex = $index) {
+                <div class="monthly-stack-row"><bdi>{{ month.label }}</bdi><div class="monthly-stack-track">
+                  @for (service of report.services; track service.id; let index = $index) {
+                    @if (service.months[monthIndex].amount > 0 && month.amount > 0) {
+                      <i [style.width.%]="service.months[monthIndex].amount / month.amount * 100" [style.background]="color(index)" [title]="service.name + ': ' + (service.months[monthIndex].amount | number: '1.0-0')"></i>
+                    }
+                  }
+                </div><strong dir="ltr">{{ month.amount | number: '1.0-0' }}</strong></div>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+
+      @if (filters().showProfit) {
+      <section id="monthly-profit" class="analysis-section profit-section" aria-labelledby="monthly-profit-heading">
+        <header class="section-heading">
+          <h2 id="monthly-profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
+          <div><span>{{ text('مجمل الربح', 'Gross profit') }}</span><strong dir="ltr">SAR {{ report.totalProfit | number: '1.0-0' }}</strong></div>
+          <div><span>{{ text('هامش الربح', 'Profit margin') }}</span><strong dir="ltr">{{ report.grossMargin | percent: '1.1-1' }}</strong></div>
+        </header>
+        <div class="charts">
+          <section class="chart monthly-span">
+            <header><h3>{{ text('مجمل الربح حسب الشهر', 'Gross profit by month') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(80px, 1fr))'">
+              @for (month of report.months; track month.label) {
+                <div class="column"><div class="column-track"><div class="column-fill profit-fill" [class.negative-fill]="month.profit < 0" [style.height.%]="width(month.profit, maxMonthlyProfit())"></div><b dir="ltr" [class.negative]="month.profit < 0">{{ month.profit | number: '1.0-0' }}</b></div><bdi>{{ month.label }}</bdi></div>
+              }
+            </div>
+          </section>
+          <section class="chart monthly-span">
+            <header><h3>{{ text('ربح الخدمات', 'Profit by service') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-service-profit-chart" [style.grid-template-columns]="'repeat(' + report.services.length + ', minmax(118px, 1fr))'">
+              @for (service of report.services; track service.id) {
+                <div class="column" [title]="service.name">
+                  <div class="column-track monthly-service-profit-track">
+                    <div class="column-fill profit-fill" [class.negative-fill]="service.profit < 0" [style.height.%]="width(service.profit, report.maxServiceProfit) * 0.8"></div>
+                    <b dir="ltr" [class.negative]="service.profit < 0">{{ service.profit | number: '1.0-0' }}</b>
+                  </div>
+                  <bdi>{{ service.name }}</bdi>
+                </div>
+              }
+            </div>
+          </section>
+          <section class="chart monthly-span">
+            <header><h3>{{ text('هامش الربح حسب الخدمة', 'Margin by service') }}</h3><span>{{ text('من الإيراد', 'Of revenue') }}</span></header>
+            <div class="monthly-margin-axis" aria-hidden="true"><div><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>
+            <div class="monthly-margin-chart">
+              @for (service of report.services; track service.id) {
+                <div class="monthly-margin-row">
+                  <bdi>{{ service.name }}</bdi>
+                  <div class="monthly-margin-scale" [class.negative-margin]="service.margin < 0" [attr.aria-label]="service.name + ': ' + (service.margin | percent: '1.1-1')" role="img">
+                    <i [style.width.%]="marginPosition(service.margin)"></i>
+                    <span [style.left.%]="marginPosition(service.margin)"></span>
+                  </div>
+                  <strong dir="ltr" [class.negative]="service.margin < 0">{{ service.margin | percent: '1.1-1' }}</strong>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+      }
+
+      @if (filters().showCount) {
+      <section id="monthly-volume" class="analysis-section expense-section" aria-labelledby="monthly-volume-heading">
+        <header class="section-heading">
+          <h2 id="monthly-volume-heading">{{ text('العمليات', 'Operations') }}</h2>
+          <div><span>{{ text('عدد المستندات', 'Documents') }}</span><strong>{{ report.totalCount | number }}</strong></div>
+          <div><span>{{ text('متوسط قيمة المستند', 'Average document value') }}</span><strong dir="ltr">SAR {{ report.avgTicket | number: '1.0-0' }}</strong></div>
+        </header>
+        <div class="charts">
+          <section class="chart monthly-span">
+            <header><h3>{{ text('المستندات حسب الشهر', 'Documents by month') }}</h3><span>{{ text('عدد المستندات', 'Documents') }}</span></header>
+            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(80px, 1fr))'">
+              @for (month of report.months; track month.label) {
+                <div class="column"><div class="column-track"><div class="column-fill volume-fill" [style.height.%]="width(month.count, maxMonthlyCount())"></div><b>{{ month.count | number }}</b></div><bdi>{{ month.label }}</bdi></div>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+      }
+    } @else {
+      <div class="empty-overview" role="status"><h2>{{ loading() ? text('جاري تحميل التقرير', 'Loading report') : text('اختر الفترة واضغط عرض التقرير', 'Select a period and run the report') }}</h2></div>
+    }
+  </div>
+
+  <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')">
+    <form (ngSubmit)="submit()">
+      <h2>{{ text('فلاتر التقرير', 'Report filters') }}</h2>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('الفترة', 'Period') }}</legend>
+        <label for="monthly-from-month">{{ text('من شهر', 'From month') }}</label>
+        <select id="monthly-from-month" name="fromMonth" [ngModel]="filters().fromMonth" (ngModelChange)="update('fromMonth', $event)">@for (month of months; track month) { <option [value]="month">{{ month }}</option> }</select>
+        <label for="monthly-from-year">{{ text('سنة البداية', 'From year') }}</label>
+        <input id="monthly-from-year" name="fromYear" type="number" min="1900" max="2100" [ngModel]="filters().fromYear" (ngModelChange)="update('fromYear', $event)" />
+        <label for="monthly-to-month">{{ text('إلى شهر', 'To month') }}</label>
+        <select id="monthly-to-month" name="toMonth" [ngModel]="filters().toMonth" (ngModelChange)="update('toMonth', $event)">@for (month of months; track month) { <option [value]="month">{{ month }}</option> }</select>
+        <label for="monthly-to-year">{{ text('سنة النهاية', 'To year') }}</label>
+        <input id="monthly-to-year" name="toYear" type="number" min="1900" max="2100" [ngModel]="filters().toYear" (ngModelChange)="update('toYear', $event)" />
+        @if (invalidPeriod()) { <p class="validation" role="alert">{{ text('اختر فترة صحيحة', 'Select a valid period') }}</p> }
+      </fieldset>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('خيارات التقرير', 'Report options') }}</legend>
+        <label for="monthly-date-type">{{ text('نوع التاريخ', 'Date type') }}</label>
+        <select id="monthly-date-type" name="dateType" [ngModel]="filters().dateType" (ngModelChange)="update('dateType', $event)"><option value="Document Date">{{ text('تاريخ المستند', 'Document date') }}</option><option value="Service Date">{{ text('تاريخ الخدمة', 'Service date') }}</option></select>
+        <label for="monthly-currency">{{ text('العملة', 'Currency') }}</label>
+        <select id="monthly-currency" name="currency" [ngModel]="filters().currency" (ngModelChange)="update('currency', $event)"><option value="SAR">SAR</option><option value="Base">{{ text('العملة الأساسية', 'Base currency') }}</option></select>
+        <label class="monthly-check"><input type="checkbox" name="showProfit" [ngModel]="filters().showProfit" (ngModelChange)="update('showProfit', $event)" />{{ text('مجمل الربح', 'Gross profit') }}</label>
+        <label class="monthly-check"><input type="checkbox" name="showCount" [ngModel]="filters().showCount" (ngModelChange)="update('showCount', $event)" />{{ text('المستندات', 'Documents') }}</label>
+      </fieldset>
+      <div class="rail-meta"><span>{{ text('القسم', 'Department') }}</span><b>Default</b><span>{{ text('التجميع', 'Group') }}</span><b>Service</b></div>
+      <button class="apply" type="submit" [disabled]="loading() || invalidPeriod()">{{ loading() ? text('جاري البحث', 'Searching') : text('عرض التقرير', 'Run report') }}</button>
+    </form>
+  </aside>
+</div>
