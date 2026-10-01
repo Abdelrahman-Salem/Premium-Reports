@@ -66,37 +66,30 @@ button:disabled {
 
 .brand {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   margin-bottom: 36px;
 }
 
-.brand-badge {
-  display: flex;
-  width: 40px;
-  height: 40px;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--profit), #7c5e17);
-  color: #1a1200;
-  font-family: Cairo, "IBM Plex Sans Arabic", sans-serif;
-  font-size: 14px;
-  font-weight: 800;
+.brand-logo {
+  display: block;
+  width: min(100%, 188px);
+  height: 72px;
+  margin-inline: auto;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 4px;
+  background: #fff;
 }
 
 .brand-name {
   font-family: Cairo, "IBM Plex Sans Arabic", sans-serif;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.3;
-}
-
-.brand-sub {
-  margin-top: 2px;
-  color: #a9b0c7;
-  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .nav-label {
@@ -154,44 +147,6 @@ button:disabled {
   content: "";
 }
 
-.nav-divider {
-  height: 1px;
-  margin: 18px 4px;
-  background: rgb(255 255 255 / 8%);
-}
-
-.sidebar-foot {
-  margin-top: auto;
-  padding-top: 20px;
-  border-top: 1px solid rgb(255 255 255 / 8%);
-}
-
-.period {
-  margin-bottom: 4px;
-  color: #7c86a3;
-  font-size: 11px;
-}
-
-.period strong {
-  color: #dadfee;
-  font-weight: 600;
-}
-
-.session-state {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  color: #f0c46c;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-.session-state.ready {
-  color: #81d6b5;
-}
-
 .session-dot {
   width: 8px;
   height: 8px;
@@ -201,9 +156,70 @@ button:disabled {
 }
 
 .content {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
   padding: 32px 40px 64px;
+}
+
+.site-footer {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: auto;
+  padding-top: 36px;
+  border-top: 1px solid #d6dfe2;
+  color: #52616b;
+  font-size: 12px;
+}
+
+.footer-credit {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 9px;
+  direction: ltr;
+  white-space: nowrap;
+}
+
+.footer-credit > span {
+  padding-top: 14px;
+}
+
+.footer-contact-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-contact-stack img {
+  display: block;
+  width: 108px;
+  height: 44px;
+  object-fit: cover;
+  background: #fff;
+}
+
+.footer-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  direction: ltr;
+  color: #176a55;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.footer-contact:hover,
+.footer-contact:focus-visible {
+  text-decoration: underline;
+}
+
+.footer-contact svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
 }
 
 .topbar {
@@ -418,23 +434,27 @@ button:disabled {
     margin-bottom: 12px;
   }
 
-  .cost-workspace .sidebar .nav:first-of-type {
-    flex-direction: row;
-    overflow-x: auto;
+  .cost-workspace .sidebar .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
   }
 
-  .cost-workspace .sidebar .nav:first-of-type .nav-button {
-    width: auto;
-    flex: none;
-    font-size: 12px;
+  .cost-workspace .sidebar .nav .nav-button {
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    font-size: 11px;
+    line-height: 1.3;
     border-radius: 4px;
+    text-align: center;
   }
 
   .cost-workspace .sidebar .nav-label,
-  .cost-workspace .sidebar .nav-divider,
-  .cost-workspace .sidebar .nav:last-of-type,
-  .cost-workspace .sidebar .nav-item:not(button),
-  .cost-workspace .sidebar-foot {
+  .cost-workspace .sidebar .nav-item:not(button) {
     display: none;
   }
 
@@ -1968,6 +1988,11 @@ table.dsr td.label {
 }
 
 @media (max-width: 620px) {
+  .site-footer {
+    justify-content: center;
+    padding-top: 22px;
+  }
+
   .kpi-grid,
   .loading-grid {
     grid-template-columns: 1fr;

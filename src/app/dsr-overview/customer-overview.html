@@ -1,0 +1,104 @@
+<div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
+  <span>{{ text('السنة', 'Year') }}</span>
+  @for (item of years(); track item) {
+    <button type="button" [class.selected]="year() === item" [attr.aria-pressed]="year() === item" [disabled]="loading()" (click)="selectYear(item)">{{ item }}</button>
+  }
+</div>
+
+<div class="workspace" [attr.aria-busy]="loading()">
+  <div class="canvas">
+    <header class="summary customer-summary">
+      <div class="report-heading"><span>TRAACS / {{ text('تحليل العملاء', 'Customer analysis') }}</span><h1>{{ text('لوحة تحليل العملاء', 'Customer Insights Dashboard') }}</h1><bdi>{{ filters().fromDate }} - {{ filters().toDate }}</bdi></div>
+      <div class="metric revenue"><span>{{ text('إيرادات العملاء', 'Customer revenue') }}</span><strong>{{ data()?.loadedRows ? (data()!.revenue | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
+      <div class="metric net"><span>{{ text('ربح العملاء', 'Customer profit') }}</span><strong>{{ data()?.loadedRows ? (data()!.profit | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
+      <div class="metric expense"><span>{{ text('العملاء النشطون', 'Active customers') }}</span><strong>{{ data()?.loadedRows ? (data()!.customerCount | number) : '-' }}</strong><small>{{ text('عميل', 'customers') }}</small></div>
+      <div class="metric average"><span>{{ text('متوسط الإيراد لكل عميل', 'Revenue per customer') }}</span><strong>{{ data()?.loadedRows ? (data()!.averageRevenue | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
+    </header>
+
+    @if (data(); as report) {
+      @if (report.loadedRows) {
+        <div class="context-line">
+          <span>{{ text('المستندات الفريدة', 'Unique documents') }} <b>{{ report.documents | number }}</b></span>
+          <span>{{ text('هامش الربح', 'Profit margin') }} <b dir="ltr">{{ report.margin | percent:'1.1-1' }}</b></span>
+          <span>{{ text('صفوف التفاصيل', 'Detail rows') }} <b>{{ report.loadedRows | number }} / {{ report.totalRows | number }}</b></span>
+        </div>
+        @if (report.loadedRows < report.totalRows) {
+          <p class="customer-data-note" role="status">{{ text('تحليل العملاء مبني على الصفوف المحمّلة فقط؛ قد تختلف النتائج بعد تحميل بقية البيانات.', 'Customer analysis uses loaded rows only; results may change when the remaining rows are available.') }} <b dir="ltr">{{ report.loadedRows | number }} / {{ report.totalRows | number }}</b></p>
+        }
+        <nav class="section-nav" [attr.aria-label]="text('أقسام تحليل العملاء', 'Customer sections')">
+          <a href="#dsr-customers">{{ text('ترتيب العملاء', 'Customer ranking') }}</a><a href="#dsr-trend">{{ text('الاتجاه الشهري', 'Monthly trend') }}</a><a href="#dsr-customer-detail">{{ text('تفاصيل العميل', 'Customer details') }}</a>
+        </nav>
+
+        <section id="dsr-customers" class="analysis-section revenue-section">
+          <header class="section-heading"><h2>{{ text('العملاء', 'Customers') }}</h2><div><span>{{ text('حصة أعلى 5 من الإيراد الموجب', 'Top 5 share of positive revenue') }}</span><strong dir="ltr">{{ report.topFiveShare | percent:'1.1-1' }}</strong></div></header>
+          <div class="charts"><section class="chart customer-wide"><header><h3>{{ text('أعلى العملاء حسب صافي الإيراد', 'Top customers by net revenue') }}</h3><span>{{ currency() }}</span></header>
+            <div class="customer-ranking">
+              @for (customer of topCustomers(); track customer.id; let index = $index) {
+                <button type="button" class="customer-rank-row" (click)="selectedId.set(customer.id)" [attr.aria-label]="customer.name">
+                  <span class="customer-rank-name"><em>{{ index + 1 }}</em><bdi>{{ customer.name }}</bdi></span><span class="customer-rank-track"><i [class.negative-fill]="customer.revenue < 0" [style.width.%]="width(customer.revenue, maxRevenue())"></i></span><strong dir="ltr">{{ customer.revenue | number:'1.0-0' }}</strong>
+                </button>
+              }
+            </div>
+          </section></div>
+        </section>
+
+        <section id="dsr-trend" class="analysis-section profit-section">
+          <header class="section-heading"><h2>{{ text('النشاط عبر الشهور', 'Activity over time') }}</h2></header>
+          <div class="charts">
+            <section class="chart customer-wide"><header><h3>{{ text('إيراد وربح العملاء شهريًا', 'Monthly customer revenue and profit') }}</h3><span>{{ currency() }}</span></header>
+              <div class="customer-legend"><span><i class="revenue-key"></i>{{ text('الإيراد', 'Revenue') }}</span><span><i class="profit-key"></i>{{ text('الربح', 'Profit') }}</span></div>
+              <div class="customer-months">
+                @for (month of report.months; track month.key) {
+                  <div class="customer-month"><div class="customer-month-plot"><span class="customer-month-bar revenue-bar" [class.negative-fill]="month.revenue < 0" [style.height.%]="width(month.revenue, maxMonthValue())" [title]="month.revenue"></span><span class="customer-month-bar profit-bar" [class.negative-fill]="month.profit < 0" [style.height.%]="width(month.profit, maxMonthValue())" [title]="month.profit"></span></div><bdi>{{ month.label }}</bdi><strong dir="ltr">{{ month.revenue | number:'1.0-0' }}</strong><small>{{ text('ربح', 'Profit') }} {{ month.profit | number:'1.0-0' }}</small></div>
+                }
+              </div>
+            </section>
+            <section class="chart customer-wide"><header><h3>{{ text('عدد العملاء النشطين شهريًا', 'Active customers by month') }}</h3><span>{{ text('عميل', 'Customers') }}</span></header>
+              <div class="customer-months count-months">
+                @for (month of report.months; track month.key) {
+                  <div class="customer-month"><div class="customer-month-plot"><span class="customer-month-bar count-bar" [style.height.%]="width(month.customers, maxMonthCustomers())"></span></div><bdi>{{ month.label }}</bdi><strong>{{ month.customers | number }}</strong></div>
+                }
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="dsr-customer-detail" class="analysis-section expense-section">
+          <header class="section-heading"><h2>{{ text('تفاصيل العميل', 'Customer details') }}</h2></header>
+          <div class="customer-detail-layout">
+            <div class="chart customer-directory"><header><h3>{{ text('كل العملاء', 'All customers') }}</h3><span>{{ filteredCustomers().length }} / {{ report.customerCount }}</span></header>
+              <label for="dsr-customer-search">{{ text('بحث عن عميل', 'Find a customer') }}</label><input id="dsr-customer-search" type="search" [placeholder]="text('الاسم أو الكود', 'Name or code')" [ngModel]="query()" (ngModelChange)="query.set($event)" />
+              <label for="dsr-customer-sort">{{ text('ترتيب حسب', 'Sort by') }}</label><select id="dsr-customer-sort" [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)"><option value="revenue">{{ text('الإيراد', 'Revenue') }}</option><option value="profit">{{ text('الربح', 'Profit') }}</option><option value="documents">{{ text('المستندات', 'Documents') }}</option></select>
+              <div class="customer-list">
+                @for (customer of filteredCustomers(); track customer.id) {
+                  <button type="button" [class.active]="selected()?.id === customer.id" (click)="selectedId.set(customer.id)"><span><bdi>{{ customer.name }}</bdi><small dir="ltr">{{ customer.code }}</small></span><strong dir="ltr">{{ customer[sortBy()] | number:'1.0-0' }}</strong></button>
+                } @empty { <p>{{ text('لا يوجد عميل مطابق', 'No matching customer') }}</p> }
+              </div>
+            </div>
+            @if (selected(); as customer) {
+              <div class="customer-selected">
+                <header class="customer-selected-heading"><div><span>{{ text('العميل المحدد', 'Selected customer') }}</span><h3><bdi>{{ customer.name }}</bdi></h3><small dir="ltr">{{ customer.code }}</small></div><strong dir="ltr">{{ customer.share | percent:'1.1-1' }} <small>{{ text('من الإيراد الموجب', 'of positive revenue') }}</small></strong></header>
+                <div class="customer-selected-metrics"><div><span>{{ text('صافي الإيراد', 'Net revenue') }}</span><strong dir="ltr">{{ customer.revenue | number:'1.0-0' }}</strong><small>{{ currency() }}</small></div><div><span>{{ text('الربح', 'Profit') }}</span><strong dir="ltr">{{ customer.profit | number:'1.0-0' }}</strong><small>{{ currency() }}</small></div><div><span>{{ text('هامش الربح', 'Margin') }}</span><strong dir="ltr">{{ customer.margin | percent:'1.1-1' }}</strong></div><div><span>{{ text('مستندات فريدة', 'Unique documents') }}</span><strong>{{ customer.documents | number }}</strong><small>{{ customer.lines }} {{ text('سطر', 'lines') }}</small></div></div>
+                <div class="customer-selected-charts">
+                  <section class="chart"><header><h3>{{ text('إيراد العميل حسب الخدمة', 'Revenue by service') }}</h3><span>{{ currency() }}</span></header><div class="customer-ranking compact">
+                    @for (service of customer.services; track service.name) { <div class="customer-rank-row"><span class="customer-rank-name"><bdi>{{ service.name }}</bdi></span><span class="customer-rank-track"><i [class.negative-fill]="service.revenue < 0" [style.width.%]="width(service.revenue, maxSelectedService())"></i></span><strong dir="ltr">{{ service.revenue | number:'1.0-0' }}</strong></div> }
+                  </div></section>
+                  <section class="chart"><header><h3>{{ text('نشاط العميل الشهري', 'Customer monthly activity') }}</h3><span>{{ currency() }}</span></header><div class="customer-months">
+                    @for (month of customer.months; track month.key) { <div class="customer-month"><div class="customer-month-plot"><span class="customer-month-bar revenue-bar" [class.negative-fill]="month.revenue < 0" [style.height.%]="width(month.revenue, maxSelectedMonth())"></span></div><bdi>{{ month.label }}</bdi><strong dir="ltr">{{ month.revenue | number:'1.0-0' }}</strong><small>{{ month.documents }} {{ text('مستند', 'docs') }}</small></div> }
+                  </div></section>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      } @else { <div class="empty-overview" role="status"><h2>{{ text('لا توجد تفاصيل عملاء في استجابة TRAACS لهذه الفترة', 'TRAACS returned no customer detail rows for this period') }}</h2></div> }
+    } @else { <div class="empty-overview" role="status"><h2>{{ loading() ? text('جاري تحميل التقرير', 'Loading report') : text('اختر الفترة واضغط عرض التقرير', 'Select a period and run the report') }}</h2></div> }
+  </div>
+  <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')"><form (ngSubmit)="submit()"><h2>{{ text('فلاتر التقرير', 'Report filters') }}</h2>
+    <fieldset [disabled]="loading()"><legend>{{ text('الفترة', 'Period') }}</legend><label for="dsr-from-date">{{ text('من تاريخ', 'From date') }}</label><input id="dsr-from-date" name="fromDate" type="date" [ngModel]="filters().fromDate" (ngModelChange)="update('fromDate', $event)" /><label for="dsr-to-date">{{ text('إلى تاريخ', 'To date') }}</label><input id="dsr-to-date" name="toDate" type="date" [ngModel]="filters().toDate" (ngModelChange)="update('toDate', $event)" /></fieldset>
+    <fieldset [disabled]="loading()"><legend>{{ text('مراكز التكلفة', 'Cost centres') }}</legend><div class="customer-center-filters"><label><input type="checkbox" [checked]="filters().costCenters.length === options().length" (change)="toggleAllCenters($any($event.target).checked)" />{{ text('كل المراكز', 'All centres') }}</label>@for (option of options(); track option.id) { <label><input type="checkbox" [checked]="filters().costCenters.includes(option.id)" (change)="toggleCenter(option.id, $any($event.target).checked)" />{{ option.label }}</label> }</div></fieldset>
+    <fieldset [disabled]="loading()"><legend>{{ text('خيارات التقرير', 'Report options') }}</legend><label for="dsr-date-type">{{ text('نوع التاريخ', 'Date type') }}</label><select id="dsr-date-type" name="dateType" [ngModel]="filters().dateType" (ngModelChange)="update('dateType', $event)"><option value="DOCUMENT">{{ text('تاريخ المستند', 'Document date') }}</option><option value="SERVICE">{{ text('تاريخ الخدمة', 'Service date') }}</option></select><label for="dsr-currency">{{ text('العملة', 'Currency') }}</label><select id="dsr-currency" name="currency" [ngModel]="filters().currency" (ngModelChange)="update('currency', $event)"><option value="SAR">SAR</option><option value="Base">{{ text('العملة الأساسية', 'Base currency') }}</option></select><label class="customer-check"><input type="checkbox" name="showSales" [ngModel]="filters().showSales" (ngModelChange)="update('showSales', $event)" />{{ text('المبيعات', 'Sales') }}</label><label class="customer-check"><input type="checkbox" name="showRefunds" [ngModel]="filters().showRefunds" (ngModelChange)="update('showRefunds', $event)" />{{ text('المرتجعات', 'Refunds') }}</label></fieldset>
+    @if (invalidFilters()) { <p class="validation" role="alert">{{ text('اختر فترة ومركز تكلفة ونوع حركة واحد على الأقل', 'Select a valid period, cost centre and transaction type') }}</p> }
+    <button class="apply" type="submit" [disabled]="loading() || invalidFilters()">{{ loading() ? text('جاري البحث', 'Searching') : text('عرض التقرير', 'Run report') }}</button>
+  </form></aside>
+</div>

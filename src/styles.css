@@ -60,6 +60,7 @@
 
   .monthly-legend,
   .monthly-ranking,
+  .monthly-share-scroll,
   .monthly-columns,
   .monthly-service-profit-chart,
   .revenue-columns,
@@ -77,6 +78,24 @@
 
   .monthly-columns .column {
     flex: 1 1 0;
+  }
+
+  .monthly-share-table {
+    min-width: 0 !important;
+  }
+
+  .monthly-share-table .share-month-hidden {
+    display: table-cell !important;
+  }
+
+  .monthly-share-picker {
+    display: none !important;
+  }
+
+  .monthly-share-table thead th:first-child,
+  .monthly-share-table tbody th {
+    position: static;
+    width: 170px;
   }
 
   .year-comparison .chart {

@@ -8,10 +8,10 @@
 
 <div class="workspace" [attr.aria-busy]="loading()">
   <div class="canvas">
-    <header class="summary">
+    <header class="summary monthly-summary">
       <div class="report-heading">
         <span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span>
-        <h1>{{ text('مبيعات الخدمات الشهرية', 'Monthly Service Sales') }}</h1>
+        <h1>{{ text('لوحة أداء مبيعات الخدمات', 'Sales Performance Dashboard') }}</h1>
         <bdi>{{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}</bdi>
       </div>
       <div class="metric revenue">
@@ -24,23 +24,25 @@
         <strong>{{ data() && filters().showProfit ? (data()!.totalProfit | number: '1.0-0') : '-' }}</strong>
         <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
       </div>
-      <div class="metric expense">
-        <span>{{ text('عدد المستندات', 'Documents') }}</span>
-        <strong>{{ data() && filters().showCount ? (data()!.totalCount | number: '1.0-0') : '-' }}</strong>
-        <small>{{ text('مستند', 'documents') }}</small>
+      <div class="metric margin">
+        <span>{{ text('هامش الربح', 'Profit margin') }}</span>
+        <strong [class.negative]="(data()?.grossMargin ?? 0) < 0">{{ data() && filters().showProfit ? (data()!.grossMargin | percent: '1.1-1') : '-' }}</strong>
+        <small>{{ text('من الإيراد', 'of revenue') }}</small>
+      </div>
+      <div class="metric average">
+        <span>{{ text('متوسط الإيراد الشهري', 'Average monthly revenue') }}</span>
+        <strong>{{ data() ? (data()!.avgMonthlyAmount | number: '1.0-0') : '-' }}</strong>
+        <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
       </div>
     </header>
 
     @if (data(); as report) {
       <div class="context-line">
         <span>{{ text('الخدمات النشطة', 'Active services') }} <b>{{ report.activeServiceCount }} / {{ report.services.length }}</b></span>
-        @if (filters().showProfit) { <span>{{ text('هامش مجمل الربح', 'Gross margin') }} <b dir="ltr">{{ report.grossMargin | percent: '1.1-1' }}</b></span> }
-        <span>{{ text('متوسط الإيراد الشهري', 'Average monthly revenue') }} <b dir="ltr">{{ report.avgMonthlyAmount | number: '1.0-0' }} SAR</b></span>
       </div>
       <nav class="section-nav" [attr.aria-label]="text('أقسام التحليل', 'Analysis sections')">
         <a href="#monthly-revenue">{{ text('الإيرادات', 'Revenue') }}</a>
         @if (filters().showProfit) { <a href="#monthly-profit">{{ text('الأرباح', 'Profit') }}</a> }
-        @if (filters().showCount) { <a href="#monthly-volume">{{ text('العمليات', 'Operations') }}</a> }
       </nav>
 
       <section id="monthly-revenue" class="analysis-section revenue-section" aria-labelledby="monthly-revenue-heading">
@@ -81,21 +83,38 @@
           </section>
           <section class="chart monthly-span">
             <header><h3>{{ text('مساهمة الخدمات في كل شهر', 'Service contribution by month') }}</h3><span>{{ text('نسبة من الإيراد الشهري', 'Share of monthly revenue') }}</span></header>
-            <div class="monthly-stack-legend">
-              @for (service of report.services; track service.id; let index = $index) {
-                <span><i [style.background]="color(index)"></i>{{ service.name }}</span>
-              }
-            </div>
-            <div class="monthly-stacks">
-              @for (month of report.months; track month.label; let monthIndex = $index) {
-                <div class="monthly-stack-row"><bdi>{{ month.label }}</bdi><div class="monthly-stack-track">
-                  @for (service of report.services; track service.id; let index = $index) {
-                    @if (service.months[monthIndex].amount > 0 && month.amount > 0) {
-                      <i [style.width.%]="service.months[monthIndex].amount / month.amount * 100" [style.background]="color(index)" [title]="service.name + ': ' + (service.months[monthIndex].amount | number: '1.0-0')"></i>
-                    }
+            <label class="monthly-share-picker">{{ text('الشهر', 'Month') }}
+              <select [value]="activeShareMonth()" (change)="selectedShareMonth.set(+$any($event.target).value)">
+                @for (month of report.months; track month.label; let monthIndex = $index) {
+                  <option [value]="monthIndex">{{ month.label }}</option>
+                }
+              </select>
+            </label>
+            <div class="monthly-share-scroll" tabindex="0">
+              <table class="monthly-share-table" [style.min-width.px]="220 + report.months.length * 96">
+                <thead><tr>
+                  <th scope="col">{{ text('الخدمة', 'Service') }}</th>
+                  @for (month of report.months; track month.label; let monthIndex = $index) {
+                    <th scope="col" [class.share-month-hidden]="activeShareMonth() !== monthIndex"><bdi>{{ month.label }}</bdi><small dir="ltr">SAR {{ month.amount | number: '1.0-0' }}</small></th>
                   }
-                </div><strong dir="ltr">{{ month.amount | number: '1.0-0' }}</strong></div>
-              }
+                </tr></thead>
+                <tbody>
+                  @for (service of report.services; track service.id) {
+                    <tr><th scope="row"><bdi>{{ service.name }}</bdi></th>
+                      @for (month of report.months; track month.label; let monthIndex = $index) {
+                        <td [class.share-month-hidden]="activeShareMonth() !== monthIndex" [title]="service.name + ' / ' + month.label + ': SAR ' + (service.months[monthIndex].amount | number: '1.0-0')">
+                          @if (month.amount !== 0 && service.months[monthIndex].amount !== 0) {
+                            <div class="monthly-share-cell" [class.negative]="shareOf(service.months[monthIndex].amount, month.amount) < 0">
+                              <i [style.width.%]="shareWidth(service.months[monthIndex].amount, month.amount)"></i>
+                              <strong dir="ltr">{{ shareOf(service.months[monthIndex].amount, month.amount) | percent: '1.1-1' }}</strong>
+                            </div>
+                          } @else { <span class="monthly-share-empty">-</span> }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
             </div>
           </section>
         </div>
@@ -133,37 +152,15 @@
           </section>
           <section class="chart monthly-span">
             <header><h3>{{ text('هامش الربح حسب الخدمة', 'Margin by service') }}</h3><span>{{ text('من الإيراد', 'Of revenue') }}</span></header>
-            <div class="monthly-margin-axis" aria-hidden="true"><div><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>
-            <div class="monthly-margin-chart">
+            <div class="monthly-margin-columns">
               @for (service of report.services; track service.id) {
-                <div class="monthly-margin-row">
-                  <bdi>{{ service.name }}</bdi>
-                  <div class="monthly-margin-scale" [class.negative-margin]="service.margin < 0" [attr.aria-label]="service.name + ': ' + (service.margin | percent: '1.1-1')" role="img">
-                    <i [style.width.%]="marginPosition(service.margin)"></i>
-                    <span [style.left.%]="marginPosition(service.margin)"></span>
-                  </div>
+                <div class="monthly-margin-column">
                   <strong dir="ltr" [class.negative]="service.margin < 0">{{ service.margin | percent: '1.1-1' }}</strong>
+                  <div class="monthly-margin-track" [attr.aria-label]="service.name + ': ' + (service.margin | percent: '1.1-1')" role="img">
+                    <i [class.negative-fill]="service.margin < 0" [style.height.%]="marginHeight(service.margin)"></i>
+                  </div>
+                  <bdi>{{ service.name }}</bdi>
                 </div>
-              }
-            </div>
-          </section>
-        </div>
-      </section>
-      }
-
-      @if (filters().showCount) {
-      <section id="monthly-volume" class="analysis-section expense-section" aria-labelledby="monthly-volume-heading">
-        <header class="section-heading">
-          <h2 id="monthly-volume-heading">{{ text('العمليات', 'Operations') }}</h2>
-          <div><span>{{ text('عدد المستندات', 'Documents') }}</span><strong>{{ report.totalCount | number }}</strong></div>
-          <div><span>{{ text('متوسط قيمة المستند', 'Average document value') }}</span><strong dir="ltr">SAR {{ report.avgTicket | number: '1.0-0' }}</strong></div>
-        </header>
-        <div class="charts">
-          <section class="chart monthly-span">
-            <header><h3>{{ text('المستندات حسب الشهر', 'Documents by month') }}</h3><span>{{ text('عدد المستندات', 'Documents') }}</span></header>
-            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(80px, 1fr))'">
-              @for (month of report.months; track month.label) {
-                <div class="column"><div class="column-track"><div class="column-fill volume-fill" [style.height.%]="width(month.count, maxMonthlyCount())"></div><b>{{ month.count | number }}</b></div><bdi>{{ month.label }}</bdi></div>
               }
             </div>
           </section>

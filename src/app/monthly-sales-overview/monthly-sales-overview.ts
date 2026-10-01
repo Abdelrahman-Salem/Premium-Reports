@@ -1,5 +1,5 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MonthlySaleDashboardView, MonthlySaleFilters } from '../models/dsr-report.models';
 
@@ -24,8 +24,9 @@ export class MonthlySalesOverview {
     return Array.from({ length: 6 }, (_, index) => last - 5 + index);
   });
   protected readonly months = Array.from({ length: 12 }, (_, index) => index + 1);
+  protected readonly selectedShareMonth = signal(0);
+  protected readonly activeShareMonth = computed(() => Math.min(this.selectedShareMonth(), Math.max(0, (this.data()?.months.length ?? 1) - 1)));
   protected readonly maxMonthlyProfit = computed(() => Math.max(1, ...this.data()?.months.map((month) => Math.abs(month.profit)) ?? [1]));
-  protected readonly maxMonthlyCount = computed(() => Math.max(1, ...this.data()?.months.map((month) => Math.abs(month.count)) ?? [1]));
   protected readonly invalidPeriod = computed(() => {
     const filters = this.filters();
     const fromYear = Number(filters.fromYear);
@@ -61,8 +62,14 @@ export class MonthlySalesOverview {
   protected width(value: number, maximum: number): number {
     return Math.min(100, Math.abs(value) / Math.max(maximum, 1) * 100);
   }
-  protected marginPosition(margin: number): number {
-    return Math.max(0, Math.min(100, margin * 100));
+  protected shareOf(amount: number, monthlyTotal: number): number {
+    return monthlyTotal === 0 ? 0 : amount / monthlyTotal;
+  }
+  protected shareWidth(amount: number, monthlyTotal: number): number {
+    return Math.min(100, Math.abs(this.shareOf(amount, monthlyTotal)) * 100);
+  }
+  protected marginHeight(margin: number): number {
+    return Math.min(100, Math.abs(margin) * 100);
   }
   protected update<K extends keyof MonthlySaleFilters>(key: K, value: MonthlySaleFilters[K]): void {
     this.filtersChange.emit({ ...this.filters(), [key]: value });

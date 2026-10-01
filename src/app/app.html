@@ -1,11 +1,8 @@
 <div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'" [class.cost-workspace]="true">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-badge">PR</div>
-      <div>
-        <div class="brand-name">Premium Reports</div>
-        <div class="brand-sub">{{ t('analytics') }}</div>
-      </div>
+      <img class="brand-logo" src="logo.jpg" alt="First Premium" />
+      <div class="brand-name" dir="ltr">First Premium Support Services</div>
     </div>
 
     <div class="nav-label">{{ t('reportSections') }}</div>
@@ -31,48 +28,7 @@
         </svg>
         {{ t('costCentrePeriodical') }}
       </button>
-      <div class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M3 12h4l3 8 4-16 3 8h4" />
-        </svg>
-        {{ t('finance') }}
-      </div>
-      <div class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <circle cx="12" cy="12" r="8" />
-          <path d="M12 8v4l3 2" />
-        </svg>
-        {{ t('operations') }}
-      </div>
     </nav>
-
-    <div class="nav-divider"></div>
-    <div class="nav-label">Session</div>
-    <nav class="nav">
-      <button class="nav-item nav-button" type="button" (click)="openTraacsLogin()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-          <path d="M10 17l5-5-5-5" />
-          <path d="M15 12H3" />
-        </svg>
-        {{ t('openTraacs') }}
-      </button>
-      <button class="nav-item nav-button" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-        {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
-      </button>
-    </nav>
-
-    <div class="sidebar-foot">
-      <div class="period">{{ language() === 'ar' ? 'الفترة المعروضة' : 'Visible period' }}</div>
-      <div class="period"><strong>{{ visiblePeriodLabel() }}</strong></div>
-      <div class="session-state" [class.ready]="sessionReady()">
-        <span class="session-dot"></span>
-        <span>{{ sessionMessage() || t('sessionMissing') }}</span>
-      </div>
-    </div>
   </aside>
 
   <main class="content">
@@ -128,7 +84,7 @@
       </div>
       @if (dsrView() === 'report') {
         <app-dsr-overview
-          [data]="dashboard()"
+          [data]="customerDashboard()"
           [filters]="filters()"
           [options]="costCentreOptions"
           [language]="language()"
@@ -191,5 +147,20 @@
       <div class="notice" role="status">{{ error() }}</div>
     }
 
+    <footer class="site-footer">
+      <div class="footer-credit">
+        <span>Powered by</span>
+        <div class="footer-contact-stack">
+          <img src="codit.png" alt="Codit" />
+          <a class="footer-contact" href="https://wa.me/201144918857" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +20 114 491 8857">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.5 11.8a8.5 8.5 0 0 1-12.4 7.5L3 21l1.7-5.1A8.5 8.5 0 1 1 20.5 11.8Z" />
+              <path d="M8.1 8.3c-.4.3-.6.8-.5 1.4.3 2.4 3.1 5.2 5.5 5.5.6.1 1.1-.1 1.4-.5l.7-1-2-1.1-.9 1c-1.1-.5-2-1.4-2.5-2.5l1-.9-1.1-2-1.6.1Z" />
+            </svg>
+            <bdi dir="ltr">+20 114 491 8857</bdi>
+          </a>
+        </div>
+      </div>
+    </footer>
   </main>
 </div>
