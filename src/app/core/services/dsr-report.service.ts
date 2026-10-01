@@ -6,6 +6,11 @@ import {
   CostCentreAccountRow,
   CostCentrePerformanceRow,
   DsrBucket,
+  DsrCustomer,
+  DsrCustomerDashboardView,
+  DsrCustomerMetric,
+  DsrCustomerMonth,
+  DsrCustomerService,
   DsrDashboardView,
   DsrFilters,
   DsrDetailAggregateRow,
@@ -454,6 +459,121 @@ export class DsrReportService {
       profitMargin,
       detailAnalytics,
       rawPreview: JSON.stringify(response, null, 2),
+    };
+  }
+
+  toCustomerDashboardView(response: DsrReportResponse): DsrCustomerDashboardView {
+    const rows = Array.isArray(response.arrDsrTicketsPhpKey) ? response.arrDsrTicketsPhpKey : [];
+    type Group = {
+      value: DsrCustomer;
+      documents: Set<string>;
+      months: Map<string, { value: DsrCustomerMonth; documents: Set<string> }>;
+      services: Map<string, { value: DsrCustomerService; documents: Set<string> }>;
+    };
+    const groups = new Map<string, Group>();
+    const allDocuments = new Set<string>();
+    const months = new Map<string, { value: DsrCustomerMonth; customers: Set<string>; documents: Set<string> }>();
+    const totals: DsrCustomerMetric = { revenue: 0, profit: 0, documents: 0, lines: 0 };
+    const monthLabel = (key: string) => key === 'Unknown'
+      ? 'Unknown' : new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1)
+        .toLocaleString('en-US', { month: 'short', year: 'numeric' });
+    const newMonth = (key: string): DsrCustomerMonth => ({
+      key, label: monthLabel(key), revenue: 0, profit: 0, documents: 0, lines: 0, customers: 0,
+    });
+
+    rows.forEach((row, index) => {
+      const code = String(row.strCustomerCodePhpKey ?? '').trim();
+      const name = String(row.strCustomerNamePhpKey ?? '').trim();
+      const id = code ? `code:${code.toLowerCase()}` : `name:${name.toLowerCase() || 'unknown'}`;
+      const date = String(row.datDatePhpKey || row.datIssueDatePhpKey || '');
+      const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(date);
+      const monthKey = match && Number(match[2]) >= 1 && Number(match[2]) <= 12
+        ? `${match[3]}-${match[2].padStart(2, '0')}` : 'Unknown';
+      const documentNo = String(row.strDocumentNoPhpKey ?? '').trim();
+      const documentId = `${id}:${documentNo || `row-${index}`}`;
+      const sign = this.isDsrRefund(row) || this.toNumber(row.dblSellingAmtPhpKey) < 0 ? -1 : 1;
+      const revenue = sign * Math.abs(this.toNumber(row.dblSellingAmtPhpKey));
+      const profit = sign * Math.abs(this.toNumber(row.dblProfitAmtPhpKey));
+      const serviceName = String(row.strServiceName || row.strSectorPhpKey || '').trim() || 'Unclassified service';
+      let group = groups.get(id);
+      if (!group) {
+        group = {
+          value: { id, code, name: name || code || 'Unknown customer', revenue: 0, profit: 0,
+            documents: 0, lines: 0, margin: 0, share: 0, activeMonths: 0, sales: 0, refunds: 0,
+            months: [], services: [] },
+          documents: new Set(), months: new Map(), services: new Map(),
+        };
+        groups.set(id, group);
+      } else if (name && group.value.name === group.value.code) {
+        group.value.name = name;
+      }
+      const customer = group.value;
+      customer.revenue += revenue;
+      customer.profit += profit;
+      customer.lines++;
+      if (sign < 0) customer.refunds += Math.abs(revenue);
+      else customer.sales += revenue;
+      group.documents.add(documentId);
+      allDocuments.add(documentId);
+
+      let customerMonth = group.months.get(monthKey);
+      if (!customerMonth) {
+        customerMonth = { value: newMonth(monthKey), documents: new Set() };
+        group.months.set(monthKey, customerMonth);
+      }
+      customerMonth.value.revenue += revenue;
+      customerMonth.value.profit += profit;
+      customerMonth.value.lines++;
+      customerMonth.documents.add(documentId);
+
+      let globalMonth = months.get(monthKey);
+      if (!globalMonth) {
+        globalMonth = { value: newMonth(monthKey), customers: new Set(), documents: new Set() };
+        months.set(monthKey, globalMonth);
+      }
+      globalMonth.value.revenue += revenue;
+      globalMonth.value.profit += profit;
+      globalMonth.value.lines++;
+      globalMonth.customers.add(id);
+      globalMonth.documents.add(documentId);
+
+      let service = group.services.get(serviceName);
+      if (!service) {
+        service = { value: { name: serviceName, revenue: 0, profit: 0, documents: 0, lines: 0 }, documents: new Set() };
+        group.services.set(serviceName, service);
+      }
+      service.value.revenue += revenue;
+      service.value.profit += profit;
+      service.value.lines++;
+      service.documents.add(documentId);
+      totals.revenue += revenue;
+      totals.profit += profit;
+      totals.lines++;
+    });
+
+    totals.documents = allDocuments.size;
+    const customers = [...groups.values()].map(({ value, documents, months: customerMonths, services }) => ({
+      ...value,
+      documents: documents.size,
+      margin: value.revenue ? value.profit / value.revenue : 0,
+      activeMonths: customerMonths.size,
+      months: [...customerMonths.values()].map(({ value: month, documents: ids }) => ({ ...month, documents: ids.size, customers: 1 }))
+        .sort((a, b) => a.key.localeCompare(b.key)),
+      services: [...services.values()].map(({ value: service, documents: ids }) => ({ ...service, documents: ids.size }))
+        .sort((a, b) => b.revenue - a.revenue),
+    })).sort((a, b) => b.revenue - a.revenue);
+    const positiveRevenue = customers.reduce((sum, customer) => sum + Math.max(0, customer.revenue), 0);
+    customers.forEach((customer) => { customer.share = positiveRevenue ? Math.max(0, customer.revenue) / positiveRevenue : 0; });
+    const monthly = [...months.values()].map(({ value, customers: ids, documents }) => ({
+      ...value, customers: ids.size, documents: documents.size,
+    })).sort((a, b) => a.key.localeCompare(b.key));
+    const reportedRows = this.toNumber(response.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey);
+    return {
+      ...totals, customers, months: monthly, customerCount: customers.length,
+      averageRevenue: customers.length ? totals.revenue / customers.length : 0,
+      margin: totals.revenue ? totals.profit / totals.revenue : 0,
+      topFiveShare: positiveRevenue ? customers.slice(0, 5).reduce((sum, customer) => sum + Math.max(0, customer.revenue), 0) / positiveRevenue : 0,
+      loadedRows: rows.length, totalRows: Math.max(rows.length, reportedRows),
     };
   }
 

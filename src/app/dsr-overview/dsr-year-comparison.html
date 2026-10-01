@@ -1,6 +1,6 @@
 <section class="monthly-comparison" [attr.aria-busy]="busy()">
   <header class="comparison-header">
-    <div><span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span><h2>{{ text('مقارنة تفاصيل DSR بين السنوات', 'DSR year comparison') }}</h2></div>
+    <div><span>TRAACS / {{ text('لوحة تحليل العملاء', 'Customer Insights Dashboard') }}</span><h2>{{ text('مقارنة أداء العملاء بين السنوات', 'Customer insights by year') }}</h2></div>
     <strong>{{ mode() === 'full' ? text('السنة كاملة', 'Full year') : text('نفس التواريخ من كل سنة', 'Same dates each year') }}</strong>
   </header>
   <form class="comparison-filters" (ngSubmit)="compare()">
@@ -27,6 +27,7 @@
                   <strong dir="ltr" [class.negative]="row[metric.key] < 0">{{ row.status === 'ready' ? (row[metric.key] | number: '1.0-0') : '-' }}</strong>
                 </div>
                 <b>{{ row.year }}</b>
+                @if (row.status === 'ready' && row.loadedRows < row.totalRows) { <small>{{ text('صفوف محملة', 'Loaded rows') }} {{ row.loadedRows }} / {{ row.totalRows }}</small> }
                 @if (row.status !== 'ready') { <small>{{ row.status === 'empty' ? text('لا توجد بيانات', 'No data') : text('تعذر التحميل', 'Unavailable') }}</small> }
               </div>
             }

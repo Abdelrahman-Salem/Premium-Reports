@@ -44,6 +44,7 @@ export interface DsrTicketRawRow {
   strTicketPhpKey?: string | null;
   strDocumentNoPhpKey?: string | null;
   strCustomerNamePhpKey?: string | null;
+  strCustomerCodePhpKey?: string | null;
   strServiceName?: string | null;
   strServiceCode?: string | null;
   strSectorPhpKey?: string | null;
@@ -194,6 +195,47 @@ export interface DsrDashboardView {
   profitMargin: number;
   detailAnalytics: DsrDetailAnalyticsView | null;
   rawPreview: string;
+}
+
+export interface DsrCustomerMetric {
+  revenue: number;
+  profit: number;
+  documents: number;
+  lines: number;
+}
+
+export interface DsrCustomerMonth extends DsrCustomerMetric {
+  key: string;
+  label: string;
+  customers: number;
+}
+
+export interface DsrCustomerService extends DsrCustomerMetric {
+  name: string;
+}
+
+export interface DsrCustomer extends DsrCustomerMetric {
+  id: string;
+  code: string;
+  name: string;
+  margin: number;
+  share: number;
+  activeMonths: number;
+  sales: number;
+  refunds: number;
+  months: DsrCustomerMonth[];
+  services: DsrCustomerService[];
+}
+
+export interface DsrCustomerDashboardView extends DsrCustomerMetric {
+  customers: DsrCustomer[];
+  months: DsrCustomerMonth[];
+  customerCount: number;
+  averageRevenue: number;
+  margin: number;
+  topFiveShare: number;
+  loadedRows: number;
+  totalRows: number;
 }
 
 export interface MonthlySaleFilters {

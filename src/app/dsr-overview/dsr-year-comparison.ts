@@ -5,8 +5,8 @@ import { Subscription, catchError, from, map, mergeMap, of, timeout } from 'rxjs
 import { DsrReportService } from '../core/services/dsr-report.service';
 import { DsrFilters } from '../models/dsr-report.models';
 
-type Metric = 'revenue' | 'profit' | 'documents' | 'tax';
-type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; revenue: number; profit: number; documents: number; tax: number };
+type Metric = 'revenue' | 'profit' | 'customers' | 'average';
+type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; revenue: number; profit: number; customers: number; average: number; loadedRows: number; totalRows: number };
 
 @Component({
   selector: 'app-dsr-year-comparison',
@@ -26,10 +26,10 @@ export class DsrYearComparison {
   protected readonly requested = signal(false);
   protected readonly results = signal<YearResult[]>([]);
   protected readonly metrics: { key: Metric; ar: string; en: string; unit: string }[] = [
-    { key: 'revenue', ar: 'صافي الإيراد', en: 'Net revenue', unit: 'SAR' },
-    { key: 'profit', ar: 'مجمل الربح', en: 'Gross profit', unit: 'SAR' },
-    { key: 'documents', ar: 'المستندات', en: 'Documents', unit: '' },
-    { key: 'tax', ar: 'الضريبة', en: 'Tax', unit: 'SAR' },
+    { key: 'revenue', ar: 'إيرادات العملاء', en: 'Customer revenue', unit: 'SAR' },
+    { key: 'profit', ar: 'ربح العملاء', en: 'Customer profit', unit: 'SAR' },
+    { key: 'customers', ar: 'العملاء النشطون', en: 'Active customers', unit: '' },
+    { key: 'average', ar: 'متوسط الإيراد لكل عميل', en: 'Revenue per customer', unit: 'SAR' },
   ];
   protected readonly valid = computed(() => {
     const from = this.fromYear();
@@ -84,16 +84,14 @@ export class DsrYearComparison {
           fromDate: this.mode() === 'full' ? `${year}-01-01` : this.dateInYear(base.fromDate, year),
           toDate: this.mode() === 'full' ? `${year}-12-31` : this.dateInYear(base.toDate, year),
         };
-        const failure: YearResult = { year, status: 'error', revenue: 0, profit: 0, documents: 0, tax: 0 };
+        const failure: YearResult = { year, status: 'error', revenue: 0, profit: 0, customers: 0, average: 0, loadedRows: 0, totalRows: 0 };
         return this.service.getDsrReport(filters).pipe(
           timeout(60000),
           map((result): YearResult => {
-            const report = this.service.toDashboardView(result.data, this.language());
-            const revenue = report.metricCards[3].value;
-            const profit = report.metricCards[0].value;
-            const tax = report.metricCards[4].value;
-            const documents = report.detailAnalytics?.totalDocumentCount ?? report.saleCount + report.refundCount;
-            return { year, status: report.detailAnalytics || revenue || profit || tax ? 'ready' : 'empty', revenue, profit, documents, tax };
+            const report = this.service.toCustomerDashboardView(result.data);
+            return { year, status: report.loadedRows ? 'ready' : 'empty', revenue: report.revenue,
+              profit: report.profit, customers: report.customerCount, average: report.averageRevenue,
+              loadedRows: report.loadedRows, totalRows: report.totalRows };
           }),
           catchError(() => of(failure)),
         );

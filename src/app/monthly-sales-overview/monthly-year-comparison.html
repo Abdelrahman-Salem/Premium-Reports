@@ -1,6 +1,6 @@
 <section class="monthly-comparison" [attr.aria-busy]="busy()">
   <header class="comparison-header">
-    <div><span>TRAACS / {{ text('تقارير المبيعات', 'Sales reports') }}</span><h2>{{ text('مقارنة مبيعات الخدمات بين السنوات', 'Monthly service year comparison') }}</h2></div>
+    <div><span>TRAACS / {{ text('لوحة أداء مبيعات الخدمات', 'Sales Performance Dashboard') }}</span><h2>{{ text('مقارنة أداء المبيعات بين السنوات', 'Sales performance by year') }}</h2></div>
     <strong>{{ mode() === 'full' ? text('السنة كاملة', 'Full year') : text('نفس الشهور من كل سنة', 'Same months each year') }}</strong>
   </header>
   <form class="comparison-filters" (ngSubmit)="compare()">

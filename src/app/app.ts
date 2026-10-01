@@ -5,13 +5,14 @@ import { CostCentreOverview } from './cost-centre-overview/cost-centre-overview'
 import { YearComparison } from './cost-centre-overview/year-comparison';
 import { MonthlySalesOverview } from './monthly-sales-overview/monthly-sales-overview';
 import { MonthlyYearComparison } from './monthly-sales-overview/monthly-year-comparison';
-import { DsrOverview } from './dsr-overview/dsr-overview';
+import { CustomerOverview } from './dsr-overview/customer-overview';
 import { DsrYearComparison } from './dsr-overview/dsr-year-comparison';
 import {
   CostCentrePeriodicalDashboardView,
   CostCentrePeriodicalFilters,
   CostCentreOption,
   DsrDashboardView,
+  DsrCustomerDashboardView,
   DsrFilters,
   DsrMetricRow,
   DsrReportResult,
@@ -32,9 +33,9 @@ const TRANSLATIONS = {
     finance: 'Finance',
     operations: 'Operations',
     salesReport: 'Sales report',
-    monthlyReport: 'Monthly service sales',
-    dsrReport: 'DSR details',
-    costCentrePeriodical: 'Cost centre periodical',
+    monthlyReport: 'Sales Performance Dashboard',
+    dsrReport: 'Customer Insights Dashboard',
+    costCentrePeriodical: 'Cost Centre Performance Dashboard',
     revenue: 'Revenue',
     grossProfit: 'Gross profit',
     netProfit: 'Net profit',
@@ -56,9 +57,9 @@ const TRANSLATIONS = {
     revenueHeatmap: 'Revenue heatmap',
     profitVsRevenue: 'Profit vs revenue',
     monthlyServiceTable: 'Monthly service table',
-    title: 'DSR Details Dashboard',
+    title: 'Customer Insights Dashboard',
     subtitle:
-      'Daily sales report summary for sale, refund, net, profit, tax, and payment movement.',
+      'Customer revenue, profit, monthly activity, and service mix from DSR detail rows.',
     liveApi: 'Live API',
     searching: 'Searching',
     search: 'Search',
@@ -128,8 +129,8 @@ const TRANSLATIONS = {
     finance: 'المالية',
     operations: 'العمليات',
     salesReport: 'تقرير المبيعات',
-    monthlyReport: 'مبيعات الخدمات الشهرية',
-    dsrReport: 'تفاصيل DSR',
+    monthlyReport: 'لوحة أداء مبيعات الخدمات',
+    dsrReport: 'لوحة تحليل العملاء',
     revenue: 'الإيراد',
     grossProfit: 'مجمل الربح',
     grossMargin: 'هامش الربح',
@@ -144,8 +145,8 @@ const TRANSLATIONS = {
     revenueHeatmap: 'خريطة الإيراد الحرارية',
     profitVsRevenue: 'الربح مقابل الإيراد',
     monthlyServiceTable: 'جدول الخدمات الشهري',
-    title: 'لوحة تفاصيل DSR',
-    subtitle: 'ملخص يومي للمبيعات والمرتجعات والصافي والأرباح والضرائب وحركة الدفع.',
+    title: 'لوحة تحليل العملاء',
+    subtitle: 'تحليل إيرادات العملاء وأرباحهم ونشاطهم عبر الشهور والخدمات.',
     liveApi: 'بيانات مباشرة',
     searching: 'جاري البحث',
     search: 'بحث',
@@ -206,8 +207,7 @@ const TRANSLATIONS = {
     payableSummary: 'ملخص المستحقات',
     profitBreakdown: 'تفصيل الأرباح',
     normalizedResponse: 'الاستجابة المنظمة',
-    costCentrePeriodical:
-      '\u062A\u0642\u0631\u064A\u0631 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u062A\u0643\u0644\u0641\u0629',
+    costCentrePeriodical: 'لوحة أداء مراكز التكلفة',
     netProfit: '\u0635\u0627\u0641\u064A \u0627\u0644\u0631\u0628\u062D',
     totalExpense: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
     activeCostCentres:
@@ -227,7 +227,7 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [CostCentreOverview, YearComparison, MonthlySalesOverview, MonthlyYearComparison, DsrOverview, DsrYearComparison],
+  imports: [CostCentreOverview, YearComparison, MonthlySalesOverview, MonthlyYearComparison, CustomerOverview, DsrYearComparison],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -303,6 +303,10 @@ export class App {
   protected readonly dashboard = computed<DsrDashboardView | null>(() => {
     const report = this.report();
     return report ? this.dsrReportService.toDashboardView(report.data, this.language()) : null;
+  });
+  protected readonly customerDashboard = computed<DsrCustomerDashboardView | null>(() => {
+    const report = this.report();
+    return report ? this.dsrReportService.toCustomerDashboardView(report.data) : null;
   });
   protected readonly monthlyDashboard = computed<MonthlySaleDashboardView | null>(() =>
     this.monthlyReport(),
@@ -390,7 +394,7 @@ export class App {
       }
       if (this.reportMode() === 'dsr') {
         return this.dsrView() === 'comparison'
-          ? Boolean(this.dsrComparison()?.printReady()) : Boolean(this.report());
+          ? Boolean(this.dsrComparison()?.printReady()) : Boolean(this.customerDashboard()?.loadedRows);
       }
       return this.costCentreView() === 'comparison'
         ? Boolean(this.costCentreComparison()?.printReady()) : Boolean(this.costCentreDashboard());
@@ -751,7 +755,7 @@ export class App {
     const previousTitle = document.title;
     const mode = this.reportMode();
     const view = mode === 'monthly' ? this.monthlyView() : mode === 'dsr' ? this.dsrView() : this.costCentreView();
-    document.title = `Premium Reports - ${mode} - ${view}${view === 'report' ? ` - ${this.visiblePeriodLabel()}` : ''}`;
+    document.title = `First Premium Support Services - ${this.reportTitle()} - ${view}${view === 'report' ? ` - ${this.visiblePeriodLabel()}` : ''}`;
     window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
     window.print();
   }
