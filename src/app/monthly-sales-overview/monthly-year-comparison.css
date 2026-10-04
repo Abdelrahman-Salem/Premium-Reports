@@ -1,6 +1,6 @@
 :host {
-  --teal: #08636b;
-  --orange: #ee7925;
+  --teal: var(--brand-deep);
+  --orange: var(--brand-primary);
   --border: #dce1e4;
   display: block;
 }
@@ -23,7 +23,7 @@
   font-size: 11px;
 }
 .comparison-header h2 {
-  color: #bc5712;
+  color: var(--brand-deep);
   font-size: 22px;
   margin-top: 5px;
 }

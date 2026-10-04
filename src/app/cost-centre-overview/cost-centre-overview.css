@@ -1,7 +1,7 @@
 :host {
   display: block;
-  --orange: #ee7925;
-  --teal: #08636b;
+  --orange: var(--brand-primary);
+  --teal: var(--brand-deep);
   --muted: #647078;
   --border: #dce1e4;
   color: #26343a;
@@ -62,8 +62,8 @@ bdi {
 }
 .year-strip button.selected {
   border-bottom-color: var(--orange);
-  background: #fff0e4;
-  color: #924107;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
   font-weight: 700;
 }
 .workspace {
@@ -100,7 +100,7 @@ h1 {
   font-size: 24px;
   line-height: 1.4;
   font-weight: 500;
-  color: #bc5712;
+  color: var(--brand-deep);
   margin: 6px 0;
 }
 .metric {
@@ -124,7 +124,7 @@ h1 {
   font-size: 21px;
   line-height: 1.4;
   overflow-wrap: anywhere;
-  color: #bc5712;
+  color: var(--brand-deep);
   font-variant-numeric: tabular-nums;
 }
 .metric small {
@@ -132,7 +132,7 @@ h1 {
   color: var(--muted);
 }
 .metric.expense strong {
-  color: var(--teal);
+  color: var(--expense);
 }
 .metric.net strong {
   color: #3e7650;
@@ -356,7 +356,7 @@ h3 {
   padding-bottom: 4px;
 }
 .expense-columns .column-fill {
-  background: var(--teal);
+  background: var(--expense);
 }
 .expense-columns .column-fill.admin {
   background: #839198;
@@ -384,7 +384,7 @@ h3 {
   background: var(--orange);
 }
 .expense-key {
-  background: var(--teal);
+  background: var(--expense);
 }
 .net-key {
   background: #719449;
@@ -584,7 +584,7 @@ input[type='checkbox'] {
   --section-color: #527d39;
 }
 .expense-section {
-  --section-color: var(--teal);
+  --section-color: var(--expense);
 }
 .section-heading {
   display: flex;

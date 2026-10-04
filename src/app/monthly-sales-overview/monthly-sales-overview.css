@@ -1,12 +1,12 @@
 :host {
-  --orange: #ee7925;
-  --teal: #08636b;
+  --orange: var(--brand-primary);
+  --teal: var(--brand-deep);
 }
 .monthly-summary {
   grid-template-columns: minmax(180px, 1.25fr) repeat(4, minmax(0, 1fr));
 }
 .monthly-summary .metric.margin strong {
-  color: #08636b;
+  color: var(--brand-deep);
 }
 .monthly-summary .metric.margin strong.negative {
   color: #b23d41;

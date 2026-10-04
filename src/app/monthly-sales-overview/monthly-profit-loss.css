@@ -1,0 +1,233 @@
+:host {
+  --orange: var(--brand-primary);
+  --teal: var(--brand-deep);
+}
+
+.monthly-summary {
+  grid-template-columns: minmax(180px, 1.35fr) repeat(5, minmax(0, 1fr));
+}
+.monthly-summary .metric.income strong { color: var(--brand-deep); }
+.monthly-summary .metric.margin strong { color: #3e7650; }
+.monthly-summary .metric.loss strong { color: #b23d41; }
+
+.monthly-columns {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.monthly-columns .column-track {
+  height: 185px;
+}
+.monthly-columns .column-track b {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.monthly-columns .column > bdi {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.pl-service-columns .column > bdi {
+  min-height: 48px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.pl-service-columns .column-track {
+  height: 205px;
+}
+.pl-income-column { background: var(--brand-primary); }
+.pl-charts {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.pl-wide {
+  grid-column: 1 / -1;
+}
+.pl-center-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 30px;
+}
+.pl-center-list small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.pl-sales-fill { background: var(--brand-primary); }
+.pl-profit-fill { background: #4b8051; }
+.pl-expense-fill { background: var(--expense); }
+.negative-fill { background: #b23d41 !important; }
+
+.pl-donut {
+  display: grid;
+  place-items: center;
+  width: min(100%, 190px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  margin: 8px auto 20px;
+}
+.pl-donut > div {
+  display: grid;
+  place-content: center;
+  width: 56%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  text-align: center;
+}
+.pl-donut strong { font-size: 24px; }
+.pl-donut small { color: var(--muted); }
+.pl-donut-legend { display: grid; gap: 9px; }
+.pl-donut-legend > div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  font-size: 11px;
+}
+.pl-donut-legend i { width: 10px; height: 10px; margin-top: 3px; }
+.pl-donut-legend bdi { overflow-wrap: anywhere; }
+.pl-donut-legend strong { font-variant-numeric: tabular-nums; }
+.pl-chart-empty { padding: 35px 12px; color: var(--muted); text-align: center; }
+
+.pl-share-picker { display: none; }
+.pl-share-scroll { max-width: 100%; overflow-x: auto; }
+.pl-share-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 11px;
+}
+.pl-share-table th,
+.pl-share-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.pl-share-table thead th {
+  background: #f1f4f4;
+  color: #26343a;
+  font-weight: 600;
+  vertical-align: bottom;
+}
+.pl-share-table thead th:first-child,
+.pl-share-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  width: 220px;
+  z-index: 1;
+  text-align: start;
+}
+.pl-share-table tbody th {
+  background: #fff;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.pl-share-table tbody tr:nth-child(even) th,
+.pl-share-table tbody tr:nth-child(even) td { background: #f9fbfb; }
+.pl-share-table thead small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.pl-share-cell {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  height: 30px;
+  background: #eef2f3;
+  color: #173e3d;
+  font-variant-numeric: tabular-nums;
+}
+.pl-share-cell i {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: -1;
+  background: #a8d3cd;
+}
+.pl-share-cell.negative i { background: #f1c1b9; }
+.pl-share-cell strong { font-size: 10px; }
+.pl-share-empty { color: #9ba8ad; }
+
+.pl-margin-columns {
+  display: grid;
+  gap: 10px;
+  overflow-x: auto;
+  padding-block: 6px 8px;
+}
+.pl-margin-column {
+  display: grid;
+  grid-template-rows: 26px 160px minmax(36px, auto);
+  gap: 7px;
+  min-width: 0;
+  text-align: center;
+}
+.pl-margin-column > strong {
+  align-self: end;
+  color: #216b5d;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.pl-margin-column > strong.negative { color: #b23d41; }
+.pl-margin-column > bdi { overflow-wrap: anywhere; font-size: 11px; }
+.pl-margin-track {
+  display: flex;
+  flex-direction: column-reverse;
+  width: min(100%, 48px);
+  height: 160px;
+  margin-inline: auto;
+  border: 1px solid var(--border);
+  background: #eef2f3;
+}
+.pl-margin-track i { display: block; width: 100%; background: #459c85; }
+
+@media (max-width: 1800px) {
+  .monthly-summary {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .monthly-summary .report-heading {
+    grid-column: 1 / -1;
+  }
+  .monthly-summary .metric { grid-column: span 2; }
+  .monthly-summary .metric.net,
+  .monthly-summary .metric.margin { grid-column: span 3; }
+}
+@media (max-width: 900px) {
+  .pl-charts { grid-template-columns: minmax(0, 1fr) !important; }
+  .pl-center-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 580px) {
+  .monthly-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .monthly-summary .metric,
+  .monthly-summary .metric.net,
+  .monthly-summary .metric.margin { grid-column: auto; }
+  .monthly-summary .metric:last-child { grid-column: 1 / -1; }
+  .monthly-summary .metric strong { font-size: 17px; }
+  .monthly-columns .column-track { height: 160px; }
+  .pl-service-columns .column-track { height: 185px; }
+  .pl-share-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .pl-share-picker select {
+    min-width: 0;
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px;
+    background: #fff;
+    color: #26343a;
+  }
+  .pl-share-table { min-width: 0 !important; }
+  .pl-share-table .pl-share-month-hidden { display: none; }
+  .pl-margin-column { grid-template-rows: 26px 130px minmax(36px, auto); }
+  .pl-margin-track { height: 130px; }
+}

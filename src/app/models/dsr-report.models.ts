@@ -270,6 +270,9 @@ export interface MonthlySaleReportResponse {
     datFromDate?: string;
     datToDate?: string;
   }>;
+  intMonthlySaleReportCountPhpKey?: number | string | null;
+  intMonthlySaleReportOffSetPhpKey?: number | string | null;
+  intMonthlySaleReportPerPagePhpKey?: number | string | null;
   [sectionName: string]: unknown;
 }
 

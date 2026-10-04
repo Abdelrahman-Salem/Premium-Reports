@@ -19,6 +19,14 @@
       "destination": "/api/proxy?action=monthly-service-report"
     },
     {
+      "source": "/api/reports/finance/profit-loss/monthly-accounts",
+      "destination": "/api/proxy?action=profit-loss-monthly-accounts"
+    },
+    {
+      "source": "/api/reports/finance/profit-loss/monthly-centers",
+      "destination": "/api/proxy?action=profit-loss-monthly-centers"
+    },
+    {
       "source": "/api/reports/finance/cost-centre-periodical",
       "destination": "/api/proxy?action=cost-centre-periodical-report"
     },

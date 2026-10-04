@@ -35,13 +35,13 @@ export class CostCentreOverview {
   readonly yearSelected = output<CostCentrePeriodicalFilters>();
   readonly search = output<void>();
   protected readonly colors = [
-    '#ee7925',
-    '#08636b',
-    '#b89e17',
-    '#4c78a8',
-    '#965477',
-    '#459c85',
-    '#69747d',
+    '#007fac',
+    '#2d777c',
+    '#b59432',
+    '#4b7092',
+    '#9a6074',
+    '#4a9b84',
+    '#707b82',
   ];
   protected readonly year = computed(
     () => Number(this.filters().fromDate.slice(0, 4)) || new Date().getFullYear(),

@@ -4,6 +4,10 @@
   margin: 10mm;
 }
 
+.print-header {
+  display: none;
+}
+
 @media print {
   html,
   body,
@@ -33,6 +37,27 @@
     width: 100% !important;
   }
 
+  .print-header {
+    display: flex !important;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #00a9df;
+    color: #25323a;
+    direction: ltr;
+    font: 700 17px Arial, sans-serif;
+    break-inside: avoid-page;
+  }
+
+  .print-header img {
+    display: block;
+    width: 128px;
+    height: 56px;
+    object-fit: cover;
+    object-position: center;
+  }
+
   .sidebar,
   .topbar,
   .auth-panel,
@@ -60,6 +85,9 @@
 
   .monthly-legend,
   .monthly-ranking,
+  .pl-center-list,
+  .pl-share-scroll,
+  .pl-margin-columns,
   .monthly-share-scroll,
   .monthly-columns,
   .monthly-service-profit-chart,
@@ -83,6 +111,26 @@
   .monthly-share-table {
     min-width: 0 !important;
   }
+
+  .pl-share-table {
+    min-width: 0 !important;
+    font-size: 9px;
+  }
+
+  .pl-share-table thead th:first-child,
+  .pl-share-table tbody th {
+    position: static;
+    width: 170px;
+  }
+
+  .pl-share-table .pl-share-month-hidden {
+    display: table-cell !important;
+  }
+
+  .pl-share-picker { display: none !important; }
+
+  .pl-margin-columns { display: flex !important; }
+  .pl-margin-column { flex: 1 1 0; }
 
   .monthly-share-table .share-month-hidden {
     display: table-cell !important;

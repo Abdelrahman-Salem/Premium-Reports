@@ -7,6 +7,15 @@
 
 <div class="workspace" [attr.aria-busy]="loading()">
   <div class="canvas">
+    @if (data(); as report) {
+      @if (report.loadedRows < report.totalRows) {
+        <p class="customer-data-note" role="status">
+          <strong>{{ text('بيانات جزئية', 'Partial data') }}</strong>
+          {{ text('تحليل العملاء والأرقام التالية مبنية على الصفوف المحمّلة فقط، وليست إجمالي الفترة.', 'Customer analysis and figures below cover loaded rows only, not the full period.') }}
+          <b dir="ltr">{{ report.loadedRows | number }} / {{ report.totalRows | number }}</b>
+        </p>
+      }
+    }
     <header class="summary customer-summary">
       <div class="report-heading"><span>TRAACS / {{ text('تحليل العملاء', 'Customer analysis') }}</span><h1>{{ text('لوحة تحليل العملاء', 'Customer Insights Dashboard') }}</h1><bdi>{{ filters().fromDate }} - {{ filters().toDate }}</bdi></div>
       <div class="metric revenue"><span>{{ text('إيرادات العملاء', 'Customer revenue') }}</span><strong>{{ data()?.loadedRows ? (data()!.revenue | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
@@ -22,9 +31,6 @@
           <span>{{ text('هامش الربح', 'Profit margin') }} <b dir="ltr">{{ report.margin | percent:'1.1-1' }}</b></span>
           <span>{{ text('صفوف التفاصيل', 'Detail rows') }} <b>{{ report.loadedRows | number }} / {{ report.totalRows | number }}</b></span>
         </div>
-        @if (report.loadedRows < report.totalRows) {
-          <p class="customer-data-note" role="status">{{ text('تحليل العملاء مبني على الصفوف المحمّلة فقط؛ قد تختلف النتائج بعد تحميل بقية البيانات.', 'Customer analysis uses loaded rows only; results may change when the remaining rows are available.') }} <b dir="ltr">{{ report.loadedRows | number }} / {{ report.totalRows | number }}</b></p>
-        }
         <nav class="section-nav" [attr.aria-label]="text('أقسام تحليل العملاء', 'Customer sections')">
           <a href="#dsr-customers">{{ text('ترتيب العملاء', 'Customer ranking') }}</a><a href="#dsr-trend">{{ text('الاتجاه الشهري', 'Monthly trend') }}</a><a href="#dsr-customer-detail">{{ text('تفاصيل العميل', 'Customer details') }}</a>
         </nav>

@@ -15,13 +15,13 @@
         <bdi>{{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}</bdi>
       </div>
       <div class="metric revenue">
-        <span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span>
-        <strong>{{ data() ? (data()!.totalAmount | number: '1.0-0') : '-' }}</strong>
+        <span>{{ text('صافي إيرادات الخدمات', 'Net service revenue') }}</span>
+        <strong>{{ data() ? (data()!.totalAmount | number: '1.2-2') : '-' }}</strong>
         <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
       </div>
       <div class="metric net" [class.loss]="(data()?.totalProfit ?? 0) < 0">
-        <span>{{ text('مجمل الربح', 'Gross profit') }}</span>
-        <strong>{{ data() && filters().showProfit ? (data()!.totalProfit | number: '1.0-0') : '-' }}</strong>
+        <span>{{ text('ربح الخدمات', 'Service profit') }}</span>
+        <strong>{{ data() && filters().showProfit ? (data()!.totalProfit | number: '1.2-2') : '-' }}</strong>
         <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
       </div>
       <div class="metric margin">
@@ -31,13 +31,15 @@
       </div>
       <div class="metric average">
         <span>{{ text('متوسط الإيراد الشهري', 'Average monthly revenue') }}</span>
-        <strong>{{ data() ? (data()!.avgMonthlyAmount | number: '1.0-0') : '-' }}</strong>
+        <strong>{{ data() ? (data()!.avgMonthlyAmount | number: '1.2-2') : '-' }}</strong>
         <small>{{ filters().currency === 'Base' ? 'SAR' : filters().currency }}</small>
       </div>
     </header>
 
     @if (data(); as report) {
       <div class="context-line">
+        <span>{{ text('الفترة المعروضة', 'Reported period') }} <bdi>{{ report.periodLabel }}</bdi></span>
+        <span>{{ text('القيم بعد احتساب المرتجعات', 'Values include refunds') }}</span>
         <span>{{ text('الخدمات النشطة', 'Active services') }} <b>{{ report.activeServiceCount }} / {{ report.services.length }}</b></span>
       </div>
       <nav class="section-nav" [attr.aria-label]="text('أقسام التحليل', 'Analysis sections')">
@@ -48,7 +50,7 @@
       <section id="monthly-revenue" class="analysis-section revenue-section" aria-labelledby="monthly-revenue-heading">
         <header class="section-heading">
           <h2 id="monthly-revenue-heading">{{ text('الإيرادات', 'Revenue') }}</h2>
-          <div><span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span><strong dir="ltr">SAR {{ report.totalAmount | number: '1.0-0' }}</strong></div>
+          <div><span>{{ text('صافي الإيراد', 'Net revenue') }}</span><strong dir="ltr">SAR {{ report.totalAmount | number: '1.2-2' }}</strong></div>
           <div><span>{{ text('أفضل شهر', 'Best month') }}</span><strong>{{ report.bestMonth?.label || '-' }}</strong></div>
         </header>
         <div class="charts">
@@ -57,7 +59,7 @@
             <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(80px, 1fr))'">
               @for (month of report.months; track month.label) {
                 <div class="column">
-                  <div class="column-track"><div class="column-fill" [class.negative-fill]="month.amount < 0" [style.height.%]="width(month.amount, report.maxMonthlyAmount)"></div><b dir="ltr">{{ month.amount | number: '1.0-0' }}</b></div>
+                  <div class="column-track"><div class="column-fill" [class.negative-fill]="month.amount < 0" [style.height.%]="width(month.amount, report.maxMonthlyAmount)"></div><b dir="ltr">{{ month.amount | number: '1.2-2' }}</b></div>
                   <bdi>{{ month.label }}</bdi>
                   <small dir="ltr" [class.negative]="(month.change ?? 0) < 0">{{ month.change === null ? '-' : (month.change | percent: '1.0-0') }}</small>
                 </div>
@@ -77,7 +79,7 @@
             <header><h3>{{ text('الإيرادات حسب الخدمة', 'Revenue by service') }}</h3><span>SAR</span></header>
             <div class="horizontal-bars monthly-ranking">
               @for (service of report.services; track service.id) {
-                <div class="account-bar"><bdi>{{ service.name }}</bdi><strong dir="ltr">{{ service.amount | number: '1.0-0' }}</strong><div class="track"><i class="revenue-key" [style.width.%]="width(service.amount, report.maxServiceAmount)"></i></div></div>
+                <div class="account-bar"><bdi>{{ service.name }}</bdi><strong dir="ltr">{{ service.amount | number: '1.2-2' }}</strong><div class="track"><i class="revenue-key" [style.width.%]="width(service.amount, report.maxServiceAmount)"></i></div></div>
               }
             </div>
           </section>
@@ -95,14 +97,14 @@
                 <thead><tr>
                   <th scope="col">{{ text('الخدمة', 'Service') }}</th>
                   @for (month of report.months; track month.label; let monthIndex = $index) {
-                    <th scope="col" [class.share-month-hidden]="activeShareMonth() !== monthIndex"><bdi>{{ month.label }}</bdi><small dir="ltr">SAR {{ month.amount | number: '1.0-0' }}</small></th>
+                    <th scope="col" [class.share-month-hidden]="activeShareMonth() !== monthIndex"><bdi>{{ month.label }}</bdi><small dir="ltr">SAR {{ month.amount | number: '1.2-2' }}</small></th>
                   }
                 </tr></thead>
                 <tbody>
                   @for (service of report.services; track service.id) {
                     <tr><th scope="row"><bdi>{{ service.name }}</bdi></th>
                       @for (month of report.months; track month.label; let monthIndex = $index) {
-                        <td [class.share-month-hidden]="activeShareMonth() !== monthIndex" [title]="service.name + ' / ' + month.label + ': SAR ' + (service.months[monthIndex].amount | number: '1.0-0')">
+                        <td [class.share-month-hidden]="activeShareMonth() !== monthIndex" [title]="service.name + ' / ' + month.label + ': SAR ' + (service.months[monthIndex].amount | number: '1.2-2')">
                           @if (month.amount !== 0 && service.months[monthIndex].amount !== 0) {
                             <div class="monthly-share-cell" [class.negative]="shareOf(service.months[monthIndex].amount, month.amount) < 0">
                               <i [style.width.%]="shareWidth(service.months[monthIndex].amount, month.amount)"></i>
@@ -124,7 +126,7 @@
       <section id="monthly-profit" class="analysis-section profit-section" aria-labelledby="monthly-profit-heading">
         <header class="section-heading">
           <h2 id="monthly-profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
-          <div><span>{{ text('مجمل الربح', 'Gross profit') }}</span><strong dir="ltr">SAR {{ report.totalProfit | number: '1.0-0' }}</strong></div>
+          <div><span>{{ text('ربح الخدمات', 'Service profit') }}</span><strong dir="ltr">SAR {{ report.totalProfit | number: '1.2-2' }}</strong></div>
           <div><span>{{ text('هامش الربح', 'Profit margin') }}</span><strong dir="ltr">{{ report.grossMargin | percent: '1.1-1' }}</strong></div>
         </header>
         <div class="charts">
@@ -132,7 +134,7 @@
             <header><h3>{{ text('مجمل الربح حسب الشهر', 'Gross profit by month') }}</h3><span>SAR</span></header>
             <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(80px, 1fr))'">
               @for (month of report.months; track month.label) {
-                <div class="column"><div class="column-track"><div class="column-fill profit-fill" [class.negative-fill]="month.profit < 0" [style.height.%]="width(month.profit, maxMonthlyProfit())"></div><b dir="ltr" [class.negative]="month.profit < 0">{{ month.profit | number: '1.0-0' }}</b></div><bdi>{{ month.label }}</bdi></div>
+                <div class="column"><div class="column-track"><div class="column-fill profit-fill" [class.negative-fill]="month.profit < 0" [style.height.%]="width(month.profit, maxMonthlyProfit())"></div><b dir="ltr" [class.negative]="month.profit < 0">{{ month.profit | number: '1.2-2' }}</b></div><bdi>{{ month.label }}</bdi></div>
               }
             </div>
           </section>
@@ -143,7 +145,7 @@
                 <div class="column" [title]="service.name">
                   <div class="column-track monthly-service-profit-track">
                     <div class="column-fill profit-fill" [class.negative-fill]="service.profit < 0" [style.height.%]="width(service.profit, report.maxServiceProfit) * 0.8"></div>
-                    <b dir="ltr" [class.negative]="service.profit < 0">{{ service.profit | number: '1.0-0' }}</b>
+                    <b dir="ltr" [class.negative]="service.profit < 0">{{ service.profit | number: '1.2-2' }}</b>
                   </div>
                   <bdi>{{ service.name }}</bdi>
                 </div>

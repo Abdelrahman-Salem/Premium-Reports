@@ -1,20 +1,24 @@
 :host {
-  --ink: #10182b;
-  --ink-soft: #1b2540;
-  --paper: #f2f4f8;
+  --brand-primary: #007fac;
+  --brand-deep: #006784;
+  --brand-soft: #e5f5fa;
+  --ink: #243039;
+  --ink-soft: #303d46;
+  --paper: #eef2f4;
   --card: #ffffff;
-  --line: rgb(16 24 43 / 8%);
-  --text: #1a2133;
-  --text-dim: #67728c;
-  --text-faint: #a2aabd;
-  --sale: #1f6f78;
-  --sale-soft: #e3eeef;
-  --refund: #bf4a3d;
-  --refund-soft: #f8e7e4;
-  --net: #1e8f6f;
-  --net-soft: #e2f2eb;
-  --profit: #ad8322;
-  --profit-soft: #f5edda;
+  --line: rgb(36 48 57 / 10%);
+  --text: #243039;
+  --text-dim: #60717c;
+  --text-faint: #8897a0;
+  --sale: #007fac;
+  --sale-soft: #e5f5fa;
+  --refund: #ae4d55;
+  --refund-soft: #f8e9eb;
+  --expense: #8f6074;
+  --net: #21856e;
+  --net-soft: #e7f4ef;
+  --profit: #397950;
+  --profit-soft: #edf5ed;
   --radius-lg: 8px;
   --radius-md: 8px;
   --shadow-card: 0 1px 2px rgb(16 24 43 / 4%), 0 8px 24px -16px rgb(16 24 43 / 18%);
@@ -94,7 +98,7 @@ button:disabled {
 
 .nav-label {
   margin: 6px 4px 10px;
-  color: #7c86a3;
+  color: #a6bbc5;
   font-size: 11px;
 }
 
@@ -112,9 +116,9 @@ button:disabled {
   width: 100%;
   padding: 11px 14px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: transparent;
-  color: #c6cce0;
+  color: #d7e5e9;
   font-size: 14px;
   font-weight: 500;
   text-align: start;
@@ -132,7 +136,7 @@ button:disabled {
 }
 
 .nav-item.active {
-  border-inline-start: 3px solid var(--profit);
+  border-inline-start: 3px solid #00a9df;
   background: rgb(255 255 255 / 6%);
   color: #ffffff;
   padding-inline-start: 11px;
@@ -395,7 +399,7 @@ button:disabled {
   width: min(100%, 300px);
   max-width: 100%;
   margin-bottom: 16px;
-  border: 1px solid #08636b;
+  border: 1px solid var(--brand-primary);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -403,18 +407,18 @@ button:disabled {
   flex: 1;
   border: 0;
   background: white;
-  color: #08636b;
+  color: var(--brand-deep);
   padding: 10px 18px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 .report-view-switch button[aria-pressed='true'] {
-  background: #08636b;
+  background: var(--brand-primary);
   color: white;
 }
 .report-view-switch button:focus-visible {
-  outline: 2px solid #ee7925;
+  outline: 2px solid var(--brand-deep);
   outline-offset: -3px;
 }
 
@@ -1069,8 +1073,8 @@ table.dsr td.label {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #10182b;
-  color: #dce5f7;
+  background: #243039;
+  color: #e8f5f8;
   direction: ltr;
   font-family: "Cascadia Code", Consolas, monospace;
   font-size: 12px;
@@ -1708,7 +1712,7 @@ table.dsr td.label {
 .heat-cell {
   display: grid;
   place-items: center;
-  background: var(--net);
+  background: #00a9df;
   color: #ffffff;
   font-weight: 900;
   line-height: 1.15;
