@@ -2,11 +2,11 @@ import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription, catchError, forkJoin, map, of, timeout } from 'rxjs';
-import { DsrReportService } from '../core/services/dsr-report.service';
-import { MonthlySaleFilters } from '../models/dsr-report.models';
+import { ProfitLossReportService } from '../core/services/profit-loss-report.service';
+import { ProfitLossFilters } from '../models/profit-loss.models';
 
-type Metric = 'revenue' | 'profit' | 'documents';
-type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; revenue: number; profit: number; documents: number };
+type Metric = 'sales' | 'income' | 'expenses' | 'netProfit';
+type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; sales: number; income: number; expenses: number; netProfit: number };
 
 @Component({
   selector: 'app-monthly-year-comparison',
@@ -15,9 +15,9 @@ type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; revenue: 
   styleUrls: ['../cost-centre-overview/cost-centre-overview.css', './monthly-year-comparison.css'],
 })
 export class MonthlyYearComparison {
-  readonly filters = input.required<MonthlySaleFilters>();
+  readonly filters = input.required<ProfitLossFilters>();
   readonly language = input<'ar' | 'en'>('ar');
-  private readonly service = inject(DsrReportService);
+  private readonly service = inject(ProfitLossReportService);
   private subscription?: Subscription;
   protected readonly fromYear = signal(new Date().getFullYear() - 1);
   protected readonly toYear = signal(new Date().getFullYear());
@@ -26,9 +26,10 @@ export class MonthlyYearComparison {
   protected readonly requested = signal(false);
   protected readonly results = signal<YearResult[]>([]);
   protected readonly metrics: { key: Metric; ar: string; en: string; unit: string }[] = [
-    { key: 'revenue', ar: 'الإيرادات', en: 'Revenue', unit: 'SAR' },
-    { key: 'profit', ar: 'مجمل الربح', en: 'Gross profit', unit: 'SAR' },
-    { key: 'documents', ar: 'المستندات', en: 'Documents', unit: '' },
+    { key: 'sales', ar: 'مبيعات الخدمات', en: 'Service sales', unit: 'SAR' },
+    { key: 'income', ar: 'الإيراد المحاسبي', en: 'P&L income', unit: 'SAR' },
+    { key: 'expenses', ar: 'المصروفات', en: 'Expenses', unit: 'SAR' },
+    { key: 'netProfit', ar: 'صافي الربح', en: 'Net profit', unit: 'SAR' },
   ];
   protected readonly valid = computed(() => {
     const from = this.fromYear();
@@ -83,22 +84,17 @@ export class MonthlyYearComparison {
     this.results.set([]);
     const base = this.filters();
     const requests = this.years().map((year) => {
-      const filters: MonthlySaleFilters = {
+      const filters: ProfitLossFilters = {
         ...base,
         fromYear: String(year),
         toYear: String(year),
         fromMonth: this.mode() === 'full' ? '1' : base.fromMonth,
         toMonth: this.mode() === 'full' ? '12' : base.toMonth,
-        showProfit: true,
-        showCount: true,
       };
-      return this.service.getMonthlySaleReport(filters).pipe(
+      return this.service.getReport(filters).pipe(
         timeout(60000),
-        map((response): YearResult => {
-          const report = this.service.toMonthlySaleDashboardView(response);
-          return { year, status: report.services.length ? 'ready' : 'empty', revenue: report.totalAmount, profit: report.totalProfit, documents: report.totalCount };
-        }),
-        catchError(() => of<YearResult>({ year, status: 'error', revenue: 0, profit: 0, documents: 0 })),
+        map((report): YearResult => ({ year, status: report.months.length ? 'ready' : 'empty', sales: report.sales, income: report.income, expenses: report.expenses, netProfit: report.netProfit })),
+        catchError(() => of<YearResult>({ year, status: 'error', sales: 0, income: 0, expenses: 0, netProfit: 0 })),
       );
     });
     this.subscription = forkJoin(requests).subscribe((results) => {

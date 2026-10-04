@@ -23,7 +23,7 @@ button:disabled {
 button:focus-visible,
 input:focus-visible,
 .chart-scroll:focus-visible {
-  outline: 2px solid #08636b;
+  outline: 2px solid var(--brand-deep);
   outline-offset: 3px;
 }
 .year-comparison {
@@ -83,12 +83,12 @@ fieldset label {
   padding-bottom: 8px;
 }
 input[type='radio'] {
-  accent-color: #08636b;
+  accent-color: var(--brand-primary);
 }
 .compare-submit {
-  background: #08636b;
+  background: var(--brand-primary);
   color: white;
-  border: 1px solid #08636b;
+  border: 1px solid var(--brand-primary);
 }
 .message {
   background: #f4f6f7;
@@ -118,10 +118,10 @@ input[type='radio'] {
   border-radius: 2px;
 }
 .revenue {
-  background: #ee7925;
+  background: var(--brand-primary);
 }
 .expense {
-  background: #08636b;
+  background: var(--brand-deep);
 }
 .net {
   background: #719449;
@@ -178,15 +178,15 @@ input[type='radio'] {
   display: grid;
   place-items: center;
   height: 49px;
-  color: #08636b;
-  background: #e9f1f2;
-  border-top: 2px solid #08636b;
+  color: var(--brand-deep);
+  background: var(--brand-soft);
+  border-top: 2px solid var(--brand-primary);
   font-size: 16px;
 }
 .year-group:nth-child(even) .year-band {
-  color: #a44d13;
-  background: #fff2e8;
-  border-top-color: #ee7925;
+  color: var(--brand-deep);
+  background: var(--brand-soft);
+  border-top-color: var(--brand-primary);
 }
 .bars {
   display: grid;

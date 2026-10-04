@@ -32,6 +32,10 @@
   </aside>
 
   <main class="content">
+    <header class="print-header" aria-label="Report company">
+      <img src="logo.jpg" alt="First Premium logo" />
+      <strong>First Premium Support Services</strong>
+    </header>
     <div class="topbar">
       <div>
         <div class="eyebrow-row">{{ t('salesReport') }}</div>
@@ -111,7 +115,7 @@
           [filters]="monthlyFilters()"
           [language]="language()"
           [loading]="loading()"
-          (filtersChange)="monthlyFilters.set($event)"
+          (filtersChange)="setMonthlyFilters($event)"
           (yearSelected)="showMonthlyYear($event)"
           (search)="refreshMonthlyReport()"
         />

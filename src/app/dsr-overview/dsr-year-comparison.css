@@ -1,3 +1,13 @@
 .comparison-fill {
   max-width: 105px;
 }
+
+.comparison-data-note {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-inline-start: 4px solid #b59432;
+  background: #fff7e7;
+  color: #624b1b;
+  font-size: 12px;
+  line-height: 1.6;
+}

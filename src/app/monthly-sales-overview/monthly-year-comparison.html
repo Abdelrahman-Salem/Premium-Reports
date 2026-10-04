@@ -1,6 +1,6 @@
 <section class="monthly-comparison" [attr.aria-busy]="busy()">
   <header class="comparison-header">
-    <div><span>TRAACS / {{ text('لوحة أداء مبيعات الخدمات', 'Sales Performance Dashboard') }}</span><h2>{{ text('مقارنة أداء المبيعات بين السنوات', 'Sales performance by year') }}</h2></div>
+    <div><span>TRAACS / {{ text('لوحة أداء مبيعات الخدمات', 'Sales Performance Dashboard') }}</span><h2>{{ text('مقارنة الأداء المالي بين السنوات', 'Financial performance by year') }}</h2></div>
     <strong>{{ mode() === 'full' ? text('السنة كاملة', 'Full year') : text('نفس الشهور من كل سنة', 'Same months each year') }}</strong>
   </header>
   <form class="comparison-filters" (ngSubmit)="compare()">
@@ -25,7 +25,7 @@
                   @if (row.status === 'ready') {
                     <div class="comparison-fill" [class.negative-fill]="row[metric.key] < 0" [style.height.%]="height(row[metric.key], metric.key)"></div>
                   }
-                  <strong dir="ltr" [class.negative]="row[metric.key] < 0">{{ row.status === 'ready' ? (row[metric.key] | number: '1.0-0') : '-' }}</strong>
+                  <strong dir="ltr" [class.negative]="row[metric.key] < 0">{{ row.status === 'ready' ? (row[metric.key] | number:'1.2-2') : '-' }}</strong>
                 </div>
                 <b>{{ row.year }}</b>
                 @if (row.status !== 'ready') { <small>{{ row.status === 'empty' ? text('لا توجد بيانات', 'No data') : text('تعذر التحميل', 'Unavailable') }}</small> }

@@ -1,0 +1,185 @@
+<div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
+  <span>{{ text('السنة', 'Year') }}</span>
+  @for (item of years(); track item) {
+    <button type="button" [class.selected]="year() === item" [attr.aria-pressed]="year() === item"
+      [disabled]="loading()" (click)="selectYear(item)">{{ item }}</button>
+  }
+</div>
+
+<div class="workspace" [attr.aria-busy]="loading()">
+  <div class="canvas">
+    <header class="summary monthly-summary">
+      <div class="report-heading">
+        <span>TRAACS / {{ text('تقارير مالية', 'Financial reports') }}</span>
+        <h1>{{ text('لوحة أداء مبيعات الخدمات', 'Sales Performance Dashboard') }}</h1>
+        <bdi>{{ data()?.periodLabel || text('لم يتم تحميل التقرير', 'Report not loaded') }}</bdi>
+      </div>
+      <div class="metric revenue"><span>{{ text('مبيعات الخدمات', 'Service sales') }}</span>
+        <strong>{{ data() ? (data()!.sales | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
+      <div class="metric income"><span>{{ text('الإيراد المحاسبي', 'P&L income') }}</span>
+        <strong>{{ data() ? (data()!.income | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
+      <div class="metric expense"><span>{{ text('المصروفات', 'Expenses') }}</span>
+        <strong>{{ data() ? (data()!.expenses | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
+      <div class="metric net" [class.loss]="(data()?.netProfit ?? 0) < 0"><span>{{ text('صافي الربح', 'Net profit') }}</span>
+        <strong>{{ data() ? (data()!.netProfit | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
+      <div class="metric margin"><span>{{ text('نسبة صافي الربح للمبيعات', 'Net profit / sales') }}</span>
+        <strong>{{ data() ? (data()!.margin | percent:'1.1-1') : '-' }}</strong><small>{{ text('من المبيعات', 'of sales') }}</small></div>
+    </header>
+
+    @if (data(); as report) {
+      <div class="context-line">
+        <span>{{ text('الفترة', 'Period') }} <bdi>{{ report.periodLabel }}</bdi></span>
+        <span>{{ text('متوسط المبيعات الشهري', 'Average monthly sales') }} <b dir="ltr">SAR {{ report.averageMonthlySales | number:'1.2-2' }}</b></span>
+      </div>
+      <nav class="section-nav" [attr.aria-label]="text('أقسام التقرير', 'Report sections')">
+        <a href="#monthly-revenue">{{ text('الإيرادات', 'Revenue') }}</a>
+        <a href="#monthly-profit">{{ text('الأرباح', 'Profit') }}</a>
+        <a href="#monthly-expenses">{{ text('المصروفات', 'Expenses') }}</a>
+      </nav>
+
+      <section id="monthly-revenue" class="analysis-section revenue-section" aria-labelledby="monthly-revenue-heading">
+        <header class="section-heading"><h2 id="monthly-revenue-heading">{{ text('الإيرادات', 'Revenue') }}</h2>
+          <div><span>{{ text('مبيعات الخدمات', 'Service sales') }}</span><strong dir="ltr">SAR {{ report.sales | number:'1.2-2' }}</strong></div>
+          <div><span>{{ text('المسجل بقائمة الأرباح والخسائر', 'Recognized in P&L') }}</span><strong dir="ltr">SAR {{ report.income | number:'1.2-2' }}</strong></div>
+        </header>
+        <div class="charts pl-charts">
+          <section class="chart pl-wide"><header><h3>{{ text('المبيعات الشهرية', 'Monthly sales') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(76px, 1fr))'">
+              @for (month of report.months; track month.key) {
+                <div class="column"><div class="column-track"><div class="column-fill" [style.height.%]="width(month.sales, maxSales())"></div><b dir="ltr">{{ month.sales | number:'1.2-2' }}</b></div><bdi>{{ month.label }}</bdi></div>
+              }
+            </div>
+          </section>
+          <section class="chart pl-wide"><header><h3>{{ text('الإيراد المحاسبي حسب الخدمة', 'P&L income by service') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-columns pl-service-columns" [style.grid-template-columns]="'repeat(' + report.incomeAccounts.length + ', minmax(112px, 1fr))'">
+              @for (account of report.incomeAccounts; track account.id) {
+                <div class="column"><div class="column-track"><div class="column-fill pl-income-column" [class.negative-fill]="account.amount < 0" [style.height.%]="width(account.amount, maxIncomeAccount())"></div><b dir="ltr" [class.negative]="account.amount < 0">{{ account.amount | number:'1.2-2' }}</b></div><bdi>{{ account.name }}</bdi></div>
+              }
+            </div>
+          </section>
+          <section class="chart"><header><h3>{{ text('توزيع الإيراد المحاسبي حسب الخدمة', 'P&L income mix by service') }}</h3><span>{{ report.incomeAccounts.length }} {{ text('خدمات', 'services') }}</span></header>
+            @if (!hasNegativeIncome() && incomeShares().length) {
+              <div class="pl-donut" [style.background]="incomeMix()" role="img" [attr.aria-label]="text('توزيع الإيراد المحاسبي حسب الخدمة', 'P&L income mix by service')"><div><strong>{{ incomeShares().length }}</strong><small>{{ text('خدمات', 'services') }}</small></div></div>
+              <div class="pl-donut-legend">
+                @for (item of incomeShares(); track item.account.id) {
+                  <div><i [style.background]="item.color"></i><bdi>{{ item.account.name }}</bdi><strong dir="ltr">{{ item.share | percent:'1.1-1' }}</strong></div>
+                }
+              </div>
+            } @else {
+              <p class="pl-chart-empty">{{ hasNegativeIncome() ? text('توجد أرصدة سالبة؛ التوزيع الدائري غير متاح لهذه الفترة', 'Negative balances prevent a meaningful pie chart for this period') : text('لا توجد إيرادات موجبة في الفترة', 'No positive income in this period') }}</p>
+            }
+          </section>
+          <section class="chart"><header><h3>{{ text('المبيعات حسب المركز', 'Sales by cost centre') }}</h3><span>SAR</span></header>
+            <div class="horizontal-bars pl-account-list">
+              @for (center of report.centers; track center.id) {
+                @if (center.sales !== 0) {
+                  <div class="account-bar"><bdi>{{ center.name }}</bdi><strong dir="ltr">{{ center.sales | number:'1.2-2' }}</strong><div class="track"><i class="pl-sales-fill" [style.width.%]="width(center.sales, maxCenterSales())"></i></div></div>
+                }
+              }
+            </div>
+          </section>
+          <section class="chart pl-wide"><header><h3>{{ text('مساهمة الخدمات في كل شهر', 'Service contribution by month') }}</h3><span>{{ text('من الإيراد المحاسبي الشهري', 'Share of monthly P&L income') }}</span></header>
+            <label class="pl-share-picker">{{ text('الشهر', 'Month') }}
+              <select [ngModel]="activeShareMonth()" (ngModelChange)="selectedShareMonth.set(+$event)">
+                @for (month of report.months; track month.key; let index = $index) { <option [value]="index">{{ month.label }}</option> }
+              </select>
+            </label>
+            <div class="pl-share-scroll" tabindex="0">
+              <table class="pl-share-table" [style.min-width.px]="220 + report.months.length * 120">
+                <thead><tr><th scope="col">{{ text('الخدمة', 'Service') }}</th>
+                  @for (month of report.months; track month.key; let index = $index) {
+                    <th scope="col" [class.pl-share-month-hidden]="activeShareMonth() !== index"><bdi>{{ month.label }}</bdi><small dir="ltr">SAR {{ month.income | number:'1.2-2' }}</small></th>
+                  }
+                </tr></thead>
+                <tbody>
+                  @for (account of report.incomeAccounts; track account.id) {
+                    <tr><th scope="row"><bdi>{{ account.name }}</bdi></th>
+                      @for (month of report.months; track month.key; let index = $index) {
+                        @let share = incomeShare(account.months[index], month.income);
+                        <td [class.pl-share-month-hidden]="activeShareMonth() !== index" [title]="account.name + ' / ' + month.label + ': SAR ' + (account.months[index] | number:'1.2-2')">
+                          @if (share !== null && account.months[index] !== 0) {
+                            <div class="pl-share-cell" [class.negative]="share < 0"><i [style.width.%]="width(share, 1)"></i><strong dir="ltr">{{ share | percent:'1.1-1' }}</strong></div>
+                          } @else { <span class="pl-share-empty">-</span> }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="monthly-profit" class="analysis-section profit-section" aria-labelledby="monthly-profit-heading">
+        <header class="section-heading"><h2 id="monthly-profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
+          <div><span>{{ text('صافي الربح', 'Net profit') }}</span><strong dir="ltr">SAR {{ report.netProfit | number:'1.2-2' }}</strong></div>
+          <div><span>{{ text('هامش الربح من المبيعات', 'Margin on sales') }}</span><strong dir="ltr">{{ report.margin | percent:'1.1-1' }}</strong></div>
+        </header>
+        <div class="charts pl-charts">
+          <section class="chart pl-wide"><header><h3>{{ text('صافي الربح الشهري', 'Monthly net profit') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(76px, 1fr))'">
+              @for (month of report.months; track month.key) {
+                <div class="column"><div class="column-track"><div class="column-fill pl-profit-fill" [class.negative-fill]="month.netProfit < 0" [style.height.%]="width(month.netProfit, maxProfit())"></div><b dir="ltr" [class.negative]="month.netProfit < 0">{{ month.netProfit | number:'1.2-2' }}</b></div><bdi>{{ month.label }}</bdi></div>
+              }
+            </div>
+          </section>
+          <section class="chart pl-wide"><header><h3>{{ text('نسبة صافي الربح للمبيعات في كل شهر', 'Net profit / sales by month') }}</h3><span>{{ text('من المبيعات الشهرية', 'of monthly sales') }}</span></header>
+            <div class="pl-margin-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(96px, 1fr))'">
+              @for (month of report.months; track month.key) {
+                <div class="pl-margin-column"><strong dir="ltr" [class.negative]="month.margin < 0">{{ month.sales === 0 ? '-' : (month.margin | percent:'1.1-1') }}</strong><div class="pl-margin-track"><i [class.negative-fill]="month.margin < 0" [style.height.%]="month.sales === 0 ? 0 : width(month.margin, 1)"></i></div><bdi>{{ month.label }}</bdi></div>
+              }
+            </div>
+          </section>
+          <section class="chart pl-wide"><header><h3>{{ text('صافي الربح حسب المركز', 'Net profit by cost centre') }}</h3><span>SAR</span></header>
+            <div class="horizontal-bars pl-center-list">
+              @for (center of report.centers; track center.id) {
+                <div class="account-bar"><bdi>{{ center.name }} @if (center.overhead) { <small>{{ text('(مصروفات إدارية)', '(administrative overhead)') }}</small> }</bdi><strong dir="ltr" [class.negative]="center.netProfit < 0">{{ center.netProfit | number:'1.2-2' }}</strong><div class="track"><i class="pl-profit-fill" [class.negative-fill]="center.netProfit < 0" [style.width.%]="width(center.netProfit, maxCenterProfit())"></i></div></div>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="monthly-expenses" class="analysis-section expense-section" aria-labelledby="monthly-expenses-heading">
+        <header class="section-heading"><h2 id="monthly-expenses-heading">{{ text('المصروفات', 'Expenses') }}</h2>
+          <div><span>{{ text('إجمالي المصروفات', 'Total expenses') }}</span><strong dir="ltr">SAR {{ report.expenses | number:'1.2-2' }}</strong></div>
+        </header>
+        <div class="charts pl-charts">
+          <section class="chart pl-wide"><header><h3>{{ text('المصروفات الشهرية', 'Monthly expenses') }}</h3><span>SAR</span></header>
+            <div class="columns monthly-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(76px, 1fr))'">
+              @for (month of report.months; track month.key) {
+                <div class="column"><div class="column-track"><div class="column-fill pl-expense-fill" [style.height.%]="width(month.expenses, maxExpenses())"></div><b dir="ltr">{{ month.expenses | number:'1.2-2' }}</b></div><bdi>{{ month.label }}</bdi></div>
+              }
+            </div>
+          </section>
+        </div>
+      </section>
+    } @else {
+      <div class="empty-overview" role="status"><h2>{{ loading() ? text('جاري تحميل التقرير', 'Loading report') : text('اختر الفترة واضغط عرض التقرير', 'Select a period and run the report') }}</h2></div>
+    }
+  </div>
+
+  <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')">
+    <form (ngSubmit)="submit()">
+      <h2>{{ text('فترة التقرير', 'Report period') }}</h2>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('من', 'From') }}</legend>
+        <label for="monthly-from-month">{{ text('الشهر', 'Month') }}</label>
+        <select id="monthly-from-month" name="fromMonth" [ngModel]="filters().fromMonth" (ngModelChange)="update('fromMonth', $event)">@for (month of months; track month) { <option [value]="month">{{ month }}</option> }</select>
+        <label for="monthly-from-year">{{ text('السنة', 'Year') }}</label>
+        <input id="monthly-from-year" name="fromYear" type="number" min="1900" max="2100" [ngModel]="filters().fromYear" (ngModelChange)="update('fromYear', $event)" />
+      </fieldset>
+      <fieldset [disabled]="loading()">
+        <legend>{{ text('إلى', 'To') }}</legend>
+        <label for="monthly-to-month">{{ text('الشهر', 'Month') }}</label>
+        <select id="monthly-to-month" name="toMonth" [ngModel]="filters().toMonth" (ngModelChange)="update('toMonth', $event)">@for (month of months; track month) { <option [value]="month">{{ month }}</option> }</select>
+        <label for="monthly-to-year">{{ text('السنة', 'Year') }}</label>
+        <input id="monthly-to-year" name="toYear" type="number" min="1900" max="2100" [ngModel]="filters().toYear" (ngModelChange)="update('toYear', $event)" />
+      </fieldset>
+      @if (invalidPeriod()) { <p class="validation" role="alert">{{ text('اختر فترة صحيحة', 'Select a valid period') }}</p> }
+      <div class="rail-meta"><span>{{ text('العملة', 'Currency') }}</span><b>SAR</b><span>{{ text('الأساس', 'Basis') }}</span><b>{{ text('محاسبي', 'Accounting') }}</b></div>
+      <button class="apply" type="submit" [disabled]="loading() || invalidPeriod()">{{ loading() ? text('جاري البحث', 'Searching') : text('عرض التقرير', 'Run report') }}</button>
+    </form>
+  </aside>
+</div>

@@ -15,6 +15,9 @@
   @if (mode() === 'period') { <p class="comparison-period">{{ text('الفترة', 'Period') }} {{ filters().fromDate.slice(5) }} - {{ filters().toDate.slice(5) }}</p> }
   @if (!valid()) { <p class="comparison-period" role="alert">{{ text('اختر سنوات متتالية وفترة صالحة داخل السنة', 'Select consecutive years and a valid within-year period') }}</p> }
   @if (requested() && !busy()) {
+    @if (hasPartialData()) {
+      <p class="comparison-data-note" role="status">{{ text('بيانات جزئية: أرقام المقارنة تعتمد على صفوف العملاء المحمّلة فقط، وليست إجمالي كل سنة.', 'Partial data: comparison figures use loaded customer rows only, not each full year.') }}</p>
+    }
     <div class="comparison-charts">
       @for (metric of metrics; track metric.key) {
         <section class="chart comparison-chart">

@@ -5,6 +5,43 @@ import { vi } from 'vitest';
 import { App } from './app';
 import { DsrReportService } from './core/services/dsr-report.service';
 
+function profitLossFixture(year: string) {
+  const key = `${year}01`;
+  const period = [{ strColumnHeading: `Jan ${year}` }];
+  return {
+    accounts: {
+      arrKeyPhpKey: [key], arrTimePeriodePhpKey: period,
+      arrPandLMonthWisePhpKey: [
+        { fk_bint_sub_ledger_id: 1, vchr_account_name: 'Cabin Revenue', bint_category: 3, [`dbl_base_currency_debit_credt${key}`]: 100.25, total: 100.25 },
+        { fk_bint_sub_ledger_id: 2, vchr_account_name: 'Rent Expense', bint_category: 4, [`dbl_base_currency_debit_credt${key}`]: 30.10, total: 30.10 },
+      ],
+    },
+    centers: {
+      arrKeyPhpKey: [key], arrTimePeriodePhpKey: period,
+      arrPandLMonthWisePhpKey: [
+        { fk_bint_cost_center_id: 75, vchr_cost_center_name: '810 - G.S.E', bint_category: 3, [`dbl_base_currency_debit_credt${key}`]: 100.25 },
+        { fk_bint_cost_center_id: 75, vchr_cost_center_name: '810 - G.S.E', bint_category: 4, [`dbl_base_currency_debit_credt${key}`]: 20.10 },
+        { fk_bint_cost_center_id: 1, vchr_cost_center_name: '100 - Head Quarter', bint_category: 4, [`dbl_base_currency_debit_credt${key}`]: 10 },
+      ],
+      arrPandLMonthWiseSumPhpKey: [
+        { bint_category: 3, [`dbl_base_currency_debit_credt${key}`]: 100.25 },
+        { bint_category: 4, [`dbl_base_currency_debit_credt${key}`]: 30.10 },
+      ],
+      arrPandLSalesPhpKey: [{ vchr_cost_center_name: '810 - G.S.E', [`base_dat_document${key}`]: 125.50 }],
+      arrPandLSalesSumPhpKey: [{ [`base_dat_document${key}`]: 125.50 }],
+    },
+  };
+}
+
+function flushProfitLoss(http: HttpTestingController, year: string) {
+  const data = profitLossFixture(year);
+  const accounts = http.expectOne('/api/reports/finance/profit-loss/monthly-accounts');
+  const centers = http.expectOne('/api/reports/finance/profit-loss/monthly-centers');
+  accounts.flush(data.accounts);
+  centers.flush(data.centers);
+  return { accounts, centers };
+}
+
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -27,6 +64,8 @@ describe('App', () => {
     expect(compiled.querySelector('.title')?.textContent).toContain('لوحة أداء مبيعات الخدمات');
     expect(compiled.querySelector('.brand-name')?.textContent).toContain('First Premium Support Services');
     expect(compiled.querySelector<HTMLImageElement>('.brand-logo')?.getAttribute('src')).toBe('logo.jpg');
+    expect(compiled.querySelector('.print-header strong')?.textContent).toBe('First Premium Support Services');
+    expect(compiled.querySelector<HTMLImageElement>('.print-header img')?.getAttribute('src')).toBe('logo.jpg');
     expect(compiled.querySelectorAll('.sidebar .nav-button')).toHaveLength(3);
     expect(compiled.querySelector('.sidebar')?.textContent).not.toContain('Session');
     expect(compiled.querySelectorAll('.auth-actions button')).toHaveLength(2);
@@ -72,7 +111,7 @@ describe('App', () => {
     expect(element.querySelector('app-year-comparison')).toBeNull();
   });
 
-  it('loads a selected monthly year immediately and renders the service report', () => {
+  it('loads a selected year and separates sales, P&L income, expenses, and net profit', () => {
     const fixture = TestBed.createComponent(App);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
@@ -81,32 +120,27 @@ describe('App', () => {
     const button = [...element.querySelectorAll<HTMLButtonElement>('app-monthly-sales-overview .year-strip button')]
       .find((item) => item.textContent?.trim() === '2025')!;
     button.click();
-    const request = http.expectOne('/api/reports/sales/monthly-service');
-    const payload = JSON.parse(new URLSearchParams(request.request.body).get('arrSearchValueAjxKey')!);
+    const requests = flushProfitLoss(http, '2025');
+    const payload = JSON.parse(new URLSearchParams(requests.accounts.request.body).get('arrSearchValueAjxKey')!);
     expect([payload.datFromMonthAjxKey, payload.intFromYearAjxKey, payload.datToMonthAjxKey, payload.intToYearAjxKey])
       .toEqual(['1', '2025', '12', '2025']);
-    request.flush(JSON.stringify({
-      arrTimePeriodePhpKey: [{ strColumnHeading: 'Jan 2025' }],
-      arrSupplierMonthlySaleReportPhpKey: [
-        { fk_bint_service_id: 1, vchr_account_name: 'Cabin Revenue', dblSUMAmt0: 125, dblSUMProfit0: 90, dblCount0: 2 },
-      ],
-    }));
     fixture.detectChanges();
-    expect(element.querySelector('.metric.revenue strong')?.textContent?.trim()).toBe('125');
-    expect(element.querySelector('.monthly-summary .metric.expense')).toBeNull();
-    expect(element.querySelector('.monthly-summary .metric.margin strong')?.textContent?.trim()).toBe('72.0%');
-    expect(element.querySelector('.monthly-summary .metric.average strong')?.textContent?.trim()).toBe('125');
-    expect(element.querySelectorAll('.monthly-summary .metric')).toHaveLength(4);
-    expect(element.querySelectorAll('#monthly-revenue .monthly-columns .column')).toHaveLength(1);
-    expect(element.querySelector('.monthly-legend')?.textContent).toContain('Cabin Revenue');
-    expect(element.querySelectorAll('.monthly-service-profit-chart .column')).toHaveLength(1);
-    expect(element.querySelectorAll('.monthly-margin-column')).toHaveLength(1);
-    expect(element.querySelector('.monthly-margin-column strong')?.textContent).toContain('72.0%');
-    expect(element.querySelector<HTMLElement>('.monthly-margin-track i')?.style.height).toBe('72%');
-    expect(element.querySelector('#monthly-volume')).toBeNull();
-    expect(element.querySelector('.section-nav a[href="#monthly-volume"]')).toBeNull();
-    expect(element.querySelector('.monthly-share-table tbody td')?.textContent).toContain('100.0%');
-    expect(element.querySelector('.monthly-detail')).toBeNull();
+    expect(element.querySelector('.metric.revenue strong')?.textContent?.trim()).toBe('125.50');
+    expect(element.querySelector('.metric.income strong')?.textContent?.trim()).toBe('100.25');
+    expect(element.querySelector('.metric.expense strong')?.textContent?.trim()).toBe('30.10');
+    expect(element.querySelector('.metric.net strong')?.textContent?.trim()).toBe('70.15');
+    expect(element.querySelector('.metric.margin strong')?.textContent?.trim()).toBe('55.9%');
+    expect(element.querySelectorAll('.monthly-summary .metric')).toHaveLength(5);
+    expect(element.querySelectorAll('#monthly-revenue .pl-service-columns .column')).toHaveLength(1);
+    expect(element.querySelector('#monthly-revenue')?.textContent).toContain('Cabin Revenue');
+    expect(element.querySelector('.pl-donut')).not.toBeNull();
+    expect(element.querySelectorAll('.pl-donut-legend > div')).toHaveLength(1);
+    expect(element.querySelectorAll('.pl-share-table tbody tr')).toHaveLength(1);
+    expect(element.querySelector('.pl-share-table tbody .pl-share-cell')?.textContent).toContain('100.0%');
+    expect(element.querySelectorAll('#monthly-profit .monthly-columns .column')).toHaveLength(1);
+    expect(element.querySelectorAll('.pl-margin-column')).toHaveLength(1);
+    expect(element.querySelectorAll('#monthly-expenses .chart')).toHaveLength(1);
+    expect(element.querySelector('#monthly-expenses')?.textContent).not.toContain('Rent Expense');
     const print = vi.spyOn(window, 'print').mockImplementation(() => {});
     const originalTitle = document.title;
     element.querySelector<HTMLButtonElement>('.export-btn')!.click();
@@ -118,28 +152,20 @@ describe('App', () => {
     http.verify();
   });
 
-  it('shows each service share by month with explicit percentages', () => {
+  it('keeps the accounting basis fixed rather than offering unsupported filters', () => {
     const fixture = TestBed.createComponent(App);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('#monthly-date-type')).toBeNull();
+    expect(element.querySelector('#monthly-currency')).toBeNull();
     element.querySelector<HTMLButtonElement>('app-monthly-sales-overview .apply')!.click();
-    http.expectOne('/api/reports/sales/monthly-service').flush(JSON.stringify({
-      arrTimePeriodePhpKey: [{ strColumnHeading: 'Jan 2026' }, { strColumnHeading: 'Feb 2026' }],
-      arrSupplierMonthlySaleReportPhpKey: [
-        { fk_bint_service_id: 1, vchr_account_name: 'Cabin Revenue', dblSUMAmt0: 60, dblSUMAmt1: 50 },
-        { fk_bint_service_id: 2, vchr_account_name: 'Fuel Revenue', dblSUMAmt0: 40, dblSUMAmt1: 150 },
-      ],
-    }));
+    const requests = flushProfitLoss(http, String(new Date().getFullYear()));
     fixture.detectChanges();
-    const rows = element.querySelectorAll('.monthly-share-table tbody tr');
-    expect(rows).toHaveLength(2);
-    const cabin = [...rows].find((row) => row.textContent?.includes('Cabin Revenue'))!;
-    const fuel = [...rows].find((row) => row.textContent?.includes('Fuel Revenue'))!;
-    expect([...cabin.querySelectorAll('td')].map((cell) => cell.textContent?.trim())).toEqual(['60.0%', '25.0%']);
-    expect([...fuel.querySelectorAll('td')].map((cell) => cell.textContent?.trim())).toEqual(['40.0%', '75.0%']);
-    expect(element.querySelector('.monthly-stack-legend')).toBeNull();
+    const centerPayload = JSON.parse(new URLSearchParams(requests.centers.request.body).get('arrSearchValueAjxKey')!);
+    expect(centerPayload.strBaseAjxKey).toBe('Base');
+    expect(element.querySelector('.monthly-summary')?.textContent).toContain('125.50');
     http.verify();
   });
 
@@ -153,22 +179,27 @@ describe('App', () => {
     fixture.detectChanges();
     expect(element.querySelector('app-monthly-sales-overview')).toBeNull();
     element.querySelector<HTMLButtonElement>('app-monthly-year-comparison .apply')!.click();
-    const requests = http.match('/api/reports/sales/monthly-service');
-    expect(requests).toHaveLength(2);
-    expect(requests.map((request) => {
+    const accountRequests = http.match('/api/reports/finance/profit-loss/monthly-accounts');
+    const centerRequests = http.match('/api/reports/finance/profit-loss/monthly-centers');
+    expect(accountRequests).toHaveLength(2);
+    expect(centerRequests).toHaveLength(2);
+    const currentYear = new Date().getFullYear();
+    const currentMonth = String(new Date().getMonth() + 1);
+    expect(accountRequests.map((request) => {
       const payload = JSON.parse(new URLSearchParams(request.request.body).get('arrSearchValueAjxKey')!);
       return [payload.intFromYearAjxKey, payload.intToYearAjxKey, payload.datFromMonthAjxKey, payload.datToMonthAjxKey];
-    })).toEqual([['2025', '2025', '1', '6'], ['2026', '2026', '1', '6']]);
-    for (const request of requests) {
-      request.flush(JSON.stringify({
-        arrTimePeriodePhpKey: [{ strColumnHeading: 'January' }],
-        arrSupplierMonthlySaleReportPhpKey: [
-          { fk_bint_service_id: 1, vchr_account_name: 'Cabin Revenue', dblSUMAmt0: 125, dblSUMProfit0: 90, dblCount0: 2 },
-        ],
-      }));
+    })).toEqual([
+      [String(currentYear - 1), String(currentYear - 1), '1', currentMonth],
+      [String(currentYear), String(currentYear), '1', currentMonth],
+    ]);
+    for (let index = 0; index < 2; index++) {
+      const year = String(currentYear - 1 + index);
+      const data = profitLossFixture(year);
+      accountRequests[index].flush(data.accounts);
+      centerRequests[index].flush(data.centers);
     }
     fixture.detectChanges();
-    expect(element.querySelectorAll('.comparison-chart')).toHaveLength(3);
+    expect(element.querySelectorAll('.comparison-chart')).toHaveLength(4);
     expect(element.querySelectorAll('.comparison-chart:first-child .comparison-year')).toHaveLength(2);
     expect(element.querySelector<HTMLButtonElement>('.export-btn')?.disabled).toBe(false);
     http.verify();
@@ -221,6 +252,7 @@ describe('App', () => {
     expect(element.querySelector('#dsr-customer-detail')?.textContent).toContain('Cabin Revenue');
     expect(element.querySelectorAll('#dsr-trend .customer-month')).toHaveLength(2);
     expect(element.querySelector('.customer-data-note')?.textContent).toContain('2 / 3');
+    expect(element.querySelector('.canvas')?.firstElementChild?.classList.contains('customer-data-note')).toBe(true);
     http.verify();
   });
 
@@ -249,13 +281,14 @@ describe('App', () => {
     ]);
     for (const request of requests) {
       const status = new URLSearchParams(request.request.body).get('strStausAjxKey');
-      request.flush(JSON.stringify(status === 'S' ? {} : { arrDsrTicketsPhpKey: [{
+      request.flush(JSON.stringify(status === 'S' ? {} : { arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 2 }, arrDsrTicketsPhpKey: [{
         datDatePhpKey: '15/01/2026', strDocumentNoPhpKey: 'D-1',
         dblSellingAmtPhpKey: 125, dblProfitAmtPhpKey: 90,
       }] }));
     }
     fixture.detectChanges();
     expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart')).toHaveLength(4);
+    expect(element.querySelector('.comparison-data-note')?.textContent).toContain('بيانات جزئية');
     expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart:first-child .comparison-year')).toHaveLength(2);
     expect(element.querySelector<HTMLButtonElement>('.export-btn')?.disabled).toBe(false);
     http.verify();

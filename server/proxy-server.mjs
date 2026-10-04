@@ -5,11 +5,15 @@ const port = Number(process.env.PORT ?? 3333);
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
 const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
+const profitLossAccountsPath = '/square/basic_profitandlossreportmonthwise_profitandlossreportmonthwise/getprofitandlossreportmonthwiselist';
+const profitLossCentersPath = '/traacs/basic_monthandcostcenterwiseprofitandlossreport_monthandcostcenterwiseprofitandlossreport/getmonthandcostcenterwiseprofitandlosslist';
 const costCentrePeriodicalTargetPath =
   '/traacs/basic_costcenterwiseperiodicalreport_costcenterwiseperiodicalreport/getcostcenterwiseperiodicallist';
 const reportPagePath = '/traacs/basic_dsrdetails_dsrdetails/dsrdetails/strMenuId/mnu_reports';
 const monthlySaleReportPagePath =
   '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/servicemonthlysalereport/strMenuId/mnu_reports';
+const profitLossAccountsPagePath = '/square/basic_profitandlossreportmonthwise_profitandlossreportmonthwise/profitandlossreportmonthwise/strMenuId/mnu_reports';
+const profitLossCentersPagePath = '/traacs/basic_monthandcostcenterwiseprofitandlossreport_monthandcostcenterwiseprofitandlossreport/monthandcostcenterwiseprofitandlossreport/strMenuId/mnu_reports';
 const costCentrePeriodicalReportPagePath =
   '/traacs/basic_costcenterwiseperiodicalreport_costcenterwiseperiodicalreport/costcenterwiseperiodicalreport/strMenuId/mnu_reports';
 const loginPagePath = '/nucorelib/basic_users/login';
@@ -380,6 +384,8 @@ const server = createServer(async (req, res) => {
   const reportRoutes = new Map([
     ['/api/reports/sales/dsr', { path: targetPath, referer: reportPagePath }],
     ['/api/reports/sales/monthly-service', { path: monthlySaleTargetPath, referer: monthlySaleReportPagePath }],
+    ['/api/reports/finance/profit-loss/monthly-accounts', { path: profitLossAccountsPath, referer: profitLossAccountsPagePath }],
+    ['/api/reports/finance/profit-loss/monthly-centers', { path: profitLossCentersPath, referer: profitLossCentersPagePath }],
     [
       '/api/reports/finance/cost-centre-periodical',
       { path: costCentrePeriodicalTargetPath, referer: costCentrePeriodicalReportPagePath },

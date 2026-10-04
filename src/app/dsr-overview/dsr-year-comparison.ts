@@ -43,6 +43,7 @@ export class DsrYearComparison {
     ? Array.from({ length: this.toYear() - this.fromYear() + 1 }, (_, index) => this.fromYear() + index)
     : []);
   protected readonly rows = computed(() => [...this.results()].sort((a, b) => a.year - b.year));
+  protected readonly hasPartialData = computed(() => this.results().some((row) => row.status === 'ready' && row.loadedRows < row.totalRows));
   readonly printReady = computed(() => !this.busy() && this.results().some((row) => row.status === 'ready'));
 
   constructor() {
