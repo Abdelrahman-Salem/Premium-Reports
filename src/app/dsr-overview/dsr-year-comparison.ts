@@ -26,10 +26,10 @@ export class DsrYearComparison {
   protected readonly requested = signal(false);
   protected readonly results = signal<YearResult[]>([]);
   protected readonly metrics: { key: Metric; ar: string; en: string; unit: string }[] = [
-    { key: 'revenue', ar: 'إيرادات العملاء', en: 'Customer revenue', unit: 'SAR' },
-    { key: 'profit', ar: 'ربح العملاء', en: 'Customer profit', unit: 'SAR' },
+    { key: 'revenue', ar: 'مبيعات العملاء', en: 'Customer sales', unit: 'SAR' },
+    { key: 'profit', ar: 'إيراد الخدمات', en: 'Service income', unit: 'SAR' },
     { key: 'customers', ar: 'العملاء النشطون', en: 'Active customers', unit: '' },
-    { key: 'average', ar: 'متوسط الإيراد لكل عميل', en: 'Revenue per customer', unit: 'SAR' },
+    { key: 'average', ar: 'متوسط المبيعات لكل عميل', en: 'Sales per customer', unit: 'SAR' },
   ];
   protected readonly valid = computed(() => {
     const from = this.fromYear();

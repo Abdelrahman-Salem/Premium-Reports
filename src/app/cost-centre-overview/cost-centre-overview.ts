@@ -75,18 +75,6 @@ export class CostCentreOverview {
   protected readonly hasRevenueAdjustments = computed(() =>
     this.revenueAccounts().some((account) => account.total < 0),
   );
-  protected readonly pie = computed(() => {
-    const total = this.revenueMagnitude();
-    if (!total) return '#e9ecee';
-    let start = 0;
-    const stops = this.revenueAccounts().map((account, index) => {
-      const end = start + (Math.abs(account.total) / total) * 100;
-      const stop = `${this.color(index)} ${start}% ${end}%`;
-      start = end;
-      return stop;
-    });
-    return `conic-gradient(${stops.join(',')})`;
-  });
   protected readonly maxRevenue = computed(() =>
     Math.max(1, ...this.revenueAccounts().map((account) => Math.abs(account.total))),
   );
@@ -136,14 +124,6 @@ export class CostCentreOverview {
     partition(tiles, 0, 0, 100, 100);
     return result;
   });
-  protected readonly maxMargin = computed(() =>
-    Math.max(
-      1,
-      ...(this.data()?.centers ?? [])
-        .filter((center) => center.revenue > 0)
-        .map((center) => Math.abs(center.margin)),
-    ),
-  );
   protected readonly maxComparison = computed(() =>
     Math.max(
       1,

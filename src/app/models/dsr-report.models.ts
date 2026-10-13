@@ -65,6 +65,9 @@ export interface DsrTicketRawRow {
 
 export interface DsrDetailsCount {
   intDsrDetailTicketCountPhpKey?: number | string | null;
+  intDsrDetailVoucherCountPhpKey?: number | string | null;
+  intDsrDetailOtherCountPhpKey?: number | string | null;
+  intDsrDetailStockCountPhpKey?: number | string | null;
   arrTotalDetailsTicketPhpKey?: {
     dblServiceFeeSumPhpKey?: number | string | null;
     dblSellingPriceSumPhpKey?: number | string | null;

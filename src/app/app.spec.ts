@@ -129,7 +129,8 @@ describe('App', () => {
     expect(element.querySelector('.metric.income strong')?.textContent?.trim()).toBe('100.25');
     expect(element.querySelector('.metric.expense strong')?.textContent?.trim()).toBe('30.10');
     expect(element.querySelector('.metric.net strong')?.textContent?.trim()).toBe('70.15');
-    expect(element.querySelector('.metric.margin strong')?.textContent?.trim()).toBe('55.9%');
+    expect(element.querySelector('.metric.margin strong')?.textContent?.trim()).toBe('70.0%');
+    expect(element.querySelector('.metric.margin')?.textContent).toContain('من الإيراد المحاسبي');
     expect(element.querySelectorAll('.monthly-summary .metric')).toHaveLength(5);
     expect(element.querySelectorAll('#monthly-revenue .pl-service-columns .column')).toHaveLength(1);
     expect(element.querySelector('#monthly-revenue')?.textContent).toContain('Cabin Revenue');
@@ -244,15 +245,24 @@ describe('App', () => {
       }],
       arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 3 },
     }));
+    const remaining = http.expectOne('/api/reports/sales/dsr-tickets');
+    expect(new URLSearchParams(remaining.request.body).get('intOffsetAjxKey')).toBe('2');
+    remaining.flush(JSON.stringify({
+      arrDsrTicketsPhpKey: [{
+        datDatePhpKey: '15/01/2025', strDocumentNoPhpKey: 'D-3', strServiceName: 'Cabin Revenue',
+        strCustomerNamePhpKey: 'Customer C', dblSellingAmtPhpKey: 50, dblProfitAmtPhpKey: 30,
+      }],
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 3 },
+      intDsrDetailsTicketOffSetPhpKey: 2,
+    }));
     fixture.detectChanges();
-    expect(element.querySelector('.metric.revenue strong')?.textContent?.trim()).toBe('200');
-    expect(element.querySelector('.metric.net strong')?.textContent?.trim()).toBe('120');
-    expect(element.querySelector('.metric.expense strong')?.textContent?.trim()).toBe('2');
-    expect(element.querySelectorAll('#dsr-customers .customer-rank-row')).toHaveLength(2);
+    expect(element.querySelector('.metric.revenue strong')?.textContent?.trim()).toBe('250');
+    expect(element.querySelector('.metric.net strong')?.textContent?.trim()).toBe('150');
+    expect(element.querySelector('.metric.expense strong')?.textContent?.trim()).toBe('3');
+    expect(element.querySelectorAll('#dsr-customers .customer-rank-row')).toHaveLength(3);
     expect(element.querySelector('#dsr-customer-detail')?.textContent).toContain('Cabin Revenue');
     expect(element.querySelectorAll('#dsr-trend .customer-month')).toHaveLength(2);
-    expect(element.querySelector('.customer-data-note')?.textContent).toContain('2 / 3');
-    expect(element.querySelector('.canvas')?.firstElementChild?.classList.contains('customer-data-note')).toBe(true);
+    expect(element.querySelector('.customer-data-note')).toBeNull();
     http.verify();
   });
 
@@ -286,9 +296,22 @@ describe('App', () => {
         dblSellingAmtPhpKey: 125, dblProfitAmtPhpKey: 90,
       }] }));
     }
+    const remaining = http.match('/api/reports/sales/dsr-tickets');
+    expect(remaining).toHaveLength(2);
+    for (const request of remaining) {
+      expect(new URLSearchParams(request.request.body).get('intOffsetAjxKey')).toBe('1');
+      request.flush(JSON.stringify({
+        arrDsrTicketsPhpKey: [{
+          datDatePhpKey: '16/01/2026', strDocumentNoPhpKey: 'D-2',
+          dblSellingAmtPhpKey: 75, dblProfitAmtPhpKey: 50,
+        }],
+        arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 2 },
+        intDsrDetailsTicketOffSetPhpKey: 1,
+      }));
+    }
     fixture.detectChanges();
     expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart')).toHaveLength(4);
-    expect(element.querySelector('.comparison-data-note')?.textContent).toContain('بيانات جزئية');
+    expect(element.querySelector('.comparison-data-note')).toBeNull();
     expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart:first-child .comparison-year')).toHaveLength(2);
     expect(element.querySelector<HTMLButtonElement>('.export-btn')?.disabled).toBe(false);
     http.verify();

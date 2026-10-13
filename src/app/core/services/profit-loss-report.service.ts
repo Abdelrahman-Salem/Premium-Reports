@@ -145,7 +145,7 @@ export class ProfitLossReportService {
         income,
         expenses,
         netProfit,
-        margin: sales === 0 ? 0 : netProfit / sales,
+        margin: income === 0 ? 0 : netProfit / income,
       };
     });
 
@@ -195,7 +195,7 @@ export class ProfitLossReportService {
       periodLabel: `${months[0].label} - ${months[months.length - 1].label}`,
       months, incomeAccounts, expenseAccounts, centers: centerView,
       sales, income, expenses, netProfit,
-      margin: sales === 0 ? 0 : netProfit / sales,
+      margin: income === 0 ? 0 : netProfit / income,
       averageMonthlySales: sales / months.length,
     };
   }

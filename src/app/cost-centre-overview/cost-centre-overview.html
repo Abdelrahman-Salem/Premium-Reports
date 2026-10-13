@@ -54,7 +54,7 @@
           <b>{{ report.activeCenterCount }} / {{ report.operatingCenterCount }}</b></span
         >
         <span
-          >{{ text('هامش صافي الربح', 'Net profit margin') }}
+          >{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net profit margin on P&L income') }}
           <b dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</b></span
         >
         <span
@@ -80,44 +80,6 @@
           </div>
         </header>
         <div class="charts">
-          <section class="chart distribution">
-            <header>
-              <h3>{{ text('توزيع الإيرادات', 'Revenue distribution') }}</h3>
-              <span>{{ text('حسب الحساب', 'By account') }}</span>
-            </header>
-            <div
-              class="pie"
-              [style.background]="pie()"
-              role="img"
-              [attr.aria-label]="
-                text(
-                  'توزيع الإيرادات حسب الحساب، القيم موضحة أدناه',
-                  'Revenue distribution by account, values listed below'
-                )
-              "
-            ></div>
-            @if (hasRevenueAdjustments()) {
-              <p class="basis">
-                {{ text('النسب حسب القيمة المطلقة للأرصدة', 'Shares based on absolute balances') }}
-              </p>
-            }
-            <div class="legend-list">
-              @for (account of revenueAccounts(); track account.id; let index = $index) {
-                <div>
-                  <i [style.background]="color(index)"></i><bdi>{{ account.name }}</bdi
-                  ><b dir="ltr">{{
-                    (revenueMagnitude() ? width(account.total, revenueMagnitude()) / 100 : 0)
-                      | percent: '1.1-1'
-                  }}</b>
-                </div>
-              } @empty {
-                <p class="basis">
-                  {{ text('لا توجد إيرادات للفترة', 'No revenue for this period') }}
-                </p>
-              }
-            </div>
-          </section>
-
           <section class="chart centre-revenue">
             <header>
               <h3>{{ text('مساهمة المراكز في الإيرادات', 'Revenue share by centre') }}</h3>
@@ -143,7 +105,12 @@
                   [style.background]="tile.color"
                   [title]="tile.name + ': SAR ' + (tile.amount | number: '1.0-0')"
                 >
-                  @if (tile.width > 18 && tile.height > 18) {
+                  @if (tile.width > 35 && tile.height > 23) {
+                    <div class="centre-tile-metrics" dir="ltr">
+                      <b>{{ tile.share | percent: '1.0-0' }}</b>
+                      <small>SAR {{ tile.amount | number: '1.0-0' }}</small>
+                    </div>
+                  } @else if (tile.width > 18 && tile.height > 18) {
                     <b dir="ltr">{{ tile.share | percent: '1.0-0' }}</b>
                   }
                 </div>
@@ -170,46 +137,19 @@
             </div>
           </section>
 
-          <section class="chart centre-revenue-columns">
-            <header>
-              <h3>{{ text('الإيرادات حسب المركز', 'Revenue by centre') }}</h3>
-              <span>SAR</span>
-            </header>
-            <div
-              class="columns revenue-columns"
-              [style.grid-template-columns]="
-                'repeat(' + report.centers.length + ', minmax(90px, 1fr))'
-              "
-            >
-              @for (center of report.centers; track center.id) {
-                <div class="column">
-                  <div class="column-track">
-                    <div
-                      class="column-fill"
-                      [class.admin]="!center.isOperating"
-                      [style.height.%]="width(center.revenue, report.maxCenterRevenue)"
-                    ></div>
-                    <b dir="ltr">{{ center.revenue | number: '1.0-0' }}</b>
-                  </div>
-                  <bdi>{{ center.name }}</bdi>
-                  @if (!center.isOperating) {
-                    <small>{{ text('إدارة', 'Admin') }}</small>
-                  }
-                </div>
-              }
-            </div>
-          </section>
-
           <section class="chart account-revenue">
             <header>
               <h3>{{ text('إيرادات الحسابات', 'Revenue by account') }}</h3>
-              <span>SAR</span>
+              <span>SAR / %</span>
             </header>
             <div class="horizontal-bars">
               @for (account of revenueAccounts(); track account.id; let index = $index) {
                 <div class="account-bar">
-                  <bdi>{{ account.name }}</bdi
-                  ><strong dir="ltr">{{ account.total | number: '1.0-0' }}</strong>
+                  <bdi>{{ account.name }}</bdi>
+                  <div class="account-bar-values" dir="ltr">
+                    <strong [class.negative]="account.total < 0">{{ account.total | number: '1.0-0' }}</strong>
+                    <span>{{ (revenueMagnitude() ? width(account.total, revenueMagnitude()) / 100 : 0) | percent: '1.1-1' }}</span>
+                  </div>
                   <div class="track">
                     <i
                       [style.width.%]="width(account.total, maxRevenue())"
@@ -223,6 +163,11 @@
                 </p>
               }
             </div>
+            @if (hasRevenueAdjustments()) {
+              <p class="basis">
+                {{ text('النسب حسب القيمة المطلقة للأرصدة', 'Shares based on absolute balances') }}
+              </p>
+            }
           </section>
         </div>
       </section>
@@ -241,84 +186,46 @@
             >
           </div>
           <div>
-            <span>{{ text('هامش صافي الربح', 'Net profit margin') }}</span
+            <span>{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net profit margin on P&L income') }}</span
             ><strong dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</strong>
           </div>
         </header>
         <div class="charts profit-charts">
-          <section class="chart net-chart">
+          <section class="chart profit-centre-chart">
             <header>
-              <h3>{{ text('الربح والعجز حسب المركز', 'Profit and loss by centre') }}</h3>
-              <span>SAR</span>
+              <h3>{{ text('صافي الربح وهامشه حسب المركز', 'Net profit and margin by centre') }}</h3>
+              <span>{{ text('SAR / من إيراد المركز', 'SAR / of centre revenue') }}</span>
             </header>
             <div class="series-legend">
               <span><i class="net-key"></i>{{ text('ربح', 'Profit') }}</span
               ><span><i class="loss-key"></i>{{ text('عجز', 'Loss') }}</span>
             </div>
-            <div class="signed-axis" dir="ltr">
-              <span>{{ text('عجز', 'Loss') }}</span
-              ><b>0</b><span>{{ text('ربح', 'Profit') }}</span>
-            </div>
-            <div class="signed-rows">
+            <div
+              class="profit-columns"
+              [style.grid-template-columns]="'repeat(' + report.centers.length + ', minmax(145px, 1fr))'"
+            >
               @for (center of report.centers; track center.id) {
-                <div class="signed-row">
-                  <div class="signed-label">
-                    <bdi>{{ center.name }}</bdi
-                    ><strong dir="ltr" [class.negative]="center.net < 0">{{
-                      center.net | number: '1.0-0'
-                    }}</strong>
+                <div class="profit-column">
+                  <div class="profit-column-metrics">
+                    <strong dir="ltr" [class.negative]="center.net < 0">SAR {{ center.net | number: '1.0-0' }}</strong>
+                    @if (center.revenue > 0) {
+                      <span dir="ltr" [class.negative]="center.margin < 0">{{ center.margin | percent: '1.1-1' }}</span>
+                    } @else {
+                      <span [title]="text('لا يُحسب الهامش بدون إيراد موجب', 'Margin unavailable without positive revenue')">-</span>
+                    }
                   </div>
-                  <div class="signed-track" dir="ltr">
-                    <i
-                      [class]="center.net < 0 ? 'loss-key' : 'net-key'"
-                      [style.left.%]="
-                        center.net < 0 ? 50 - width(center.net, report.maxCenterNet) / 2 : 50
-                      "
-                      [style.width.%]="width(center.net, report.maxCenterNet) / 2"
-                    ></i>
+                  <div class="profit-column-plot">
+                    @if (center.net !== 0) {
+                      <i
+                        class="profit-column-bar"
+                        [class.loss]="center.net < 0"
+                        [style.height.%]="width(center.net, report.maxCenterNet) / 2"
+                      ></i>
+                    }
                   </div>
+                  <bdi>{{ center.name }}</bdi>
                   @if (!center.isOperating) {
                     <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small>
-                  }
-                </div>
-              }
-            </div>
-          </section>
-          <section class="chart margin-chart">
-            <header>
-              <h3>{{ text('هامش الربح حسب المركز', 'Profit margin by centre') }}</h3>
-              <span>{{ text('الصافي ÷ الإيراد', 'Net / revenue') }}</span>
-            </header>
-            <div class="signed-axis" dir="ltr">
-              <span>{{ text('هامش سالب', 'Negative margin') }}</span
-              ><b>0%</b><span>{{ text('هامش موجب', 'Positive margin') }}</span>
-            </div>
-            <div class="signed-rows">
-              @for (center of report.centers; track center.id) {
-                <div class="signed-row">
-                  <div class="signed-label">
-                    <bdi>{{ center.name }}</bdi
-                    ><strong dir="ltr" [class.negative]="center.revenue > 0 && center.margin < 0">{{
-                      center.revenue > 0 ? (center.margin | percent: '1.1-1') : '-'
-                    }}</strong>
-                  </div>
-                  @if (center.revenue > 0) {
-                    <div class="signed-track" dir="ltr">
-                      <i
-                        [class]="center.margin < 0 ? 'loss-key' : 'net-key'"
-                        [style.left.%]="
-                          center.margin < 0 ? 50 - width(center.margin, maxMargin()) / 2 : 50
-                        "
-                        [style.width.%]="width(center.margin, maxMargin()) / 2"
-                      ></i>
-                    </div>
-                  } @else {
-                    <small>{{
-                      text(
-                        'لا يُحسب الهامش بدون إيراد موجب',
-                        'Margin unavailable without positive revenue'
-                      )
-                    }}</small>
                   }
                 </div>
               }
