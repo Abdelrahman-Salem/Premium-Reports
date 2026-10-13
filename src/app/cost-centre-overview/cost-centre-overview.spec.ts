@@ -67,7 +67,10 @@ describe('CostCentreOverview', () => {
   it('shows all revenue accounts and retains merged centres and admin overhead', () => {
     const fixture = render();
     const element: HTMLElement = fixture.nativeElement;
-    expect(element.querySelectorAll('.distribution .legend-list > div')).toHaveLength(10);
+    expect(element.querySelectorAll('.account-revenue .account-bar')).toHaveLength(10);
+    expect(element.querySelectorAll('.account-bar-values span')).toHaveLength(10);
+    expect(element.querySelector('.account-bar-values')?.textContent).toContain('10.0%');
+    expect(element.querySelector('.distribution')).toBeNull();
     expect(element.querySelectorAll('.comparison-row')).toHaveLength(2);
     expect(element.querySelector('.comparison')?.textContent).toContain(
       '808 - AirPort Jeddah + 810 - G.S.E',
@@ -83,10 +86,12 @@ describe('CostCentreOverview', () => {
     expect(tiles).toHaveLength(1);
     expect(parseFloat(tiles[0].style.width)).toBe(100);
     expect(element.querySelector('.revenue-centre-legend')?.textContent).toContain('SAR 1,500');
+    expect(element.querySelector('.centre-tile-metrics')?.textContent).toContain('SAR 1,500');
+    expect(element.querySelector('.centre-tile-metrics')?.textContent).toContain('100%');
     expect(element.querySelector('.revenue-centre-legend')?.textContent).not.toContain(
       'Head Quarter',
     );
-    expect(element.querySelectorAll('.centre-revenue-columns .column')).toHaveLength(2);
+    expect(element.querySelector('.centre-revenue-columns')).toBeNull();
   });
 
   it('shows expense by centre without the two account-level charts', () => {
@@ -100,7 +105,7 @@ describe('CostCentreOverview', () => {
     expect(element.querySelector('.expense-columns')?.textContent).toContain('-50');
   });
 
-  it('groups charts into three sections and distinguishes losses from undefined margins', () => {
+  it('shows profit columns with amounts, margins, and losses below zero', () => {
     const fixture = render({
       ...response,
       arrCostCenterWiseDetailsPhpKey: [
@@ -116,20 +121,30 @@ describe('CostCentreOverview', () => {
     expect([...element.querySelectorAll('.analysis-section')].map((section) => section.id)).toEqual(
       ['cost-revenue', 'cost-profit', 'cost-expense'],
     );
-    expect(element.querySelectorAll('#cost-revenue .chart')).toHaveLength(4);
-    expect(element.querySelectorAll('#cost-profit .chart')).toHaveLength(3);
+    expect(element.querySelectorAll('#cost-revenue .chart')).toHaveLength(2);
+    expect(element.querySelectorAll('#cost-profit .chart')).toHaveLength(2);
     expect(element.querySelectorAll('#cost-expense .chart')).toHaveLength(1);
-    const losses = [...element.querySelectorAll<HTMLElement>('.net-chart .signed-track i')];
+    const columns = [...element.querySelectorAll<HTMLElement>('.profit-column')];
+    expect(columns).toHaveLength(2);
+    expect(columns[0].querySelector('.profit-column-metrics')?.textContent).toContain('SAR -2,450');
+    expect(columns[0].querySelector('.profit-column-metrics')?.textContent).toContain('-163.3%');
+    expect(columns[1].querySelector('.profit-column-metrics span')?.textContent?.trim()).toBe('-');
+    expect(columns[1].querySelector('.profit-column-metrics span')?.getAttribute('title')).toContain('Margin unavailable');
+    const losses = [...element.querySelectorAll<HTMLElement>('.profit-column-bar.loss')];
     expect(losses).toHaveLength(2);
     for (const loss of losses) {
-      expect(loss.classList.contains('loss-key')).toBe(true);
-      expect(parseFloat(loss.style.left)).toBeLessThan(50);
-      expect(parseFloat(loss.style.left) + parseFloat(loss.style.width)).toBeCloseTo(50);
+      expect(parseFloat(loss.style.height)).toBeGreaterThan(0);
     }
-    const marginRows = element.querySelectorAll('.margin-chart .signed-row');
-    expect(marginRows[0].querySelector('strong')?.textContent).toContain('-163.3%');
-    expect(marginRows[1].querySelector('.signed-track')).toBeNull();
-    expect(marginRows[1].textContent).toContain('Margin unavailable');
+    expect(losses[0].style.height).toBe('50%');
+  });
+
+  it('shows a positive profit column and its margin above zero', () => {
+    const fixture = render();
+    const first = (fixture.nativeElement as HTMLElement).querySelector('.profit-column')!;
+    expect(first.querySelector('.profit-column-metrics')?.textContent).toContain('SAR 1,550');
+    expect(first.querySelector('.profit-column-metrics')?.textContent).toContain('103.3%');
+    expect(first.querySelector<HTMLElement>('.profit-column-bar')?.style.height).toBe('50%');
+    expect(first.querySelector('.profit-column-bar.loss')).toBeNull();
   });
 
   it('changes quarter boundaries without replacing the loaded report period', () => {

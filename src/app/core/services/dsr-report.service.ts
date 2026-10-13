@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, catchError, expand, forkJoin, map, of, reduce } from 'rxjs';
+import { EMPTY, Observable, catchError, expand, forkJoin, map, of, reduce, switchMap } from 'rxjs';
 
 import {
   CostCentreAccountRow,
@@ -108,6 +108,7 @@ export class DsrReportService {
   private readonly apiOrigin = this.resolveApiOrigin();
   private readonly loginOrigin = this.resolveLoginOrigin();
   private readonly endpoint = `${this.apiOrigin}/api/reports/sales/dsr`;
+  private readonly dsrTicketsEndpoint = `${this.apiOrigin}/api/reports/sales/dsr-tickets`;
   private readonly monthlySaleEndpoint = `${this.apiOrigin}/api/reports/sales/monthly-service`;
   private readonly costCentrePeriodicalEndpoint = `${this.apiOrigin}/api/reports/finance/cost-centre-periodical`;
 
@@ -155,6 +156,9 @@ export class DsrReportService {
     };
 
     return forkJoin({ summary: request('S'), details: request('D') }).pipe(
+      switchMap(({ summary, details }) => this.loadRemainingDsrTickets(details, search, headers).pipe(
+        map((completeDetails) => ({ summary, details: completeDetails })),
+      )),
       map(({ summary, details }) => {
         if (!summary && !details) throw new Error('DSR summary and details requests failed.');
         const data: DsrReportResponse = { ...(summary ?? {}) };
@@ -165,8 +169,81 @@ export class DsrReportService {
         if (!details?.arrDsrTicketsPhpKey?.length && summary?.arrDsrDetailsCountPhpKey) {
           data.arrDsrDetailsCountPhpKey = summary.arrDsrDetailsCountPhpKey;
         }
+        this.assertDsrTicketTotals(data);
         return { data, source: 'api' as const, receivedAt: new Date() };
       }),
+    );
+  }
+
+  private assertDsrTicketTotals(data: DsrReportResponse): void {
+    const rows = data.arrDsrTicketsPhpKey;
+    const counts = data.arrDsrDetailsCountPhpKey;
+    const expectedRows = Number(counts?.intDsrDetailTicketCountPhpKey);
+    const totals = counts?.arrTotalDetailsTicketPhpKey;
+    if (!Array.isArray(rows) || !Number.isInteger(expectedRows) || rows.length !== expectedRows || !totals) return;
+    let sales = 0;
+    let serviceIncome = 0;
+    for (const row of rows) {
+      const isRefund = this.isDsrRefund(row) || this.toNumber(row.dblSellingAmtPhpKey) < 0;
+      sales += this.signedDsrValue(row.dblSellingAmtPhpKey, isRefund);
+      serviceIncome += this.signedDsrValue(row.dblProfitAmtPhpKey, isRefund);
+    }
+    const assertAmount = (actual: number, raw: number | string | null | undefined, label: string) => {
+      if (raw == null) return;
+      const expected = Number(raw);
+      if (!Number.isFinite(expected) || Math.abs(actual - expected) > 0.02) {
+        throw new Error(`DSR ${label} does not reconcile with TRAACS totals.`);
+      }
+    };
+    assertAmount(sales, totals.dblSellingPriceSumPhpKey, 'sales');
+    assertAmount(serviceIncome, totals.dblProfitSumPhpKey, 'service income');
+  }
+
+  private loadRemainingDsrTickets(
+    details: DsrReportResponse | null,
+    search: string,
+    headers: HttpHeaders,
+  ): Observable<DsrReportResponse | null> {
+    if (!details) return of(null);
+    const firstRows = details.arrDsrTicketsPhpKey ?? [];
+    const reportedCount = this.toNumber(details.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey);
+    if (!Array.isArray(firstRows) || !Number.isInteger(reportedCount) || reportedCount < firstRows.length) {
+      throw new Error('DSR ticket count does not match the first page.');
+    }
+    if (reportedCount === firstRows.length) return of(details);
+    if (!firstRows.length) throw new Error('DSR ticket details are missing from the first page.');
+
+    const requestPage = (offset: number) => {
+      const body = new URLSearchParams();
+      body.set('strOrderByAjxKey', '');
+      body.set('strOrderAjxKey', '');
+      body.set('intPerPageAjxKey', '250');
+      body.set('intOffsetAjxKey', String(offset));
+      body.set('arrSearchValueAjxKey', search);
+      body.set('tabClick', 'true');
+      return this.http.post(this.dsrTicketsEndpoint, body.toString(), {
+        headers, responseType: 'text', withCredentials: true,
+      }).pipe(map((response) => ({ offset, data: this.parseResponse(response) })));
+    };
+    const pageRows = (page: { offset: number; data: DsrReportResponse }): DsrTicketRawRow[] => {
+      const rows = page.data.arrDsrTicketsPhpKey;
+      const actualOffset = page.data['intDsrDetailsTicketOffSetPhpKey'];
+      const pageCount = page.data.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey;
+      if (!Array.isArray(rows) || !rows.length || page.offset + rows.length > reportedCount ||
+        (actualOffset != null && Number(actualOffset) !== page.offset) ||
+        (pageCount != null && Number(pageCount) !== reportedCount)) {
+        throw new Error('DSR ticket pagination returned incomplete or inconsistent data.');
+      }
+      return rows;
+    };
+
+    return requestPage(firstRows.length).pipe(
+      expand((page) => {
+        const nextOffset = page.offset + pageRows(page).length;
+        return nextOffset < reportedCount ? requestPage(nextOffset) : EMPTY;
+      }),
+      reduce((rows, page) => [...rows, ...pageRows(page)], firstRows),
+      map((rows) => ({ ...details, arrDsrTicketsPhpKey: rows })),
     );
   }
 
@@ -605,7 +682,11 @@ export class DsrReportService {
     const monthly = [...months.values()].map(({ value, customers: ids, documents }) => ({
       ...value, customers: ids.size, documents: documents.size,
     })).sort((a, b) => a.key.localeCompare(b.key));
-    const reportedRows = this.toNumber(response.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey);
+    const counts = response.arrDsrDetailsCountPhpKey;
+    const reportedRows = this.toNumber(counts?.intDsrDetailTicketCountPhpKey) +
+      this.toNumber(counts?.intDsrDetailVoucherCountPhpKey) +
+      this.toNumber(counts?.intDsrDetailOtherCountPhpKey) +
+      this.toNumber(counts?.intDsrDetailStockCountPhpKey);
     return {
       ...totals, customers, months: monthly, customerCount: customers.length,
       averageRevenue: customers.length ? totals.revenue / customers.length : 0,

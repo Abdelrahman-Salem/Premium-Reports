@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { CostCentrePeriodicalFilters, MonthlySaleFilters, MonthlySaleReportResponse } from '../../models/dsr-report.models';
+import { CostCentrePeriodicalFilters, DsrFilters, MonthlySaleFilters, MonthlySaleReportResponse } from '../../models/dsr-report.models';
 import { DsrReportService } from './dsr-report.service';
 
 const filters: MonthlySaleFilters = {
@@ -122,6 +122,17 @@ describe('DsrReportService financial reconciliation', () => {
     expect(view.totalRows).toBe(4);
   });
 
+  it('keeps non-ticket sections visible as incomplete customer coverage', () => {
+    const view = service.toCustomerDashboardView({
+      arrDsrTicketsPhpKey: [{ strCustomerCodePhpKey: 'A', dblSellingAmtPhpKey: 100 }],
+      arrDsrDetailsCountPhpKey: {
+        intDsrDetailTicketCountPhpKey: 1, intDsrDetailVoucherCountPhpKey: 2,
+      },
+    });
+    expect(view.loadedRows).toBe(1);
+    expect(view.totalRows).toBe(3);
+  });
+
   it('reconciles cost-centre source columns, including combined Jeddah/G.S.E and HQ overhead', () => {
     const filters: CostCentrePeriodicalFilters = {
       fromDate: '2026-01-01', toDate: '2026-09-16', costCenterId: '', costCenterName: 'ALL',
@@ -168,5 +179,118 @@ describe('DsrReportService financial reconciliation', () => {
       ...response,
       arrCostCenterWiseDetailsPhpKey: [{ ...response.arrCostCenterWiseDetailsPhpKey[0], dbl_base_currency_debit_credt99: 'invalid' }],
     }, filters)).toThrow(/Invalid cost-centre value/);
+  });
+});
+
+describe('DsrReportService customer detail pagination', () => {
+  let service: DsrReportService;
+  let http: HttpTestingController;
+  const dsrFilters: DsrFilters = {
+    fromDate: '2026-01-01', toDate: '2026-09-30', costCenters: ['1', '73', '74', '75', '77'],
+    currency: 'SAR', dateType: 'DOCUMENT', showSales: true, showRefunds: true,
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    service = TestBed.inject(DsrReportService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  const flushInitial = (http: HttpTestingController, details: object) => {
+    const initial = http.match('/api/reports/sales/dsr');
+    expect(initial).toHaveLength(2);
+    initial.find((request) => new URLSearchParams(request.request.body).get('strStausAjxKey') === 'S')!
+      .flush(JSON.stringify({ arrDsrDetailsSummaryDataPhpKey: {} }));
+    initial.find((request) => new URLSearchParams(request.request.body).get('strStausAjxKey') === 'D')!
+      .flush(JSON.stringify(details));
+  };
+
+  it('loads every ticket page before calculating customer sales', () => {
+    let result: ReturnType<DsrReportService['toCustomerDashboardView']> | undefined;
+    service.getDsrReport(dsrFilters).subscribe((report) => {
+      result = service.toCustomerDashboardView(report.data);
+    });
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: Array.from({ length: 250 }, (_, index) => ({
+        strCustomerCodePhpKey: 'A', strDocumentNoPhpKey: `INV-${index}`, dblSellingAmtPhpKey: 1,
+        dblProfitAmtPhpKey: 0.8,
+      })),
+      arrDsrDetailsCountPhpKey: {
+        intDsrDetailTicketCountPhpKey: 305,
+        arrTotalDetailsTicketPhpKey: { dblSellingPriceSumPhpKey: 360, dblProfitSumPhpKey: 288 },
+      },
+    });
+    const next = http.expectOne('/api/reports/sales/dsr-tickets');
+    const body = new URLSearchParams(next.request.body);
+    expect(body.get('intOffsetAjxKey')).toBe('250');
+    expect(body.get('intPerPageAjxKey')).toBe('250');
+    expect(body.get('strOrderByAjxKey')).toBe('');
+    expect(JSON.parse(body.get('arrSearchValueAjxKey')!).datDsrDetailsToAjxKey).toBe('30/09/2026');
+    expect(result).toBeUndefined();
+    next.flush(JSON.stringify({
+      arrDsrTicketsPhpKey: Array.from({ length: 55 }, (_, index) => ({
+        strCustomerCodePhpKey: 'B', strDocumentNoPhpKey: `INV-${index + 250}`,
+        dblSellingAmtPhpKey: 2, dblProfitAmtPhpKey: 1.6,
+      })),
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 305 },
+      intDsrDetailsTicketOffSetPhpKey: 250,
+    }));
+    expect(result?.loadedRows).toBe(305);
+    expect(result?.totalRows).toBe(305);
+    expect(result?.revenue).toBe(360);
+    expect(result?.profit).toBeCloseTo(288, 2);
+  });
+
+  it('fails without displaying partial results when a later page is empty', () => {
+    let emitted = false;
+    let error: Error | undefined;
+    service.getDsrReport(dsrFilters).subscribe({
+      next: () => { emitted = true; },
+      error: (failure: Error) => { error = failure; },
+    });
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: Array.from({ length: 250 }, () => ({ dblSellingAmtPhpKey: 1 })),
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 305 },
+    });
+    http.expectOne('/api/reports/sales/dsr-tickets').flush(JSON.stringify({
+      arrDsrTicketsPhpKey: [],
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 305 },
+      intDsrDetailsTicketOffSetPhpKey: 250,
+    }));
+    expect(emitted).toBe(false);
+    expect(error?.message).toMatch(/incomplete or inconsistent/);
+  });
+
+  it('rejects fully loaded rows when they disagree with the TRAACS summary', () => {
+    let emitted = false;
+    let error: Error | undefined;
+    service.getDsrReport(dsrFilters).subscribe({
+      next: () => { emitted = true; },
+      error: (failure: Error) => { error = failure; },
+    });
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: [{ dblSellingAmtPhpKey: 100, dblProfitAmtPhpKey: 80 }],
+      arrDsrDetailsCountPhpKey: {
+        intDsrDetailTicketCountPhpKey: 1,
+        arrTotalDetailsTicketPhpKey: { dblSellingPriceSumPhpKey: 101, dblProfitSumPhpKey: 80 },
+      },
+    });
+    expect(emitted).toBe(false);
+    expect(error?.message).toMatch(/sales does not reconcile/);
+  });
+
+  it('preserves an empty report without requesting another page', () => {
+    let loadedRows = -1;
+    service.getDsrReport(dsrFilters).subscribe((report) => {
+      loadedRows = service.toCustomerDashboardView(report.data).loadedRows;
+    });
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: null,
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 0 },
+    });
+    http.expectNone('/api/reports/sales/dsr-tickets');
+    expect(loadedRows).toBe(0);
   });
 });

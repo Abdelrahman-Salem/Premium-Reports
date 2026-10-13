@@ -62,7 +62,7 @@ const TRANSLATIONS = {
     monthlyServiceTable: 'Monthly service table',
     title: 'Customer Insights Dashboard',
     subtitle:
-      'Customer revenue, profit, monthly activity, and service mix from DSR detail rows.',
+      'Customer sales, service income, monthly activity, and service mix from DSR detail rows.',
     liveApi: 'Live API',
     searching: 'Searching',
     search: 'Search',
@@ -79,6 +79,7 @@ const TRANSLATIONS = {
     signInFirst: 'Sign in to TRAACS first, then press Check session and search again.',
     noDataOrSession:
       'No report data was returned. If this period should have movement, sign in to TRAACS first and search again.',
+    incompleteDsr: 'Could not load all DSR detail rows. Please retry the report.',
     from: 'From',
     to: 'To',
     costCentre: 'Cost Centre',
@@ -150,7 +151,7 @@ const TRANSLATIONS = {
     profitVsRevenue: 'الربح مقابل الإيراد',
     monthlyServiceTable: 'جدول الخدمات الشهري',
     title: 'لوحة تحليل العملاء',
-    subtitle: 'تحليل إيرادات العملاء وأرباحهم ونشاطهم عبر الشهور والخدمات.',
+    subtitle: 'تحليل مبيعات العملاء وإيراد الخدمات ونشاطهم عبر الشهور والخدمات.',
     liveApi: 'بيانات مباشرة',
     searching: 'جاري البحث',
     search: 'بحث',
@@ -166,6 +167,7 @@ const TRANSLATIONS = {
     signInFirst: 'سجل الدخول إلى TRAACS أولًا، ثم اضغط فحص الجلسة وابحث مرة أخرى.',
     noDataOrSession:
       'لم ترجع بيانات للتقرير. لو الفترة دي فيها حركة، سجل الدخول إلى TRAACS أولًا ثم ابحث مرة أخرى.',
+    incompleteDsr: 'تعذر تحميل كل صفوف تفاصيل DSR. أعد عرض التقرير.',
     from: 'من',
     to: 'إلى',
     costCentre: 'مركز التكلفة',
@@ -459,11 +461,17 @@ export class App {
         this.report.set(result);
         this.loading.set(false);
       },
-      error: () => {
+      error: (failure: unknown) => {
         this.loading.set(false);
-        this.sessionReady.set(false);
-        this.error.set(this.t('signInFirst'));
-        this.checkSession();
+        const incomplete = (failure instanceof HttpErrorResponse && failure.url?.includes('/dsr-tickets')) ||
+          (failure instanceof Error && /^DSR (ticket|sales|service income)/.test(failure.message));
+        if (incomplete) {
+          this.error.set(this.t('incompleteDsr'));
+        } else {
+          this.sessionReady.set(false);
+          this.error.set(this.t('signInFirst'));
+          this.checkSession();
+        }
       },
     });
   }

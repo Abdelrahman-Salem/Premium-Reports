@@ -58,7 +58,8 @@ describe('ProfitLossReportService', () => {
     expect(report.income).toBeCloseTo(100.25, 2);
     expect(report.expenses).toBeCloseTo(30.10, 2);
     expect(report.netProfit).toBeCloseTo(70.15, 2);
-    expect(report.margin).toBeCloseTo(70.15 / 125.50, 5);
+    expect(report.margin).toBeCloseTo(70.15 / 100.25, 5);
+    expect(report.months[0].margin).toBeCloseTo(70.15 / 100.25, 5);
     expect(report.centers.find((center) => center.id === '73+75')?.sales).toBeCloseTo(125.50, 2);
     expect(report.centers.find((center) => center.id === '1')?.overhead).toBe(true);
     expect(report.incomeAccounts[0].name).toBe('Cabin Revenue');

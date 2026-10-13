@@ -22,8 +22,8 @@
         <strong>{{ data() ? (data()!.expenses | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
       <div class="metric net" [class.loss]="(data()?.netProfit ?? 0) < 0"><span>{{ text('صافي الربح', 'Net profit') }}</span>
         <strong>{{ data() ? (data()!.netProfit | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
-      <div class="metric margin"><span>{{ text('نسبة صافي الربح للمبيعات', 'Net profit / sales') }}</span>
-        <strong>{{ data() ? (data()!.margin | percent:'1.1-1') : '-' }}</strong><small>{{ text('من المبيعات', 'of sales') }}</small></div>
+      <div class="metric margin"><span>{{ text('هامش صافي الربح', 'Net profit margin') }}</span>
+        <strong>{{ data() ? (data()!.margin | percent:'1.1-1') : '-' }}</strong><small>{{ text('من الإيراد المحاسبي', 'of P&L income') }}</small></div>
     </header>
 
     @if (data(); as report) {
@@ -114,7 +114,7 @@
       <section id="monthly-profit" class="analysis-section profit-section" aria-labelledby="monthly-profit-heading">
         <header class="section-heading"><h2 id="monthly-profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
           <div><span>{{ text('صافي الربح', 'Net profit') }}</span><strong dir="ltr">SAR {{ report.netProfit | number:'1.2-2' }}</strong></div>
-          <div><span>{{ text('هامش الربح من المبيعات', 'Margin on sales') }}</span><strong dir="ltr">{{ report.margin | percent:'1.1-1' }}</strong></div>
+          <div><span>{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net profit margin on P&L income') }}</span><strong dir="ltr">{{ report.margin | percent:'1.1-1' }}</strong></div>
         </header>
         <div class="charts pl-charts">
           <section class="chart pl-wide"><header><h3>{{ text('صافي الربح الشهري', 'Monthly net profit') }}</h3><span>SAR</span></header>
@@ -124,10 +124,10 @@
               }
             </div>
           </section>
-          <section class="chart pl-wide"><header><h3>{{ text('نسبة صافي الربح للمبيعات في كل شهر', 'Net profit / sales by month') }}</h3><span>{{ text('من المبيعات الشهرية', 'of monthly sales') }}</span></header>
+          <section class="chart pl-wide"><header><h3>{{ text('هامش صافي الربح في كل شهر', 'Net profit margin by month') }}</h3><span>{{ text('من الإيراد المحاسبي الشهري', 'of monthly P&L income') }}</span></header>
             <div class="pl-margin-columns" [style.grid-template-columns]="'repeat(' + report.months.length + ', minmax(96px, 1fr))'">
               @for (month of report.months; track month.key) {
-                <div class="pl-margin-column"><strong dir="ltr" [class.negative]="month.margin < 0">{{ month.sales === 0 ? '-' : (month.margin | percent:'1.1-1') }}</strong><div class="pl-margin-track"><i [class.negative-fill]="month.margin < 0" [style.height.%]="month.sales === 0 ? 0 : width(month.margin, 1)"></i></div><bdi>{{ month.label }}</bdi></div>
+                <div class="pl-margin-column"><strong dir="ltr" [class.negative]="month.margin < 0">{{ month.income === 0 ? '-' : (month.margin | percent:'1.1-1') }}</strong><div class="pl-margin-track"><i [class.negative-fill]="month.margin < 0" [style.height.%]="month.income === 0 ? 0 : width(month.margin, 1)"></i></div><bdi>{{ month.label }}</bdi></div>
               }
             </div>
           </section>

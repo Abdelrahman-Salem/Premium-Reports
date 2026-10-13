@@ -4,6 +4,7 @@ import { request } from 'node:https';
 const port = Number(process.env.PORT ?? 3333);
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
+const dsrTicketsPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsticketdata';
 const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
 const profitLossAccountsPath = '/square/basic_profitandlossreportmonthwise_profitandlossreportmonthwise/getprofitandlossreportmonthwiselist';
 const profitLossCentersPath = '/traacs/basic_monthandcostcenterwiseprofitandlossreport_monthandcostcenterwiseprofitandlossreport/getmonthandcostcenterwiseprofitandlosslist';
@@ -383,6 +384,7 @@ const server = createServer(async (req, res) => {
 
   const reportRoutes = new Map([
     ['/api/reports/sales/dsr', { path: targetPath, referer: reportPagePath }],
+    ['/api/reports/sales/dsr-tickets', { path: dsrTicketsPath, referer: reportPagePath }],
     ['/api/reports/sales/monthly-service', { path: monthlySaleTargetPath, referer: monthlySaleReportPagePath }],
     ['/api/reports/finance/profit-loss/monthly-accounts', { path: profitLossAccountsPath, referer: profitLossAccountsPagePath }],
     ['/api/reports/finance/profit-loss/monthly-centers', { path: profitLossCentersPath, referer: profitLossCentersPagePath }],

@@ -161,6 +161,7 @@ h1 {
 }
 .revenue-section .charts {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
 }
 .chart {
   background: #fff;
@@ -186,34 +187,12 @@ h3 {
   font-size: 10px;
   color: var(--muted);
 }
-.pie {
-  width: min(100%, 190px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  margin: 20px auto;
-}
-.legend-list {
-  display: grid;
-  gap: 9px;
-}
-.legend-list > div {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
-  gap: 7px;
-  align-items: baseline;
-  font-size: 10px;
-}
-.legend-list i,
 .series-legend i {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 2px;
   flex: none;
-}
-.legend-list b {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 .basis {
   font-size: 11px;
@@ -225,10 +204,6 @@ h3 {
   align-items: start;
   gap: 10px;
   margin-top: 25px;
-}
-.revenue-columns {
-  overflow-x: auto;
-  padding-bottom: 4px;
 }
 .column {
   display: flex;
@@ -295,6 +270,20 @@ h3 {
   font-weight: 700;
   text-shadow: 0 1px 4px #0008;
 }
+.centre-tile-metrics {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+.centre-tile-metrics small {
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-shadow: 0 1px 4px #0008;
+}
 .revenue-centre-legend {
   display: grid;
   gap: 0;
@@ -337,6 +326,17 @@ h3 {
 }
 .account-bar strong {
   font-weight: 600;
+}
+.account-bar-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px 9px;
+  font-variant-numeric: tabular-nums;
+}
+.account-bar-values span {
+  color: var(--muted);
 }
 .track {
   grid-column: 1 / -1;
@@ -613,64 +613,83 @@ input[type='checkbox'] {
   font-size: 16px;
   overflow-wrap: anywhere;
 }
-.profit-charts {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.profit-section .charts {
+  grid-template-columns: minmax(0, 1fr);
 }
 .profit-charts .comparison {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
-.signed-axis {
+.profit-columns {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.profit-column {
+  display: grid;
+  grid-template-rows: 52px 220px minmax(36px, auto) minmax(0, auto);
+  justify-items: center;
   gap: 8px;
-  color: var(--muted);
-  font-size: 10px;
-  padding-bottom: 10px;
-}
-.signed-axis > :last-child {
-  text-align: right;
-}
-.signed-rows {
-  display: grid;
-  gap: 18px;
-}
-.signed-row {
-  display: grid;
-  gap: 8px;
-}
-.signed-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 11px;
-}
-.signed-label bdi {
   min-width: 0;
+  text-align: center;
 }
-.signed-label strong {
-  flex: none;
+.profit-column-metrics {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
 }
-.signed-track {
-  position: relative;
-  height: 14px;
-  background: #edf0f1;
+.profit-column-metrics strong {
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
-.signed-track::after {
+.profit-column-metrics span {
+  color: #3e7650;
+  font-size: 12px;
+  font-weight: 700;
+}
+.profit-column-metrics span.negative {
+  color: #b23d41;
+}
+.profit-column-plot {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent 54px,
+    #eff2f3 55px
+  );
+}
+.profit-column-plot::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: -3px;
-  bottom: -3px;
-  width: 1px;
-  background: #7f8b90;
+  inset-inline: 0;
+  top: 50%;
+  border-top: 1px solid #829096;
 }
-.signed-track i {
+.profit-column-bar {
   position: absolute;
-  height: 100%;
+  bottom: 50%;
+  inset-inline-start: 25%;
+  width: 50%;
+  min-height: 2px;
+  background: #527d39;
 }
-.signed-row small {
+.profit-column-bar.loss {
+  top: 50%;
+  bottom: auto;
+  background: #ba5154;
+}
+.profit-column > bdi {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.profit-column small {
   color: var(--muted);
   font-size: 10px;
 }
@@ -721,9 +740,6 @@ input[type='checkbox'] {
   }
 }
 @media (max-width: 580px) {
-  .profit-charts {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .section-heading {
     gap: 12px;
   }
