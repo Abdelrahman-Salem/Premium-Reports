@@ -1,6 +1,6 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, catchError, expand, forkJoin, map, of, reduce, switchMap } from 'rxjs';
+import { EMPTY, Observable, catchError, expand, forkJoin, map, of, reduce, retry, switchMap, throwError, timeout, timer } from 'rxjs';
 
 import {
   CostCentreAccountRow,
@@ -145,13 +145,8 @@ export class DsrReportService {
       body.set('arrSearchValueAjxKey', search);
       body.set('strStausAjxKey', status);
       if (status === 'D') body.set('tabClick', 'true');
-      return this.http.post(this.endpoint, body.toString(), {
-        headers,
-        responseType: 'text',
-        withCredentials: true,
-      }).pipe(
-        map((response) => this.parseResponse(response)),
-        catchError(() => of(null)),
+      return this.requestDsrPage(this.endpoint, body, headers).pipe(
+        catchError((failure: unknown) => status === 'S' ? of(null) : throwError(() => failure)),
       );
     };
 
@@ -172,6 +167,28 @@ export class DsrReportService {
         this.assertDsrTicketTotals(data);
         return { data, source: 'api' as const, receivedAt: new Date() };
       }),
+    );
+  }
+
+  private requestDsrPage(
+    url: string,
+    body: URLSearchParams,
+    headers: HttpHeaders,
+  ): Observable<DsrReportResponse> {
+    return this.http.post(url, body.toString(), {
+      headers, responseType: 'text', withCredentials: true,
+    }).pipe(
+      timeout(60000),
+      retry({
+        count: 2,
+        delay: (failure: unknown, attempt) => {
+          const transient = failure instanceof HttpErrorResponse
+            ? [0, 408, 429, 502, 503, 504].includes(failure.status)
+            : failure instanceof Error && failure.name === 'TimeoutError';
+          return transient ? timer(attempt * 1000) : throwError(() => failure);
+        },
+      }),
+      map((response) => this.parseResponse(response)),
     );
   }
 
@@ -204,11 +221,19 @@ export class DsrReportService {
     search: string,
     headers: HttpHeaders,
   ): Observable<DsrReportResponse | null> {
-    if (!details) return of(null);
+    if (!details) throw new Error('DSR ticket details are missing.');
     const firstRows = details.arrDsrTicketsPhpKey ?? [];
-    const reportedCount = this.toNumber(details.arrDsrDetailsCountPhpKey?.intDsrDetailTicketCountPhpKey);
-    if (!Array.isArray(firstRows) || !Number.isInteger(reportedCount) || reportedCount < firstRows.length) {
+    const counts = details.arrDsrDetailsCountPhpKey;
+    const rawCount = counts?.intDsrDetailTicketCountPhpKey;
+    const reportedCount = Number(rawCount);
+    if (rawCount == null || String(rawCount).trim() === '' || !Array.isArray(firstRows) ||
+      !Number.isSafeInteger(reportedCount) || reportedCount < firstRows.length) {
       throw new Error('DSR ticket count does not match the first page.');
+    }
+    const otherCounts = [counts?.intDsrDetailVoucherCountPhpKey,
+      counts?.intDsrDetailOtherCountPhpKey, counts?.intDsrDetailStockCountPhpKey];
+    if (otherCounts.some((count) => count != null && Number(count) !== 0)) {
+      throw new Error('DSR ticket data does not cover all sections of the requested report.');
     }
     if (reportedCount === firstRows.length) return of(details);
     if (!firstRows.length) throw new Error('DSR ticket details are missing from the first page.');
@@ -221,9 +246,9 @@ export class DsrReportService {
       body.set('intOffsetAjxKey', String(offset));
       body.set('arrSearchValueAjxKey', search);
       body.set('tabClick', 'true');
-      return this.http.post(this.dsrTicketsEndpoint, body.toString(), {
-        headers, responseType: 'text', withCredentials: true,
-      }).pipe(map((response) => ({ offset, data: this.parseResponse(response) })));
+      return this.requestDsrPage(this.dsrTicketsEndpoint, body, headers).pipe(
+        map((data) => ({ offset, data })),
+      );
     };
     const pageRows = (page: { offset: number; data: DsrReportResponse }): DsrTicketRawRow[] => {
       const rows = page.data.arrDsrTicketsPhpKey;
@@ -242,7 +267,10 @@ export class DsrReportService {
         const nextOffset = page.offset + pageRows(page).length;
         return nextOffset < reportedCount ? requestPage(nextOffset) : EMPTY;
       }),
-      reduce((rows, page) => [...rows, ...pageRows(page)], firstRows),
+      reduce((rows, page) => {
+        rows.push(...pageRows(page));
+        return rows;
+      }, [...firstRows]),
       map((rows) => ({ ...details, arrDsrTicketsPhpKey: rows })),
     );
   }

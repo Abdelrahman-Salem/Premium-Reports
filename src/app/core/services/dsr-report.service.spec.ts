@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { CostCentrePeriodicalFilters, DsrFilters, MonthlySaleFilters, MonthlySaleReportResponse } from '../../models/dsr-report.models';
 import { DsrReportService } from './dsr-report.service';
 
@@ -196,7 +197,10 @@ describe('DsrReportService customer detail pagination', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
 
   const flushInitial = (http: HttpTestingController, details: object) => {
     const initial = http.match('/api/reports/sales/dsr');
@@ -292,5 +296,113 @@ describe('DsrReportService customer detail pagination', () => {
     });
     http.expectNone('/api/reports/sales/dsr-tickets');
     expect(loadedRows).toBe(0);
+  });
+
+  it('loads a full-year report across five pages without publishing an intermediate result', () => {
+    let loadedRows: number | undefined;
+    const pageRows = (offset: number, length: number) => Array.from({ length }, (_, index) => ({
+      strDocumentNoPhpKey: `INV-${offset + index}`, dblSellingAmtPhpKey: 1, dblProfitAmtPhpKey: 0.8,
+    }));
+    service.getDsrReport({ ...dsrFilters, toDate: '2026-12-31' }).subscribe((report) => {
+      loadedRows = report.data.arrDsrTicketsPhpKey?.length;
+    });
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: pageRows(0, 250),
+      arrDsrDetailsCountPhpKey: {
+        intDsrDetailTicketCountPhpKey: 1001,
+        arrTotalDetailsTicketPhpKey: { dblSellingPriceSumPhpKey: 1001, dblProfitSumPhpKey: 800.8 },
+      },
+    });
+    for (const offset of [250, 500, 750, 1000]) {
+      expect(loadedRows).toBeUndefined();
+      const request = http.expectOne('/api/reports/sales/dsr-tickets');
+      const body = new URLSearchParams(request.request.body);
+      expect(body.get('intOffsetAjxKey')).toBe(String(offset));
+      const search = JSON.parse(body.get('arrSearchValueAjxKey')!);
+      expect(search.datDsrDetailsToAjxKey).toBe('31/12/2026');
+      expect(search.intDsrDetailsCostCenterAjxKey).toEqual(dsrFilters.costCenters);
+      request.flush(JSON.stringify({
+        arrDsrTicketsPhpKey: pageRows(offset, Math.min(250, 1001 - offset)),
+        arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 1001 },
+        intDsrDetailsTicketOffSetPhpKey: offset,
+      }));
+    }
+    expect(loadedRows).toBe(1001);
+  });
+
+  it.each([
+    {},
+    { arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: null } },
+    { arrDsrTicketsPhpKey: [], arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 0, intDsrDetailVoucherCountPhpKey: 1 } },
+  ])('rejects unverified or uncovered detail sections: %j', (details) => {
+    let emitted = false;
+    let error: Error | undefined;
+    service.getDsrReport(dsrFilters).subscribe({
+      next: () => { emitted = true; }, error: (failure: Error) => { error = failure; },
+    });
+    flushInitial(http, details);
+    expect(emitted).toBe(false);
+    expect(error?.message).toMatch(/^DSR ticket/);
+    http.expectNone('/api/reports/sales/dsr-tickets');
+  });
+
+  it('propagates a failed initial details request instead of emitting a summary-only report', () => {
+    let emitted = false;
+    let status: number | undefined;
+    service.getDsrReport(dsrFilters).subscribe({
+      next: () => { emitted = true; }, error: (failure) => { status = failure.status; },
+    });
+    const initial = http.match('/api/reports/sales/dsr');
+    initial.find((request) => new URLSearchParams(request.request.body).get('strStausAjxKey') === 'S')!
+      .flush(JSON.stringify({ arrDsrDetailsSummaryDataPhpKey: {} }));
+    initial.find((request) => new URLSearchParams(request.request.body).get('strStausAjxKey') === 'D')!
+      .flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    expect(emitted).toBe(false);
+    expect(status).toBe(401);
+    http.expectNone('/api/reports/sales/dsr-tickets');
+  });
+
+  it('retries a temporary page failure at the same offset without double-counting rows', async () => {
+    vi.useFakeTimers();
+    let loadedRows: number | undefined;
+    service.getDsrReport(dsrFilters).subscribe((report) => {
+      loadedRows = report.data.arrDsrTicketsPhpKey?.length;
+    });
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: [{ dblSellingAmtPhpKey: 1 }],
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 2 },
+    });
+    const failed = http.expectOne('/api/reports/sales/dsr-tickets');
+    const body = failed.request.body;
+    failed.flush('Unavailable', { status: 503, statusText: 'Service Unavailable' });
+    expect(loadedRows).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1000);
+    const retried = http.expectOne('/api/reports/sales/dsr-tickets');
+    expect(retried.request.body).toBe(body);
+    retried.flush(JSON.stringify({
+      arrDsrTicketsPhpKey: [{ dblSellingAmtPhpKey: 2 }],
+      intDsrDetailsTicketOffSetPhpKey: 1,
+    }));
+    expect(loadedRows).toBe(2);
+  });
+
+  it('allows the full report to take more than a minute when each page responds in time', async () => {
+    vi.useFakeTimers();
+    let loadedRows: number | undefined;
+    service.getDsrReport(dsrFilters).subscribe((report) => {
+      loadedRows = report.data.arrDsrTicketsPhpKey?.length;
+    });
+    await vi.advanceTimersByTimeAsync(45000);
+    flushInitial(http, {
+      arrDsrTicketsPhpKey: [{ dblSellingAmtPhpKey: 1 }],
+      arrDsrDetailsCountPhpKey: { intDsrDetailTicketCountPhpKey: 2 },
+    });
+    const remaining = http.expectOne('/api/reports/sales/dsr-tickets');
+    await vi.advanceTimersByTimeAsync(45000);
+    expect(loadedRows).toBeUndefined();
+    remaining.flush(JSON.stringify({
+      arrDsrTicketsPhpKey: [{ dblSellingAmtPhpKey: 2 }], intDsrDetailsTicketOffSetPhpKey: 1,
+    }));
+    expect(loadedRows).toBe(2);
   });
 });
