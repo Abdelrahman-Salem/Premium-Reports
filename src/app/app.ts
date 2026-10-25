@@ -463,14 +463,13 @@ export class App {
       },
       error: (failure: unknown) => {
         this.loading.set(false);
-        const incomplete = (failure instanceof HttpErrorResponse && failure.url?.includes('/dsr-tickets')) ||
-          (failure instanceof Error && /^DSR (ticket|sales|service income)/.test(failure.message));
-        if (incomplete) {
-          this.error.set(this.t('incompleteDsr'));
-        } else {
+        if (failure instanceof HttpErrorResponse && [401, 403].includes(failure.status)) {
           this.sessionReady.set(false);
           this.error.set(this.t('signInFirst'));
           this.checkSession();
+        } else {
+          this.error.set(this.t(failure instanceof HttpErrorResponse && failure.status === 404
+            ? 'proxyMissing' : 'incompleteDsr'));
         }
       },
     });

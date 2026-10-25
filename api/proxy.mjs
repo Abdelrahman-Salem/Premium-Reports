@@ -2,6 +2,7 @@ import { request } from 'node:https';
 
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
+const dsrTicketsPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsticketdata';
 const monthlySaleTargetPath = '/traacs/basic_servicemonthlysalereport_servicemonthlysalereport/getmonthlysalereportlist';
 const profitLossAccountsPath = '/square/basic_profitandlossreportmonthwise_profitandlossreportmonthwise/getprofitandlossreportmonthwiselist';
 const profitLossCentersPath = '/traacs/basic_monthandcostcenterwiseprofitandlossreport_monthandcostcenterwiseprofitandlossreport/getmonthandcostcenterwiseprofitandlosslist';
@@ -493,6 +494,11 @@ export default async function handler(req, res) {
 
   if (action === 'report' && req.method === 'POST') {
     await proxyReportRequest(req, res);
+    return;
+  }
+
+  if (action === 'dsr-ticket-report' && req.method === 'POST') {
+    await proxyReportRequest(req, res, dsrTicketsPath, reportPagePath);
     return;
   }
 

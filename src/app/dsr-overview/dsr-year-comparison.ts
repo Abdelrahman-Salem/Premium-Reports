@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subscription, catchError, from, map, mergeMap, of, timeout } from 'rxjs';
+import { Subscription, catchError, from, map, mergeMap, of } from 'rxjs';
 import { DsrReportService } from '../core/services/dsr-report.service';
 import { DsrFilters } from '../models/dsr-report.models';
 
@@ -87,7 +87,6 @@ export class DsrYearComparison {
         };
         const failure: YearResult = { year, status: 'error', revenue: 0, profit: 0, customers: 0, average: 0, loadedRows: 0, totalRows: 0 };
         return this.service.getDsrReport(filters).pipe(
-          timeout(60000),
           map((result): YearResult => {
             const report = this.service.toCustomerDashboardView(result.data);
             return { year, status: report.loadedRows ? 'ready' : 'empty', revenue: report.revenue,
