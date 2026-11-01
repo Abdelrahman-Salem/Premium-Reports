@@ -23,11 +23,12 @@
       <div class="metric net" [class.loss]="(data()?.netProfit ?? 0) < 0"><span>{{ text('صافي الربح', 'Net profit') }}</span>
         <strong>{{ data() ? (data()!.netProfit | number:'1.2-2') : '-' }}</strong><small>SAR</small></div>
       <div class="metric margin"><span>{{ text('هامش صافي الربح', 'Net profit margin') }}</span>
-        <strong>{{ data() ? (data()!.margin | percent:'1.1-1') : '-' }}</strong><small>{{ text('من الإيراد المحاسبي', 'of P&L income') }}</small></div>
+        <strong>{{ data() && data()!.income > 0 ? (data()!.margin | percent:'1.1-1') : '-' }}</strong><small>{{ text('من الإيراد المحاسبي', 'of P&L income') }}</small></div>
     </header>
 
     @if (data(); as report) {
       <div class="context-line">
+        <span class="accounting-basis">{{ text('صافي الربح = الإيراد المحاسبي − المصروفات', 'Net profit = P&L income − expenses') }}</span>
         <span>{{ text('الفترة', 'Period') }} <bdi>{{ report.periodLabel }}</bdi></span>
         <span>{{ text('متوسط المبيعات الشهري', 'Average monthly sales') }} <b dir="ltr">SAR {{ report.averageMonthlySales | number:'1.2-2' }}</b></span>
       </div>
@@ -114,7 +115,7 @@
       <section id="monthly-profit" class="analysis-section profit-section" aria-labelledby="monthly-profit-heading">
         <header class="section-heading"><h2 id="monthly-profit-heading">{{ text('الأرباح', 'Profit') }}</h2>
           <div><span>{{ text('صافي الربح', 'Net profit') }}</span><strong dir="ltr">SAR {{ report.netProfit | number:'1.2-2' }}</strong></div>
-          <div><span>{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net profit margin on P&L income') }}</span><strong dir="ltr">{{ report.margin | percent:'1.1-1' }}</strong></div>
+          <div><span>{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net profit margin on P&L income') }}</span><strong dir="ltr">{{ report.income > 0 ? (report.margin | percent:'1.1-1') : '-' }}</strong></div>
         </header>
         <div class="charts pl-charts">
           <section class="chart pl-wide"><header><h3>{{ text('صافي الربح الشهري', 'Monthly net profit') }}</h3><span>SAR</span></header>
@@ -161,6 +162,7 @@
   </div>
 
   <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')">
+    <app-report-filters [language]="language()" [busy]="loading()" [valid]="!invalidPeriod()" [summary]="filters().fromYear + '-' + filters().fromMonth + ' — ' + filters().toYear + '-' + filters().toMonth + ' · SAR'" (apply)="submit()">
     <form (ngSubmit)="submit()">
       <h2>{{ text('فترة التقرير', 'Report period') }}</h2>
       <fieldset [disabled]="loading()">
@@ -181,5 +183,6 @@
       <div class="rail-meta"><span>{{ text('العملة', 'Currency') }}</span><b>SAR</b><span>{{ text('الأساس', 'Basis') }}</span><b>{{ text('محاسبي', 'Accounting') }}</b></div>
       <button class="apply" type="submit" [disabled]="loading() || invalidPeriod()">{{ loading() ? text('جاري البحث', 'Searching') : text('عرض التقرير', 'Run report') }}</button>
     </form>
+    </app-report-filters>
   </aside>
 </div>

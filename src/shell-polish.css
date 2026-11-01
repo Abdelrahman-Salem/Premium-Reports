@@ -1,0 +1,198 @@
+/* Application chrome follows the approved dashboard reference.
+   Screen-only rules keep the report/PDF canvas and all financial logic independent. */
+@media screen {
+  html, body { background: #f1f6f9; }
+  body .app.app { --paper: #f1f6f9; background: #f1f6f9; }
+  body .app.app .sidebar { width: 280px; padding: 32px 20px; background: #0c2c3c; border-color: #163a4c; }
+  body .app.app .brand { gap: 16px; margin-bottom: 42px; }
+  body .app.app .brand-logo { width: 220px; height: 92px; border-radius: 20px; object-fit: cover; }
+  body .app.app .brand-name { max-width: 240px; font-size: 14px; font-weight: 600; color: #dce8ef; white-space: normal; }
+  body .app.app .nav-label { font-size: 12px; color: #8ca9b9; margin-inline: 10px; }
+  body .app.app .nav { gap: 7px; }
+  body .app.app .nav-item { min-height: 55px; font-size: 13px; font-weight: 600; padding: 13px 14px; border-radius: 17px; color: #b7cdd9; }
+  body .app.app .nav-item.active { background: #123f54; border-color: #247898; color: #fff; padding-inline-start: 13px; }
+  body .app.app .nav-item.active svg { color: #65cce9; }
+  body .app.app .additional-reports-label { margin: 24px 6px 19px; padding-top: 24px; border-color: #214454; }
+  body .app.app .content { padding: 28px 32px 40px; }
+
+  body .app.app .topbar {
+    position: relative; isolation: isolate; overflow: hidden;
+    min-height: 230px; padding: 30px 32px 88px; margin: 0;
+    border: 0; border-radius: 30px; background: #0c2e3e;
+    box-shadow: 0 9px 0 -5px #0a4055; flex-wrap: nowrap; align-items: flex-start; gap: 24px;
+  }
+  body .app.app .topbar::before {
+    content: ''; position: absolute; z-index: -1; width: 138px; height: 138px;
+    left: 20px; top: 0; border: 1px solid #246078; border-radius: 50%;
+    box-shadow: 0 0 0 49px #0c2e3e, 0 0 0 50px #1a4e64, 0 0 0 99px #0c2e3e, 0 0 0 100px #17465b, 0 0 0 149px #0c2e3e, 0 0 0 150px #153f53, 0 0 0 199px #0c2e3e, 0 0 0 200px #12394b;
+  }
+  body .app.app .topbar::after { content: ''; position: absolute; z-index: -1; width: 410px; height: 410px; border-radius: 50%; background: #12394d; right: -110px; top: -16px; }
+  body .app.app .page-identity { display: flex; align-items: center; gap: 20px; min-width: 0; }
+  body .app.app .page-symbol {
+    display: grid; place-items: center; flex: none; width: 70px; height: 70px;
+    color: #fff; border: 1px solid #268aa4; border-radius: 21px; background: #0a7492;
+    box-shadow: inset 0 1px 0 #ffffff0a;
+  }
+  body .app.app .page-symbol svg { width: 32px; height: 32px; }
+  body .app.app .page-heading { min-width: 0; }
+  body .app.app .eyebrow-row { display: inline-flex; gap: 8px; margin-bottom: 8px; padding: 7px 13px; border: 1px solid #ffffff1f; border-radius: 30px; color: #b6d8e6; background: #ffffff12; font-size: 12px; font-weight: 600; }
+  body .app.app .eyebrow-row::before { display: none; }
+  body .app.app .eyebrow-row svg { width: 16px; height: 16px; }
+  body .app.app .topbar .title { font-family: inherit; font-size: clamp(27px, 2.5vw, 40px); font-weight: 700; line-height: 1.45; letter-spacing: -.7px; color: #fff; }
+  body .app.app .topbar .subtitle { color: #afc9d6; font-size: 12px; max-width: 56ch; line-height: 1.8; margin-top: 8px; }
+  body .app.app .topbar-actions { gap: 11px; justify-content: flex-end; flex: none; padding-top: 24px; max-width: 40%; }
+  body .app.app[dir='rtl'] .topbar-actions { flex-direction: row-reverse; }
+  body .app.app .topbar-actions .light-btn, body .app.app .topbar-actions .export-btn { min-height: 49px; padding: 0 21px; font-size: 13px; border-radius: 15px; justify-content: center; transition: background .18s, transform .18s; white-space: nowrap; }
+  body .app.app .topbar-actions .language-btn { color: #fff; border-color: #527081; background: #0e3041; }
+  body .app.app .language-btn svg { width: 17px; height: 17px; color: currentColor; }
+  body .app.app .topbar-actions .export-btn { color: #fff; border: 1px solid #2999b5; background: #087c9b; box-shadow: none; }
+  body .app.app .topbar-actions .export-btn:hover:enabled { background: #0790b0; transform: translateY(-1px); }
+  body .app.app .topbar-actions .export-btn:disabled { background: #9aacb7; border-color: #8da1ad; color: #173b4e; opacity: 1; box-shadow: none; }
+  body .app.app .topbar-actions .live-pill { order: 3; min-height: 28px; background: #214d54; color: #b8e8da; font-size: 10px; margin-inline-start: auto; }
+
+  body .app.app .auth-panel, body .app.app .auth-panel.ready {
+    position: relative; z-index: 1; grid-template-columns: minmax(0,1fr) auto; gap: 5px 24px;
+    min-height: 122px; padding: 22px 24px; margin: -54px 20px 16px;
+    border: 1px solid #f0d590; border-radius: 23px; background: #fff6df; color: #805700;
+    box-shadow: 0 18px 30px #173b4e12;
+  }
+  body .app.app .auth-panel.ready { border-color: #c9e5d8; background: #edf8f2; color: #2a755d; }
+  body .app.app .auth-status { grid-column: 1; grid-row: 1; gap: 16px; min-width: 0; }
+  body .app.app .connection-symbol { position: relative; width: 52px; height: 52px; flex: none; border-radius: 16px; color: #8f6200; background: #ffe9af; display: grid; place-items: center; }
+  body .app.app .connection-symbol svg { width: 25px; height: 25px; }
+  body .app.app .connection-symbol .session-dot { position: absolute; inset-inline-end: -8px; top: -5px; width: 12px; height: 12px; border: 3px solid #fff6df; box-sizing: content-box; background: #df940a; box-shadow: 0 0 0 2px #f6d387; }
+  body .app.app .auth-panel.ready .connection-symbol { color: #278465; background: #d9f0e4; }
+  body .app.app .auth-panel.ready .session-dot { background: #2caa7b; border-color: #edf8f2; box-shadow: 0 0 0 2px #b7e4cf; }
+  body .app.app .auth-panel .auth-status div, body .app.app .auth-panel.ready .auth-status div { display: grid; gap: 4px; }
+  body .app.app .auth-panel .auth-status strong, body .app.app .auth-panel.ready .auth-status strong { font-size: 17px; color: #5d4103; font-weight: 600; }
+  body .app.app .auth-panel.ready .auth-status strong { color: #25664f; }
+  body .app.app .auth-panel .auth-status span, body .app.app .auth-panel.ready .auth-status span { font-size: 13px; font-weight: 500; color: inherit; line-height: 1.7; }
+  body .app.app .auth-panel > p { grid-column: 1; grid-row: 2; margin: 0; padding-inline-start: 68px; font-size: 11px; line-height: 1.8; color: #8e6b26; }
+  body .app.app .auth-actions { grid-column: 2; grid-row: 1 / 3; gap: 10px; }
+  body .app.app .auth-panel .auth-actions .light-btn, body .app.app .auth-panel.ready .auth-actions .light-btn { min-height: 46px; padding: 0 18px; border: 1px solid #efcf87; background: #fff; color: #684b0b; font-size: 12px; border-radius: 13px; }
+  body .app.app .auth-panel.ready .auth-actions .light-btn { color: #2a755d; border-color: #c8e3d5; }
+  body .app.app .auth-actions svg { width: 16px; height: 16px; flex: none; }
+  body .app.app .auth-actions svg.checking { animation: report-spin 1s linear infinite; }
+
+  body .app.app .year-strip { padding: 5px; margin: 0 20px 16px; min-height: 63px; border: 1px solid #dce7ef; border-radius: 21px; background: #fff; gap: 6px; box-shadow: 0 5px 18px #163d5105; }
+  body .app.app .year-strip > span { color: #71889a; align-self: center; font-size: 12px; }
+  body .app.app .year-strip button { min-height: 50px; min-width: 66px; border: 0; border-radius: 15px; font-weight: 500; font-size: 15px; background: transparent; color: #58718b; transition: background .18s, color .18s; }
+  body .app.app .year-strip button.selected, body .app.app .year-strip button.selected:hover { color: #fff; background: #087994; box-shadow: 0 5px 13px #08799426; font-weight: 700; }
+  body .app.app .year-strip button:hover:enabled:not(.selected) { background: #f0f7fa; color: #087994; }
+  body .app.app :is(.workspace, .reference-workspace) { gap: 16px; }
+  body .app.app :is(.workspace, .reference-workspace) > :is(.canvas, .reference-content) { width: auto; margin-inline: 20px; align-self: stretch; }
+  body .app.app :is(.workspace, .reference-workspace) > .filter-rail { width: auto; margin-inline: 20px; border-radius: 22px; border-color: #dce7ef; box-shadow: 0 5px 18px #163d5105; overflow: hidden; }
+  body .app.app .filter-toolbar { padding: 25px 24px; min-height: 108px; gap: 18px; background: #fff; }
+  body .app.app app-report-filters, body .app.app app-report-filters * { box-sizing: border-box; }
+  body .app.app app-report-filters { font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif; }
+  body .app.app .filter-caption { gap: 16px; }
+  body .app.app .filter-symbol { width: 52px; height: 52px; border-radius: 17px; background: #e5f4f9; color: #007997; border: 0; }
+  body .app.app .filter-caption-text { min-width: 0; }
+  body .app.app .filter-caption strong { font-size: 15px; color: #203649; font-weight: 600; }
+  body .app.app .filter-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 7px; }
+  body .app.app .filter-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 4px 11px; border: 1px solid #e1ebf3; border-radius: 30px; background: #f2f7fa; color: #516b83; font-size: 12px; }
+  body .app.app .filter-chip svg { width: 15px; height: 15px; flex: none; }
+  body .app.app .filter-caption .filter-chip bdi { font-size: 12px; margin: 0; color: inherit; }
+  body .app.app .filter-toolbar-actions { gap: 10px; }
+  body .app.app .filter-toggle, body .app.app .filter-run { min-height: 49px; border-radius: 14px; padding-inline: 20px; font-size: 13px; }
+  body .app.app .filter-toggle { color: #4c647c; border-color: #d5e3ef; background: #fff; }
+  body .app.app .filter-toggle[aria-expanded='true'] { color: #087994; border-color: #bfe4ef; background: #f0f9fc; }
+  body .app.app .filter-run { background: #087994; border-color: #087994; box-shadow: 0 6px 14px #08799424; }
+  body .app.app .filter-run:hover:enabled { background: #066b83; }
+  body .app.app .filter-content { padding: 24px; background: #fbfdfe; border-radius: 0 0 22px 22px; }
+  body .app.app .filter-content legend { font-size: 13px; }
+  body .app.app .filter-content label:has(input[type='checkbox']) { font-size: 12px; min-height: 39px; }
+  body .app.app .filter-content fieldset > label:not(:has(input[type='checkbox'])) { font-size: 12px; }
+  body .app.app .report-view-switch { margin-inline: 20px; }
+  body .app.app :is(.reference-empty, .empty-overview) { background: #fff; border: 1px dashed #c8dce9; border-radius: 25px; min-height: 240px; padding: 46px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  body .app.app .empty-symbol { display: grid; place-items: center; width: 64px; height: 64px; color: #087c9d; background: #e5f4fa; border-radius: 21px; }
+  body .app.app .empty-symbol svg { width: 32px; height: 32px; }
+  body .app.app :is(.reference-empty, .empty-overview) h2 { color: #49647a; font-size: 19px; font-weight: 600; padding: 0; margin: 0; border: 0; }
+  body .app.app :is(.reference-empty, .empty-overview) p { font-size: 13px; color: #738ba0; margin: 0; line-height: 1.8; }
+  body .app.app .site-footer { justify-content: center; margin-top: 40px; padding: 28px 0 0; border-top: 1px solid #dfE9f0; }
+  body .app.app .footer-credit { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  body .app.app .footer-brand { display: flex; align-items: center; gap: 14px; padding: 13px 21px; min-height: 68px; border: 1px solid #dce7ef; border-radius: 21px; background: #fff; box-shadow: 0 5px 15px #15384e04; }
+  body .app.app .footer-brand > span { font-size: 12px; font-weight: 500; color: #61778d; white-space: nowrap; }
+  body .app.app .footer-contact-stack { align-items: center; gap: 0; }
+  body .app.app .footer-logo { width: 104px; height: 32px; overflow: hidden; }
+  body .app.app .footer-logo img { display: block; width: 104px; height: auto; object-fit: contain; margin-top: -3px; background: #fff; }
+  body .app.app .footer-contact { gap: 8px; padding: 8px 16px; min-height: 38px; background: #e6f7ee; color: #158047; border: 1px solid #bfe8cf; border-radius: 30px; font-size: 13px; line-height: 1.5; text-decoration: none; transition: background .18s; }
+  body .app.app .footer-contact:hover { background: #d5f0e1; color: #106536; }
+  body .app.app .footer-contact svg { width: 17px; height: 17px; }
+  body .app.app .footer-contact bdi { letter-spacing: .1px; }
+  body .app.app.pdf-export :is(.canvas, .reference-content) { margin-inline: 0; }
+}
+@media screen and (max-width: 1280px) {
+  body .app.app .sidebar { width: 240px; padding-inline: 16px; }
+  body .app.app .brand-logo { width: 200px; height: 84px; }
+  body .app.app .brand-name { font-size: 12px; }
+  body .app.app .content { padding-inline: 24px; }
+  body .app.app .topbar { padding-inline: 26px; }
+  body .app.app .topbar-actions { max-width: 38%; flex-wrap: wrap; }
+  body .app.app .topbar-actions .light-btn, body .app.app .topbar-actions .export-btn { padding-inline: 14px; font-size: 12px; }
+  body .app.app .auth-panel, body .app.app .auth-panel.ready { grid-template-columns: minmax(0,1fr); gap: 8px; }
+  body .app.app .auth-actions { grid-column: 1; grid-row: 3; padding-inline-start: 68px; justify-content: flex-start; }
+  body .app.app .auth-panel.ready .auth-actions { grid-row: 2; }
+  body .app.app .filter-toolbar { flex-wrap: wrap; }
+}
+@media screen and (max-width: 880px) {
+  body .app.app .sidebar { position: static; width: 100%; height: auto; padding: 18px; }
+  body .app.app .brand { margin-bottom: 18px; gap: 16px; }
+  body .app.app .brand-logo { width: 150px; height: 62px; border-radius: 13px; }
+  body .app.app .brand-name { max-width: 210px; font-size: 12px; }
+  body .app.app .nav-item { min-height: 48px; border-radius: 12px; font-size: 11px; }
+  body .app.app .additional-reports-label { display: block; padding-top: 16px; margin-top: 18px; margin-bottom: 12px; font-size: 11px; }
+  body .app.app .topbar .title { font-size: 28px; }
+  body .app.app .page-symbol { width: 60px; height: 60px; border-radius: 18px; }
+  body .app.app .topbar-actions { max-width: 38%; padding-top: 12px; }
+}
+@media screen and (max-width: 600px) {
+  body .app.app .content { padding: 18px 14px 30px; }
+  body .app.app .brand-logo { width: 132px; height: 57px; }
+  body .app.app .brand-name { max-width: 165px; font-size: 10px; }
+  body .app.app .topbar { min-height: 250px; padding: 23px 21px 72px; border-radius: 24px; gap: 19px; flex-wrap: wrap; }
+  body .app.app .topbar > .page-identity:first-child { display: flex; width: 100%; gap: 12px; }
+  body .app.app .page-symbol { width: 50px; height: 50px; border-radius: 15px; }
+  body .app.app .page-symbol svg { width: 25px; height: 25px; }
+  body .app.app .topbar .title { font-size: 24px; line-height: 1.5; letter-spacing: -.3px; }
+  body .app.app .topbar .subtitle { display: none; }
+  body .app.app .eyebrow-row { font-size: 10px; padding: 5px 10px; }
+  body .app.app .eyebrow-row svg { width: 13px; height: 13px; }
+  body .app.app .topbar-actions { max-width: 100%; width: 100%; padding: 0; margin: 0; justify-content: flex-end; gap: 8px; }
+  body .app.app .topbar-actions .light-btn, body .app.app .topbar-actions .export-btn { padding-inline: 14px; font-size: 11px; min-height: 43px; border-radius: 12px; }
+  body .app.app .topbar-actions .export-btn { margin: 0; }
+  body .app.app .topbar-actions .live-pill { font-size: 9px; margin: 0; }
+  body .app.app .auth-panel, body .app.app .auth-panel.ready { padding: 19px 16px; margin: -44px 10px 16px; border-radius: 19px; gap: 10px; }
+  body .app.app .auth-status { gap: 12px; }
+  body .app.app .connection-symbol { width: 43px; height: 43px; border-radius: 14px; }
+  body .app.app .connection-symbol svg { width: 23px; height: 23px; }
+  body .app.app .auth-panel .auth-status strong, body .app.app .auth-panel.ready .auth-status strong { font-size: 15px; }
+  body .app.app .auth-panel .auth-status span, body .app.app .auth-panel.ready .auth-status span { font-size: 11px; }
+  body .app.app .auth-panel > p { padding-inline-start: 0; font-size: 10px; }
+  body .app.app .auth-actions { padding-inline-start: 0; display: flex; width: 100%; gap: 7px; }
+  body .app.app .auth-panel .auth-actions .light-btn, body .app.app .auth-panel.ready .auth-actions .light-btn { justify-content: center; padding-inline: 10px; font-size: 10px; min-height: 42px; flex: 1; }
+  body .app.app .auth-actions svg { width: 14px; height: 14px; }
+  body .app.app .year-strip { margin-inline: 10px; min-height: 54px; padding: 4px; gap: 4px; border-radius: 16px; }
+  body .app.app .year-strip button { min-width: 52px; min-height: 44px; font-size: 12px; border-radius: 12px; }
+  body .app.app :is(.workspace, .reference-workspace) > :is(.canvas, .reference-content, .filter-rail) { margin-inline: 10px; }
+  body .app.app :is(.workspace, .reference-workspace) > .filter-rail { border-radius: 19px; }
+  body .app.app .filter-toolbar { padding: 20px 17px; gap: 17px; }
+  body .app.app .filter-caption { gap: 12px; align-items: flex-start; }
+  body .app.app .filter-symbol { width: 44px; height: 44px; border-radius: 14px; }
+  body .app.app .filter-caption strong { font-size: 14px; }
+  body .app.app .filter-chip { padding: 4px 8px; min-height: 29px; gap: 5px; }
+  body .app.app .filter-caption .filter-chip bdi { font-size: 10px; }
+  body .app.app .filter-chip svg { width: 13px; height: 13px; }
+  body .app.app .filter-toolbar-actions { width: 100%; padding-top: 15px; border-top: 1px solid #edf2f6; }
+  body .app.app .filter-toolbar-actions button { flex: 1; padding-inline: 10px; font-size: 11px; min-height: 45px; border-radius: 12px; }
+  body .app.app .filter-content { padding: 18px; }
+  body .app.app .filter-content form { grid-template-columns: minmax(0,1fr); }
+  body .app.app .report-view-switch { margin-inline: 10px; min-width: 0; }
+  body .app.app :is(.reference-empty, .empty-overview) { min-height: 240px; padding: 32px 20px; border-radius: 21px; gap: 16px; }
+  body .app.app :is(.reference-empty, .empty-overview) h2 { font-size: 17px; line-height: 1.7; }
+  body .app.app :is(.reference-empty, .empty-overview) p { font-size: 12px; }
+  body .app.app .site-footer { margin-top: 32px; padding-top: 26px; }
+  body .app.app .footer-brand { padding: 12px 19px; min-height: 63px; border-radius: 18px; }
+  body .app.app .footer-brand > span { font-size: 11px; }
+  body .app.app .footer-contact { font-size: 12px; }
+}

@@ -1,11 +1,12 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ReportFilters } from '../shared/report-filters';
 import { ProfitLossDashboard, ProfitLossFilters } from '../models/profit-loss.models';
 
 @Component({
   selector: 'app-monthly-sales-overview',
-  imports: [DecimalPipe, PercentPipe, FormsModule],
+  imports: [DecimalPipe, PercentPipe, FormsModule, ReportFilters],
   templateUrl: './monthly-profit-loss.html',
   styleUrls: ['../cost-centre-overview/cost-centre-overview.css', './monthly-profit-loss.css'],
 })

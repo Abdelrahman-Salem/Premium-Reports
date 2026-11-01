@@ -3,12 +3,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { DsrReportService } from './core/services/dsr-report.service';
 import { ProfitLossReportService } from './core/services/profit-loss-report.service';
+import { ReportPdfService } from './core/services/report-pdf.service';
 import { CostCentreOverview } from './cost-centre-overview/cost-centre-overview';
 import { YearComparison } from './cost-centre-overview/year-comparison';
 import { MonthlySalesOverview } from './monthly-sales-overview/monthly-sales-overview';
 import { MonthlyYearComparison } from './monthly-sales-overview/monthly-year-comparison';
 import { CustomerOverview } from './dsr-overview/customer-overview';
 import { DsrYearComparison } from './dsr-overview/dsr-year-comparison';
+import { ExecutivePerformance } from './executive-performance/executive-performance';
 import {
   CostCentrePeriodicalDashboardView,
   CostCentrePeriodicalFilters,
@@ -26,7 +28,7 @@ import { ProfitLossDashboard, ProfitLossFilters } from './models/profit-loss.mod
 type Language = 'en' | 'ar';
 const defaultMonthlyYear = String(new Date().getFullYear());
 const defaultMonthlyEndMonth = String(new Date().getMonth() + 1);
-type ReportMode = 'monthly' | 'dsr' | 'costCentre';
+type ReportMode = 'monthly' | 'dsr' | 'costCentre' | 'executive';
 type ReportSection = 'overview' | 'profit' | 'type' | 'payment' | 'payable' | 'expense' | 'raw';
 
 const TRANSLATIONS = {
@@ -37,6 +39,7 @@ const TRANSLATIONS = {
     operations: 'Operations',
     salesReport: 'Sales report',
     monthlyReport: 'Sales Performance Dashboard',
+    executiveReport: 'Sales Performance Summary',
     dsrReport: 'Customer Insights Dashboard',
     costCentrePeriodical: 'Cost Centre Performance Dashboard',
     revenue: 'Revenue',
@@ -66,7 +69,7 @@ const TRANSLATIONS = {
     liveApi: 'Live API',
     searching: 'Searching',
     search: 'Search',
-    exportReport: 'Export PDF',
+    exportReport: 'Download PDF',
     openTraacs: 'Open TRAACS login',
     checkSession: 'Check session',
     checkingSession: 'Checking',
@@ -116,6 +119,7 @@ const TRANSLATIONS = {
     profit: 'Profit',
     raw: 'Raw',
     reportSections: 'Report sections',
+    additionalReports: 'Additional reports',
     summaryDetails: 'Summary details',
     metric: 'Metric',
     sale: 'Sale',
@@ -135,6 +139,7 @@ const TRANSLATIONS = {
     operations: 'العمليات',
     salesReport: 'تقرير المبيعات',
     monthlyReport: 'لوحة أداء مبيعات الخدمات',
+    executiveReport: 'لوحة الأداء الشاملة',
     dsrReport: 'لوحة تحليل العملاء',
     revenue: 'الإيراد',
     grossProfit: 'مجمل الربح',
@@ -155,7 +160,7 @@ const TRANSLATIONS = {
     liveApi: 'بيانات مباشرة',
     searching: 'جاري البحث',
     search: 'بحث',
-    exportReport: 'تصدير PDF',
+    exportReport: 'تحميل PDF',
     openTraacs: 'فتح تسجيل دخول TRAACS',
     checkSession: 'فحص الجلسة',
     checkingSession: 'جاري الفحص',
@@ -204,6 +209,7 @@ const TRANSLATIONS = {
     profit: 'الأرباح',
     raw: 'البيانات الخام',
     reportSections: 'أقسام التقرير',
+    additionalReports: 'تقارير إضافية',
     summaryDetails: 'تفاصيل الملخص',
     metric: 'البند',
     sale: 'بيع',
@@ -234,16 +240,21 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [CostCentreOverview, YearComparison, MonthlySalesOverview, MonthlyYearComparison, CustomerOverview, DsrYearComparison],
+  imports: [CostCentreOverview, YearComparison, MonthlySalesOverview, MonthlyYearComparison, CustomerOverview, DsrYearComparison, ExecutivePerformance],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App {
   private readonly dsrReportService = inject(DsrReportService);
   private readonly profitLossReportService = inject(ProfitLossReportService);
+  private readonly pdfService = inject(ReportPdfService);
+  protected readonly exporting = signal(false);
+  protected readonly exportMessage = signal('');
+  protected readonly exportFailed = signal(false);
   private readonly monthlyComparison = viewChild(MonthlyYearComparison);
   private readonly dsrComparison = viewChild(DsrYearComparison);
   private readonly costCentreComparison = viewChild(YearComparison);
+  private readonly executiveReport = viewChild(ExecutivePerformance);
   private readonly chartColors = [
     '#2e6f73',
     '#c77b32',
@@ -360,6 +371,7 @@ export class App {
     return `${filters.fromDate} - ${filters.toDate}`;
   });
   protected readonly visiblePeriodLabel = computed(() => {
+    if (this.reportMode() === 'executive') return this.executiveReport()?.periodLabel() ?? '';
     if (this.reportMode() === 'monthly') {
       return this.monthlyPeriodLabel();
     }
@@ -367,6 +379,7 @@ export class App {
     return this.reportMode() === 'costCentre' ? this.costCentrePeriodLabel() : this.periodLabel();
   });
   protected readonly reportTitle = computed(() => {
+    if (this.reportMode() === 'executive') return this.t('executiveReport');
     if (this.reportMode() === 'monthly') {
       return this.t('monthlyReport');
     }
@@ -374,6 +387,7 @@ export class App {
     return this.reportMode() === 'costCentre' ? this.t('costCentrePeriodical') : this.t('title');
   });
   protected readonly reportSubtitle = computed(() => {
+    if (this.reportMode() === 'executive') return '';
     if (this.reportMode() === 'monthly') {
       return this.language() === 'ar'
         ? 'تحليل شهري لإيرادات الخدمات والربحية والحجم مع مقارنة بين الشهور والخدمات.'
@@ -390,6 +404,7 @@ export class App {
   });
   protected readonly hasActiveReport = computed(
     () => {
+      if (this.reportMode() === 'executive') return this.executiveReport()?.printReady() ?? false;
       if (this.reportMode() === 'monthly') {
         return this.monthlyView() === 'comparison'
           ? Boolean(this.monthlyComparison()?.printReady()) : Boolean(this.monthlyDashboard());
@@ -636,6 +651,21 @@ export class App {
     this.error.set(null);
     this.hasSearched.set(false);
     this.costCentreOpen.set(false);
+    this.exportMessage.set('');
+  }
+
+  protected setDsrFilters(filters: DsrFilters): void {
+    this.filters.set(filters);
+    this.report.set(null);
+    this.error.set(null);
+    this.exportMessage.set('');
+  }
+
+  protected setCostCentreFilters(filters: CostCentrePeriodicalFilters): void {
+    this.costCentreFilters.set(filters);
+    this.costCentreReport.set(null);
+    this.error.set(null);
+    this.exportMessage.set('');
   }
 
   protected toggleLanguage(): void {
@@ -771,14 +801,30 @@ export class App {
     return value === 0 ? 'dim' : '';
   }
 
-  protected exportCurrentReport(): void {
-    if (!this.hasActiveReport() || this.loading()) return;
-    const previousTitle = document.title;
+  protected async exportCurrentReport(): Promise<void> {
+    if (!this.hasActiveReport() || this.loading() || this.exporting()) return;
     const mode = this.reportMode();
-    const view = mode === 'monthly' ? this.monthlyView() : mode === 'dsr' ? this.dsrView() : this.costCentreView();
-    document.title = `First Premium Support Services - ${this.reportTitle()} - ${view}${view === 'report' ? ` - ${this.visiblePeriodLabel()}` : ''}`;
-    window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
-    window.print();
+    const view = mode === 'executive' ? 'report' : mode === 'monthly' ? this.monthlyView() : mode === 'dsr' ? this.dsrView() : this.costCentreView();
+    const title = this.reportTitle();
+    const language = this.language();
+    const period = view === 'report' ? this.visiblePeriodLabel() :
+      document.querySelector('.comparison-period,.year-comparison > header > span')?.textContent?.trim() ?? '';
+    const label = view === 'comparison' ? `${title} · ${language === 'ar' ? 'مقارنة السنوات' : 'Year comparison'}` : title;
+    this.exporting.set(true);
+    this.exportFailed.set(false);
+    this.exportMessage.set(language === 'ar' ? 'جاري تجهيز ملف PDF والرسومات…' : 'Preparing your dashboard PDF…');
+    try {
+      await this.pdfService.download({ root: document.querySelector<HTMLElement>('app-root > .app')!, title: label,
+        period, language, portrait: mode === 'executive',
+        fileName: `First-Premium-${mode}-${view}-${new Date().toISOString().slice(0,10)}.pdf`,
+        progress: (done, total) => this.exportMessage.set(language === 'ar'
+          ? `جاري تجهيز الرسومات ${done} / ${total}` : `Preparing charts ${done} / ${total}`),
+      });
+      this.exportMessage.set(language === 'ar' ? 'تم تجهيز التقرير وتنزيل ملف PDF.' : 'Your PDF report has been downloaded.');
+    } catch {
+      this.exportFailed.set(true);
+      this.exportMessage.set(language === 'ar' ? 'تعذر إنشاء ملف PDF. أعد المحاولة.' : 'The PDF could not be created. Please retry.');
+    } finally { this.exporting.set(false); }
   }
 
   protected trackByLabel(_: number, row: DsrMetricRow | MetricCard): string {

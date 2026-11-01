@@ -1,6 +1,7 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ReportFilters } from '../shared/report-filters';
 import {
   CostCentreOption,
   CostCentrePeriodicalDashboardView,
@@ -21,7 +22,7 @@ interface RevenueCentreTile {
 
 @Component({
   selector: 'app-cost-centre-overview',
-  imports: [DecimalPipe, PercentPipe, FormsModule],
+  imports: [DecimalPipe, PercentPipe, FormsModule, ReportFilters],
   templateUrl: './cost-centre-overview.html',
   styleUrl: './cost-centre-overview.css',
 })

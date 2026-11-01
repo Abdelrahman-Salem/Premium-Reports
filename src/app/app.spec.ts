@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { vi } from 'vitest';
 import { App } from './app';
 import { DsrReportService } from './core/services/dsr-report.service';
+import { ReportPdfService } from './core/services/report-pdf.service';
 
 function profitLossFixture(year: string) {
   const key = `${year}01`;
@@ -66,17 +67,17 @@ describe('App', () => {
     expect(compiled.querySelector<HTMLImageElement>('.brand-logo')?.getAttribute('src')).toBe('logo.jpg');
     expect(compiled.querySelector('.print-header strong')?.textContent).toBe('First Premium Support Services');
     expect(compiled.querySelector<HTMLImageElement>('.print-header img')?.getAttribute('src')).toBe('logo.jpg');
-    expect(compiled.querySelectorAll('.sidebar .nav-button')).toHaveLength(3);
+    expect(compiled.querySelectorAll('.sidebar .nav-button')).toHaveLength(4);
     expect(compiled.querySelector('.sidebar')?.textContent).not.toContain('Session');
     expect(compiled.querySelectorAll('.auth-actions button')).toHaveLength(2);
     expect(compiled.querySelector('.site-footer .footer-credit')?.textContent).toContain('Powered by');
     expect(compiled.querySelector<HTMLImageElement>('.footer-credit img')?.getAttribute('src')).toBe('codit.png');
     expect(compiled.querySelector<HTMLAnchorElement>('.footer-contact')?.getAttribute('href')).toBe('https://wa.me/201144918857');
-    compiled.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[1].click();
+    compiled.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[2].click();
     fixture.detectChanges();
     expect(compiled.querySelector('.title')?.textContent).toContain('لوحة تحليل العملاء');
     expect(compiled.querySelector('.site-footer')).not.toBeNull();
-    compiled.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[2].click();
+    compiled.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[3].click();
     fixture.detectChanges();
     expect(compiled.querySelector('.title')?.textContent).toContain('لوحة أداء مراكز التكلفة');
     expect(compiled.querySelector('.site-footer')).not.toBeNull();
@@ -84,7 +85,7 @@ describe('App', () => {
     fixture.detectChanges();
     expect(compiled.querySelector('.title')?.textContent).toContain('Cost Centre Performance Dashboard');
     expect([...compiled.querySelectorAll('.sidebar .nav-button')].map((button) => button.textContent?.trim())).toEqual([
-      'Sales Performance Dashboard', 'Customer Insights Dashboard', 'Cost Centre Performance Dashboard',
+      'Sales Performance Summary', 'Sales Performance Dashboard', 'Customer Insights Dashboard', 'Cost Centre Performance Dashboard',
     ]);
   });
 
@@ -92,7 +93,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[3].click();
     fixture.detectChanges();
     const buttons = element.querySelectorAll<HTMLButtonElement>('.report-view-switch button');
     expect(buttons).toHaveLength(2);
@@ -142,14 +143,33 @@ describe('App', () => {
     expect(element.querySelectorAll('.pl-margin-column')).toHaveLength(1);
     expect(element.querySelectorAll('#monthly-expenses .chart')).toHaveLength(1);
     expect(element.querySelector('#monthly-expenses')?.textContent).not.toContain('Rent Expense');
-    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
-    const originalTitle = document.title;
+    const download = vi.spyOn(TestBed.inject(ReportPdfService), 'download').mockResolvedValue(undefined);
     element.querySelector<HTMLButtonElement>('.export-btn')!.click();
-    expect(print).toHaveBeenCalledOnce();
-    expect(document.title).toContain('First Premium Support Services - لوحة أداء مبيعات الخدمات - report');
-    window.dispatchEvent(new Event('afterprint'));
-    expect(document.title).toBe(originalTitle);
-    print.mockRestore();
+    expect(download).toHaveBeenCalledWith(expect.objectContaining({ title: 'لوحة أداء مبيعات الخدمات', portrait: false, language: 'ar' }));
+    http.verify();
+  });
+
+  it('prevents concurrent exports and allows retry after a failed PDF download', async () => {
+    const fixture = TestBed.createComponent(App);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    element.querySelector<HTMLButtonElement>('.year-strip button')!.click();
+    flushProfitLoss(http, '2021');
+    fixture.detectChanges();
+    let rejectExport!: (reason: unknown) => void;
+    const download = vi.spyOn(TestBed.inject(ReportPdfService), 'download').mockReturnValue(new Promise((_resolve, reject) => rejectExport = reject));
+    const button = element.querySelector<HTMLButtonElement>('.export-btn')!;
+    button.click(); button.click();
+    fixture.detectChanges();
+    expect(download).toHaveBeenCalledOnce();
+    expect(button.disabled).toBe(true);
+    rejectExport(new Error('Failed to render'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(element.querySelector('.pdf-status.error')).not.toBeNull();
+    expect(button.disabled).toBe(false);
     http.verify();
   });
 
@@ -212,7 +232,7 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[1].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
     fixture.detectChanges();
     const year = [...element.querySelectorAll<HTMLButtonElement>('app-dsr-overview .year-strip button')]
       .find((button) => button.textContent?.trim() === '2025')!;
@@ -272,7 +292,7 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[1].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
     fixture.detectChanges();
     element.querySelectorAll<HTMLButtonElement>('.report-view-switch button')[1].click();
     fixture.detectChanges();
@@ -323,7 +343,7 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[1].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
     fixture.detectChanges();
     element.querySelector<HTMLButtonElement>('app-dsr-overview .apply')!.click();
     const requests = http.match('/api/reports/sales/dsr');
@@ -372,7 +392,7 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[3].click();
     fixture.detectChanges();
     for (const [year, amount] of [
       [2025, 125],
@@ -419,7 +439,7 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[3].click();
     fixture.detectChanges();
     const quarters = element.querySelectorAll<HTMLInputElement>('.quarters input');
     quarters[0].click();
@@ -506,7 +526,7 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    element.querySelectorAll<HTMLButtonElement>('.nav-button')[2].click();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[3].click();
     fixture.detectChanges();
     element.querySelector<HTMLInputElement>('input[name="center-73"]')!.click();
     fixture.detectChanges();

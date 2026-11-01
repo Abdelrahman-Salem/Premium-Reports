@@ -31,7 +31,7 @@
         </bdi>
       </div>
       <div class="metric revenue">
-        <span>{{ text('إجمالي الإيرادات', 'Total revenue') }}</span>
+        <span>{{ text('الإيراد المحاسبي', 'P&L income') }}</span>
         <strong>{{ data() ? (data()!.totalRevenue | number: '1.0-0') : '-' }}</strong
         ><small>SAR</small>
       </div>
@@ -49,13 +49,14 @@
 
     @if (data(); as report) {
       <div class="context-line">
+        <span class="accounting-basis">{{ text('صافي الربح = الإيراد المحاسبي − المصروفات', 'Net profit = P&L income − expenses') }}</span>
         <span
           >{{ text('مراكز التشغيل النشطة', 'Active operating centres') }}
           <b>{{ report.activeCenterCount }} / {{ report.operatingCenterCount }}</b></span
         >
         <span
           >{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net profit margin on P&L income') }}
-          <b dir="ltr">{{ report.profitMargin | percent: '1.1-1' }}</b></span
+          <b dir="ltr">{{ report.totalRevenue > 0 ? (report.profitMargin | percent: '1.1-1') : '-' }}</b></span
         >
         <span
           >{{ text('الحسابات', 'Accounts') }} <b>{{ report.accountCount }}</b></span
@@ -363,6 +364,7 @@
   </div>
 
   <aside class="filter-rail" [attr.aria-label]="text('فلاتر التقرير', 'Report filters')">
+    <app-report-filters [language]="language()" [busy]="loading()" [valid]="!invalidDates()" [summary]="filters().fromDate + ' — ' + filters().toDate + ' · ' + (selectedCenters().length ? selectedCenters().length + text(' مراكز', ' centres') : text('كل المراكز', 'All centres'))" (apply)="submit()">
     <form (ngSubmit)="submit()">
       <h2>{{ text('فلاتر التقرير', 'Report filters') }}</h2>
       <fieldset [disabled]="loading()">
@@ -462,5 +464,6 @@
         }
       </section>
     }
+    </app-report-filters>
   </aside>
 </div>

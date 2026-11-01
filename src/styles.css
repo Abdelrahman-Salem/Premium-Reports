@@ -1,4 +1,9 @@
-/* You can add global styles to this file, and also import other style files */
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
+@import './report-theme.css';
+@import './shell-polish.css';
 @page {
   size: A4 landscape;
   margin: 10mm;
@@ -8,7 +13,13 @@
   display: none;
 }
 
+@page executive-report {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
 @media print {
+  .executive-mode { page: executive-report; }
   html,
   body,
   app-root,
