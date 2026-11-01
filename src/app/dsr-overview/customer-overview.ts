@@ -1,11 +1,12 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ReportFilters } from '../shared/report-filters';
 import { CostCentreOption, DsrCustomerDashboardView, DsrFilters } from '../models/dsr-report.models';
 
 @Component({
   selector: 'app-dsr-overview',
-  imports: [DecimalPipe, PercentPipe, FormsModule],
+  imports: [DecimalPipe, PercentPipe, FormsModule, ReportFilters],
   templateUrl: './customer-overview.html',
   styleUrls: ['../cost-centre-overview/cost-centre-overview.css', './customer-overview.css'],
 })

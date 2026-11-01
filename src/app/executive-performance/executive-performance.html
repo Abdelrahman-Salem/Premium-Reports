@@ -1,0 +1,155 @@
+<div class="year-strip" role="group" [attr.aria-label]="text('السنة', 'Year')">
+  @for (year of years; track year) {
+    <button type="button" [class.selected]="filters().fromMonth.slice(0,4) === '' + year" (click)="selectYear(year)" [disabled]="busy()">{{ year }}</button>
+  }
+</div>
+<div class="reference-workspace" [attr.aria-busy]="busy()">
+  <div class="reference-content">
+    @if (error()) { <p class="report-error" role="alert">{{ error() }}</p> }
+    @if (data(); as report) {
+      @let finance = report.finance;
+      <article class="reference-sheet overview-sheet">
+        <div class="reference-title"><img src="logo.jpg" alt="First Premium Support Services" /><h1>{{ text('لوحة الأداء الشاملة', 'Sales Performance Summary') }}</h1></div>
+        <p class="report-meta">First Premium Support Services <span dir="ltr">{{ periodLabel() }}</span> SAR</p>
+        <p class="scope-meta">{{ report.centerNames.join(' / ') }}</p>
+        <div class="reference-kpis">
+          <div><span>{{ text('مبيعات الخدمات', 'Service Sales') }}</span><strong dir="ltr">{{ finance.sales | number:'1.0-0' }}</strong><small>{{ text('المتوسط الشهري', 'Monthly avg') }} <bdi>{{ finance.averageMonthlySales | number:'1.0-0' }}</bdi></small></div>
+          <div><span>{{ text('الإيراد المحاسبي', 'P&L Income') }}</span><strong dir="ltr">{{ finance.income | number:'1.0-0' }}</strong><small>{{ text('المتوسط الشهري', 'Monthly avg') }} <bdi>{{ finance.income / finance.months.length | number:'1.0-0' }}</bdi></small></div>
+          <div><span>{{ text('صافي الربح', 'Net Profit') }}</span><strong dir="ltr" [class.loss]="finance.netProfit < 0">{{ finance.netProfit | number:'1.0-0' }}</strong><small>{{ text('المتوسط الشهري', 'Monthly avg') }} <bdi>{{ finance.netProfit / finance.months.length | number:'1.0-0' }}</bdi></small></div>
+          <div><span>{{ text('هامش صافي الربح', 'Net Profit Margin') }}</span><strong dir="ltr">{{ finance.income > 0 ? (finance.margin | percent:'1.1-1') : '-' }}</strong><small>{{ text('صافي الربح / الإيراد المحاسبي', 'Net profit / P&L income') }}</small></div>
+        </div>
+        <section class="reference-chart"><h2>{{ text('مبيعات الخدمات الشهرية', 'Monthly Service Sales') }}</h2>
+          @for (window of monthWindows(); track window[0].month.key) { <app-performance-columns [items]="monthlyColumns(window, 'sales')" [compact]="true" [label]="text('المبيعات ونسبتها من إجمالي الفترة', 'Monthly sales and share of period sales')" /> }
+          <p class="metric-basis">{{ text('النسبة من إجمالي مبيعات الفترة المختارة', 'Share of total sales in the selected period') }}</p>
+        </section>
+        <section class="reference-chart"><h2>{{ text('صافي الربح والهامش الشهري', 'Monthly Net Profit and Margin') }}</h2>
+          @for (window of monthWindows(); track window[0].month.key) { <app-performance-columns [items]="monthlyColumns(window, 'profit')" [compact]="true" [label]="text('صافي الربح والهامش الشهري', 'Monthly net profit and margin')" /> }
+          <p class="metric-basis">{{ text('الهامش من الإيراد المحاسبي للشهر', 'Net margin on monthly P&L income') }}</p>
+        </section>
+      </article>
+
+      <article class="reference-sheet mix-sheet">
+        <p class="report-meta">First Premium Support Services <span dir="ltr">{{ periodLabel() }}</span> SAR</p>
+        <section class="reference-chart"><h2>{{ text('الإيراد الشهري حسب فئة الخدمة', 'Monthly Revenue by Service Category') }}</h2>
+          <div class="reference-legend">@for (item of services(); track item.account.id) { <span><i [style.background]="item.color"></i><bdi>{{ serviceName(item.account.name) }}</bdi></span> }</div>
+          @for (window of monthWindows(); track window[0].month.key) {
+            <div class="stack-scroll" tabindex="0">
+              <div class="stack-grid" dir="ltr" [style.--column-count]="window.length" [style.grid-template-columns]="'repeat(' + window.length + ', minmax(64px, 1fr))'">
+                @for (entry of window; track entry.month.key) {
+                  <div class="stack-column">
+                    <strong class="stack-total" [title]="'SAR ' + (entry.month.income | number:'1.2-2')">{{ short(entry.month.income) }}</strong>
+                    <div class="stack-plot"><span class="stack-zero" [style.bottom.%]="stackScale().negative * 1.12 / stackScale().total * 100"></span>
+                      @for (segment of stackSegments(entry.index); track segment.account.id) {
+                        @if (segment.value !== 0) {
+                          <div class="stack-segment" [style.background]="segment.color" [style.height.%]="segment.height" [style.bottom.%]="segment.bottom"
+                            [title]="segment.account.name + ': SAR ' + (segment.value | number:'1.2-2')">
+                            @if (segment.height >= 7 && segment.share !== null) { <span>{{ segment.share | percent:'1.1-1' }}</span> }
+                          </div>
+                        }
+                      }
+                    </div><bdi>{{ entry.month.label }}</bdi>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </section>
+        <section class="reference-chart"><h2>{{ text('نسبة كل فئة من الإيراد الشهري', 'Share of Monthly Revenue by Category') }}</h2>
+          @for (window of monthWindows(); track window[0].month.key) {
+            <div class="heat-scroll" tabindex="0"><table class="heat-table">
+              <thead><tr><th scope="col">{{ text('الخدمة', 'Service') }}</th>@for (entry of window; track entry.month.key) { <th scope="col"><bdi>{{ entry.month.label }}</bdi><small dir="ltr">{{ short(entry.month.income) }}</small></th> }</tr></thead>
+              <tbody>@for (item of services(); track item.account.id) { <tr><th scope="row"><bdi>{{ serviceName(item.account.name) }}</bdi></th>
+                @for (entry of window; track entry.month.key) { @let share = ratio(item.account.months[entry.index], entry.month.income);
+                  <td [style.background]="heatColor(item.account, entry.index)" [class.heat-dark]="heatDark(item.account, entry.index)" dir="ltr"
+                    [title]="'SAR ' + (item.account.months[entry.index] | number:'1.2-2')">{{ share === null || share === 0 ? '-' : (share | percent:'1.1-1') }}</td>
+                }</tr> }</tbody>
+            </table></div>
+          }
+        </section>
+      </article>
+
+      <article class="reference-sheet contribution-sheet">
+        <p class="report-meta">First Premium Support Services <span dir="ltr">{{ periodLabel() }}</span> SAR</p>
+        <section class="reference-chart"><h2>{{ text('مساهمة فئات الخدمات في الإيراد المحاسبي', 'Revenue by Service Category') }}</h2>
+          <div class="service-share-list">@for (item of services(); track item.account.id) {
+            <div><bdi>{{ serviceName(item.account.name) }}</bdi><div class="rounded-track"><i [class.loss-fill]="item.account.amount < 0" [style.width.%]="width(item.account.amount, maxServiceAmount())"></i></div>
+              <strong dir="ltr">{{ finance.income > 0 ? (item.account.amount / finance.income | percent:'1.1-1') : '-' }}</strong></div>
+          }</div>
+          <p class="metric-basis">{{ text('مساهمة أكبر ثلاث خدمات', 'Top 3 services') }}: <bdi>{{ topThreeShare() === null ? '-' : (topThreeShare() | percent:'1.1-1') }}</bdi></p>
+        </section>
+        <section class="reference-chart"><h2>{{ text('صافي الربح حسب مركز التكلفة', 'Net Profit by Cost Centre') }}</h2>
+          <div class="centre-net-list">@for (center of finance.centers; track center.id) {
+            <div><bdi>{{ center.name }}</bdi><div class="centre-net-track" dir="ltr"><i [class.loss-fill]="center.netProfit < 0" [style.left.%]="center.netProfit < 0 ? 50 - width(center.netProfit, maxCentreNet()) / 2 : 50" [style.width.%]="width(center.netProfit, maxCentreNet()) / 2"></i></div>
+              <strong dir="ltr" [class.loss]="center.netProfit < 0">{{ center.netProfit | number:'1.0-0' }}</strong></div>
+          }</div>
+          <p class="metric-basis">{{ text('إجمالي صافي الربح', 'Total net profit') }}: <bdi>{{ finance.netProfit | number:'1.0-0' }}</bdi></p>
+        </section>
+        <section class="reference-chart"><h2>{{ text('أكبر خمسة عملاء حسب المبيعات', 'Top 5 Customers by Sales') }}</h2>
+          <div class="customer-head"><span>{{ text('العميل', 'Customer') }}</span><span>{{ text('حجم المبيعات', 'Sales volume') }}</span><span>{{ text('المبلغ', 'Amount') }}</span><span>{{ text('من أكبر خمسة', 'Of top 5') }}</span></div>
+          <div class="top-customers">@for (customer of topCustomers(); track customer.id; let i = $index) {
+            <div class="top-customer"><div class="customer-name"><b>{{ i + 1 }}</b><bdi>{{ customer.name }}</bdi></div>
+              <div class="rounded-track"><i [style.width.%]="width(customer.revenue, topCustomers()[0].revenue)"></i></div>
+              <strong dir="ltr">{{ customer.revenue | number:'1.0-0' }}</strong><span dir="ltr">{{ customer.revenue / topTotal() | percent:'1.1-1' }}</span></div>
+          } @empty { <p class="metric-basis">{{ text('لا توجد مبيعات موجبة للعملاء في الفترة المختارة', 'No positive customer sales in this period') }}</p> }</div>
+          <p class="metric-basis">{{ text('إجمالي أكبر خمسة', 'Top 5 total') }}: <bdi>{{ topTotal() | number:'1.0-0' }}</bdi> | {{ text('حصة أكبر عميلين من أكبر خمسة', 'Top 2 share of top 5') }}: <bdi>{{ topTwoShare() === null ? '-' : (topTwoShare() | percent:'1.1-1') }}</bdi></p>
+          <p class="metric-basis">{{ text('المبالغ بالريال السعودي، بما فيها حسابات العملاء التي يتضمن اسمها USD.', 'Amounts are in SAR, including customers with USD in their account names.') }}</p>
+        </section>
+      </article>
+
+      <article class="reference-sheet expenses-sheet">
+        <p class="report-meta">First Premium Support Services <span dir="ltr">{{ periodLabel() }}</span> SAR</p>
+        <h2>{{ text('ملخص المصروفات', 'Expenses Overview') }}</h2>
+        <div class="reference-kpis expense-kpis">
+          <div><span>{{ text('إجمالي المصروفات', 'Total Expenses') }}</span><strong dir="ltr">{{ finance.expenses | number:'1.0-0' }}</strong><small>SAR</small></div>
+          <div><span>{{ text('حسابات المصروفات', 'Expense Accounts') }}</span><strong>{{ expenseAccounts() }}</strong><small>{{ text('حسابات لها أرصدة خلال الفترة', 'Accounts with balances in the period') }}</small></div>
+          <div><span>{{ text('حصة المصروفات الإدارية', 'Admin Overhead Share') }}</span><strong dir="ltr">{{ overheadShare() === null ? '-' : (overheadShare() | percent:'1.1-1') }}</strong><small>{{ text('المركز الرئيسي / المصروفات المختارة', 'Head Quarter / selected expenses') }}</small></div>
+        </div>
+        <section class="reference-chart"><h2>{{ text('المصروفات حسب مركز التكلفة', 'Expenses by Cost Centre') }}</h2>
+          <app-performance-columns [items]="expenseColumns()" [label]="text('مصروفات المراكز ونسبتها من الإجمالي', 'Centre expenses and share of total')" />
+        </section>
+      </article>
+
+      <article class="reference-sheet centre-performance-sheet">
+        <p class="report-meta">First Premium Support Services <span dir="ltr">{{ periodLabel() }}</span> SAR</p>
+        <h2>{{ text('أداء مراكز التكلفة', 'Cost Centre Performance') }}</h2>
+        <div class="reference-legend"><span><i class="income-fill"></i>{{ text('الإيراد', 'Revenue') }}</span><span><i class="expense-fill"></i>{{ text('المصروفات', 'Expenses') }}</span><span><i class="profit-fill"></i>{{ text('صافي الربح', 'Net profit') }}</span><span><i class="loss-fill"></i>{{ text('الخسارة', 'Loss') }}</span></div>
+        <div class="centre-performance">@for (center of finance.centers; track center.id) {
+          <section class="centre-performance-row"><div class="centre-name"><bdi>{{ center.name }}</bdi>@if (center.overhead) { <small>{{ text('إدارة / غير تشغيلي', 'Admin / non-operating') }}</small> }</div>
+            <div class="centre-series">
+              <div><span>{{ text('الإيراد', 'Revenue') }}</span><div class="rounded-track"><i class="income-fill" [style.width.%]="width(center.income, maxComparison())"></i></div><strong dir="ltr">{{ center.income | number:'1.0-0' }}</strong></div>
+              <div><span>{{ text('المصروفات', 'Expenses') }}</span><div class="rounded-track"><i class="expense-fill" [style.width.%]="width(center.expenses, maxComparison())"></i></div><strong dir="ltr">{{ center.expenses | number:'1.0-0' }}</strong></div>
+              <div><span>{{ center.netProfit < 0 ? text('الخسارة', 'Loss') : text('الصافي', 'Net') }}</span><div class="rounded-track"><i [class]="center.netProfit < 0 ? 'loss-fill' : 'profit-fill'" [style.width.%]="width(center.netProfit, maxComparison())"></i></div><strong dir="ltr" [class.loss]="center.netProfit < 0">{{ center.netProfit | number:'1.0-0' }}</strong></div>
+            </div>
+          </section>
+        }</div>
+      </article>
+    } @else {
+      <div class="reference-empty" role="status">
+        <span class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 26h21M10 25V15m7 10V7m6 18V12" stroke-linecap="round"/></svg></span>
+        <h2>{{ busy() ? text('جاري تحميل التقرير والتحقق من البيانات', 'Loading and verifying the report') : text('لوحة الأداء الشاملة', 'Sales Performance Summary') }}</h2>
+        <p>{{ busy() ? text('يتم تحميل كل الصفحات للفترة والمراكز المختارة.', 'Fetching all pages for the selected period and centres.') : text('حدد الفترة والمراكز لعرض التقرير.', 'Select the period and centres to load the report.') }}</p>
+      </div>
+    }
+  </div>
+  <aside class="filter-rail">
+    <app-report-filters [language]="language()" [busy]="busy()" [valid]="valid()" [summary]="filters().fromMonth + ' — ' + filters().toMonth + ' · ' + filters().costCenterIds.length + text(' مراكز', ' centres')" (apply)="load()">
+    <form (ngSubmit)="load()">
+      <h2>{{ text('فلاتر التقرير', 'Report Filters') }}</h2>
+      <fieldset [disabled]="busy()"><legend>{{ text('الفترة', 'Period') }}</legend>
+        <label for="executive-from">{{ text('من شهر', 'From month') }}</label><input id="executive-from" type="month" name="fromMonth" min="1900-01" max="2100-12" [ngModel]="filters().fromMonth" (ngModelChange)="updateMonth('fromMonth', $event)" />
+        <label for="executive-to">{{ text('إلى شهر', 'To month') }}</label><input id="executive-to" type="month" name="toMonth" min="1900-01" max="2100-12" [ngModel]="filters().toMonth" (ngModelChange)="updateMonth('toMonth', $event)" />
+      </fieldset>
+      <fieldset [disabled]="busy()"><legend>{{ text('الربع السنوي', 'Quarter') }}</legend><div class="quarter-options">
+        @for (q of [1,2,3,4]; track q) { <label><input type="checkbox" [checked]="filters().quarters.includes(q)" (change)="toggleQuarter(q)" />{{ text('الربع', 'Q') }} {{ q }}</label> }
+      </div></fieldset>
+      <fieldset [disabled]="busy()"><legend>{{ text('مراكز التكلفة', 'Cost Centres') }}</legend>
+        <label class="center-option"><input type="checkbox" [checked]="filters().costCenterIds.length === options().length" (change)="toggleCenter('ALL')" />{{ text('كل المراكز', 'All centres') }}</label>
+        @for (center of options(); track center.id) { <label class="center-option"><input type="checkbox" [checked]="filters().costCenterIds.includes(center.id)" (change)="toggleCenter(center.id)" /><bdi>{{ center.label }}</bdi></label> }
+      </fieldset>
+      <div class="filter-basis"><span>{{ text('العملة', 'Currency') }}</span><strong>SAR</strong><span>{{ text('أساس المبيعات', 'Sales basis') }}</span><strong>{{ text('تاريخ المستند', 'Document date') }}</strong></div>
+      @if (!valid()) { <p class="validation">{{ text('حدد فترة صحيحة ومركزًا واحدًا على الأقل.', 'Choose a valid period and at least one centre.') }}</p> }
+      <button class="apply" type="submit" [disabled]="busy() || !valid()">{{ busy() ? text('جاري التحميل', 'Loading') : text('عرض التقرير', 'Run report') }}</button>
+    </form>
+    </app-report-filters>
+  </aside>
+</div>

@@ -1,0 +1,307 @@
+/* Shared presentation for all report workspaces and exported dashboards. */
+html, body { margin: 0; min-width: 320px; background: #f5f7fb; }
+body .app.app .canvas .summary { grid-template-columns: repeat(3,minmax(0,1fr)); }
+body .app.app .canvas .summary.monthly-summary { grid-template-columns: repeat(5,minmax(0,1fr)); }
+body .app.app .canvas .summary.customer-summary { grid-template-columns: repeat(4,minmax(0,1fr)); }
+body .app.app .canvas .summary .metric { grid-column: auto; }
+body .app.app .canvas .monthly-summary .metric:last-child { grid-column: auto; }
+body .app.app {
+  --brand-primary: #008ab8;
+  --brand-deep: #076484;
+  --brand-soft: #eaf7fc;
+  --paper: #f5f7fb;
+  --ink: #172f45;
+  --text: #233d52;
+  --text-dim: #748597;
+  --line: #e5ecf3;
+  --net: #1a8b72;
+  --profit: #1a8b72;
+  --expense: #b8768d;
+  background: var(--paper);
+  font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif;
+}
+body .app.app .sidebar { width: 242px; position: sticky; top: 0; height: 100dvh; padding: 28px 17px; background: #102c41; border-inline-end: 1px solid #234054; }
+body .app.app .brand { margin-bottom: 38px; gap: 16px; }
+body .app.app .brand-logo { width: 180px; height: 80px; border-radius: 12px; object-fit: cover; }
+body .app.app .brand-name { color: #cedde8; font-size: 12px; line-height: 1.8; max-width: 175px; align-self: center; }
+body .app.app .nav-label { font-size: 10px; letter-spacing: .04em; margin-bottom: 14px; color: #8da9bd; }
+body .app.app .nav { gap: 8px; }
+body .app.app .additional-reports-label { margin: 24px 4px 12px; padding-top: 20px; border-top: 1px solid #234054; font-weight: 600; }
+body .app.app .nav-item { min-height: 58px; border-radius: 12px; padding: 12px 14px; gap: 12px; font-size: 12px; line-height: 1.75; color: #a9c2d2; transition: background .18s, color .18s; }
+body .app.app .nav-item svg { width: 20px; height: 20px; opacity: 1; }
+body .app.app .nav-item:hover { color: white; background: #1b3a50; }
+body .app.app .nav-item.active { border: 1px solid #2b647e; padding-inline-start: 13px; color: white; background: #164761; }
+body .app.app .nav-item.active svg { color: #65d3ef; }
+body .app.app .nav-item.active::after { background: #67d4ed; box-shadow: 0 0 0 4px #22566d; width: 5px; height: 5px; }
+body .app.app .content { padding: 27px 32px 32px; gap: 0; }
+body .app.app .topbar { gap: 20px; padding: 0 0 24px; margin-bottom: 0; align-items: center; }
+body .app.app .eyebrow-row { color: #7a8b9d; font-size: 10px; font-weight: 500; }
+body .app.app .title { font-size: 20px; color: #19374d; font-weight: 700; letter-spacing: -.3px; }
+body .app.app .subtitle { font-size: 11px; line-height: 1.8; max-width: 70ch; margin-top: 4px; }
+body .app.app .light-btn, body .app.app .export-btn { min-height: 43px; border-radius: 10px; font-size: 12px; }
+body .app.app .light-btn { border-color: #e0e8ef; background: white; }
+body .app.app .export-btn { background: #0087b1; box-shadow: 0 4px 12px #007fac21; }
+body .app.app .export-btn:hover:enabled { background: #006f94; }
+body .app.app .live-pill { min-height: 30px; border: 0; border-radius: 30px; background: #e8f4ef; color: #257c66; font-size: 10px; padding: 0 12px; gap: 7px; }
+body .app.app .live-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+body .app.app .auth-panel { border-radius: 12px; padding: 12px 16px; border-color: #efdfba; margin-bottom: 20px; font-size: 11px; }
+body .app.app .auth-panel.ready { background: #eef6f3; border-color: #dcebe3; padding-block: 9px; grid-template-columns: 1fr auto; }
+body .app.app .auth-panel.ready > p { display: none; }
+body .app.app .auth-panel.ready .auth-status div { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+body .app.app .auth-panel.ready .auth-status strong { font-size: 11px; }
+body .app.app .auth-panel.ready .auth-status span { font-size: 10px; }
+body .app.app .auth-panel.ready .light-btn { min-height: 29px; padding-inline: 10px; font-size: 10px; background: transparent; border-color: #cddfd6; }
+body .app.app .report-view-switch { display: flex; width: auto; min-width: 260px; align-self: flex-start; max-width: 100%; padding: 4px; border: 1px solid #e2e9f0; border-radius: 11px; background: #eaf0f5; margin-bottom: 16px; gap: 4px; }
+body .app.app .report-view-switch button { padding: 9px 18px; min-height: 36px; border: 0; border-radius: 8px; font: 600 11px 'IBM Plex Sans Arabic', sans-serif; white-space: nowrap; color: #718597; background: transparent; }
+body .app.app .report-view-switch button[aria-pressed='true'] { background: white; color: #087fa5; box-shadow: 0 2px 6px #1b405210; }
+body .app.app .year-strip { display: flex; gap: 5px; padding: 5px; border: 1px solid #e2e9f0; border-radius: 12px; background: white; margin-bottom: 16px; overflow-x: auto; }
+body .app.app .year-strip > span { font-size: 11px; padding: 0 12px; }
+body .app.app .year-strip button { min-height: 36px; flex: 1; border: 0; border-radius: 8px; background: transparent; color: #74869a; font: 600 12px 'IBM Plex Sans Arabic', sans-serif; }
+body .app.app .year-strip button:hover { background: #f2f7fb; }
+body .app.app .year-strip button.selected { background: #e8f6fc; color: #007fac; box-shadow: inset 0 0 0 1px #d1edf8; }
+body .app.app :is(.workspace, .reference-workspace) { display: flex; flex-direction: column; gap: 22px; align-items: stretch; }
+body .app.app :is(.canvas, .reference-content) { width: 100%; min-width: 0; }
+body .app.app :is(.workspace, .reference-workspace) > .filter-rail { order: -1; width: 100%; padding: 0; background: white; border: 1px solid #e1e9f1; border-radius: 15px; box-shadow: 0 4px 18px #19395404; }
+app-report-filters { display: block; }
+.filter-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; padding: 16px 18px; }
+.filter-caption { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.filter-symbol { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; color: #0987ae; background: #edf7fb; flex: none; }
+.filter-symbol svg { width: 23px; height: 23px; }
+.filter-caption strong, .filter-caption bdi { display: block; }
+.filter-caption strong { font-size: 12px; color: #243f54; font-weight: 600; }
+.filter-caption bdi { font-size: 10px; color: #7b8c9e; margin-top: 4px; overflow-wrap: anywhere; }
+.filter-toolbar-actions { display: flex; gap: 8px; align-items: center; }
+.filter-toggle, .filter-run { display: inline-flex; justify-content: center; align-items: center; gap: 10px; border: 1px solid #dfe8ef; border-radius: 9px; padding: 10px 14px; font: 600 11px 'IBM Plex Sans Arabic', sans-serif; cursor: pointer; min-height: 39px; }
+.filter-toggle { color: #566e82; background: white; }
+.filter-run { color: white; background: #0088b2; border-color: #0088b2; }
+.filter-toggle svg, .filter-run svg { width: 15px; height: 15px; transition: transform .2s; }
+.filter-toggle svg.expanded { transform: rotate(180deg); }
+[dir='rtl'] .filter-run svg { transform: rotate(180deg); }
+.filter-content { border-top: 1px solid #e8eef4; padding: 20px; background: #fcfdff; border-radius: 0 0 15px 15px; }
+.filter-content[hidden] { display: none !important; }
+body .app.app .filter-content form { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); align-items: start; gap: 20px; margin: 0; padding: 0; }
+body .app.app .filter-content form > h2, body .app.app .filter-content form > .apply { display: none; }
+body .app.app .filter-content fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+body .app.app .filter-content legend { color: #233f56; font-size: 11px; font-weight: 700; padding: 0 0 12px; }
+body .app.app .filter-content fieldset > label:not(:has(input[type='checkbox'])) { display: block; color: #7a8b9c; font-size: 10px; margin: 8px 0 5px; }
+body .app.app .filter-content :is(input:not([type='checkbox']):not([type='radio']), select) { width: 100%; max-width: 100%; min-width: 0; min-height: 40px; border: 1px solid #dce6ee; background: white; color: #243f54; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+body .app.app .filter-content :is(input, select):focus { border-color: #2d9dc1; outline: 3px solid #e0f2f9; }
+body .app.app .filter-content label:has(input[type='checkbox']) { display: flex; align-items: center; gap: 8px; min-height: 34px; border: 1px solid #e3ebf2; border-radius: 8px; padding: 7px 9px; margin: 0 0 5px; background: white; color: #6a7e91; font-size: 10px; cursor: pointer; line-height: 1.7; }
+body .app.app .filter-content label:has(input:checked) { border-color: #b7dfed; color: #086d8f; background: #eef8fc; }
+body .app.app .filter-content :is(input[type='checkbox'], input[type='radio']) { width: 13px; height: 13px; margin: 0; accent-color: #0088b2; flex: none; }
+body .app.app .filter-content :is(.quarters, .quarter-options) { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+body .app.app .filter-content :is(.rail-meta, .filter-basis) { align-self: end; margin: 0; border: 1px solid #e6edf3; background: #f2f6fa; border-radius: 10px; padding: 14px; font-size: 10px; }
+body .app.app .filter-content .rail-summary { display: none; }
+body .app.app .canvas .summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; border: 0; background: transparent; overflow: visible; }
+body .app.app .canvas .report-heading { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0,1fr) auto; border: 0; padding: 3px 0 8px; align-items: center; }
+body .app.app .canvas .report-heading > span { grid-column: 1; color: #8293a3; font-size: 10px; }
+body .app.app .canvas .report-heading h1 { grid-column: 1; font-size: clamp(23px, 2vw, 30px); color: #18394e; font-weight: 700; line-height: 1.7; margin: 2px 0; }
+body .app.app .canvas .report-heading > bdi { grid-column: 2; grid-row: 1 / 3; border: 1px solid #e1e9f0; background: #fff; border-radius: 9px; padding: 9px 12px; font-size: 10px; color: #6b8195; }
+body .app.app .canvas .metric { min-width: 0; text-align: start; border: 1px solid #e1e9f0; border-radius: 14px; background: #fff; padding: 20px 17px; position: relative; box-shadow: 0 3px 10px #23486003; }
+body .app.app .canvas .metric::before { content: ''; position: absolute; inset-inline-start: 0; top: 22px; width: 3px; height: 22px; background: #0392bc; border-radius: 3px; }
+body .app.app .canvas .metric > span { color: #7b8c9e; font-size: 11px; margin-bottom: 12px; }
+body .app.app .canvas .metric strong { font-size: clamp(20px, 1.65vw, 27px); letter-spacing: -.6px; font-weight: 700; color: #166984; white-space: nowrap; overflow-wrap: normal; text-align: start; }
+body .app.app .canvas .metric small { display: inline-block; margin-top: 12px; padding: 2px 7px; border-radius: 5px; background: #f2f6f9; color: #8493a0; font-size: 9px; }
+body .app.app .canvas .metric:is(.net,.margin) strong { color: #218c73; }
+body .app.app .canvas .metric:is(.net,.margin)::before { background: #3aa88c; }
+body .app.app .canvas .metric.expense strong { color: #ac7188; }
+body .app.app .canvas .metric.expense::before { background: #c28b9e; }
+body .app.app .canvas .metric.loss strong, body .app.app .negative { color: #c75260; }
+body .app.app .canvas .context-line { padding: 14px 0 20px; gap: 8px 18px; font-size: 10px; color: #7f90a1; }
+body .app.app .canvas .context-line b { color: #38566b; }
+body .app.app .accounting-basis { display: inline-flex; align-items: center; gap: 7px; color: #54778a; font-size: 10px; }
+body .app.app .accounting-basis::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #42a4b8; }
+body .app.app .canvas .section-nav { border: 0; padding: 0; margin: 0 0 26px; display: flex; gap: 8px; flex-wrap: wrap; }
+body .app.app .canvas .section-nav a { border: 1px solid #e1e9f0; color: #5f7c91; border-radius: 9px; padding: 9px 18px; background: white; font-size: 11px; font-weight: 600; }
+body .app.app .canvas .section-nav a:hover { background: #eaf7fc; color: #067c9f; border-color: #bbdfea; }
+body .app.app .canvas .analysis-section { margin: 0 0 30px; padding: 0; border: 0; scroll-margin-top: 20px; }
+body .app.app .canvas .section-heading { border: 0; padding: 8px 0 16px; display: flex; gap: 20px; align-items: center; }
+body .app.app .canvas .section-heading h2 { font-size: 18px; color: #23445b; font-weight: 700; margin-inline-end: auto; }
+body .app.app .canvas .section-heading > div { font-size: 10px; color: #7b91a3; }
+body .app.app .canvas .section-heading strong { color: #38586e; font-size: 13px; margin-top: 4px; }
+body .app.app .canvas .charts { gap: 18px; }
+body .app.app .canvas .chart, body .app.app .comparison-charts .chart, body .app.app .year-comparison .chart { border: 1px solid #e1e9f1; border-radius: 16px; background: white; box-shadow: 0 4px 16px #25445d03; padding: 22px; }
+body .app.app .canvas .chart > header, body .app.app .comparison-chart > header { padding-bottom: 16px; border-bottom: 1px solid #edf1f6; margin-bottom: 22px; align-items: center; }
+body .app.app .canvas .chart h3, body .app.app .comparison-chart h3 { font-size: 13px; color: #315268; font-weight: 600; line-height: 1.8; }
+body .app.app .canvas .chart > header > span { border-radius: 5px; padding: 3px 7px; background: #f3f7fa; font-size: 9px; color: #8799a9; }
+body .app.app .canvas :is(.track,.customer-rank-track,.pl-margin-track) { border-radius: 6px; background: #eef3f7; overflow: hidden; }
+body .app.app .canvas :is(.track,.customer-rank-track) > i { border-radius: 6px; }
+body .app.app .canvas :is(.column-fill,.customer-month-bar,.profit-column-bar) { border-radius: 6px 6px 0 0; }
+body .app.app .canvas .column-fill:not(.negative-fill):not(.pl-profit-fill):not(.pl-expense-fill) { background: linear-gradient(180deg,#2098c1,#087da8); }
+body .app.app .canvas .column-track { background: repeating-linear-gradient(to top, #edf2f7 0, #edf2f7 1px, transparent 1px, transparent 25%); border-bottom-color: #dbe5ed; }
+body .app.app .canvas .column-track b { color: #42647a; font-size: 11px; }
+body .app.app .canvas .columns .column > bdi { color: #7d90a1; font-size: 10px; line-height: 1.8; }
+body .app.app .canvas :is(.account-bar,.customer-rank-row) { padding-block: 13px; }
+body .app.app .canvas .customer-rank-row { border-radius: 8px; padding-inline: 10px; }
+body .app.app .canvas .customer-rank-row:hover { background: #f2f8fc; }
+body .app.app .canvas .customer-rank-name em { background: #e8f4fb; color: #127f9f; border-radius: 7px; }
+body .app.app .canvas .pl-share-table th, body .app.app .canvas .pl-share-table td { border-bottom-color: #e7edf3; }
+body .app.app .canvas .pl-share-table thead th { background: #f1f6fa; color: #5e7b8e; }
+body .app.app .canvas .pl-share-cell { border-radius: 6px; background: #edf4f7; }
+body .app.app .canvas .pl-share-cell i { background: #afd6e4; }
+body .app.app .canvas .customer-detail-card { border-radius: 14px; }
+body .app.app .canvas .customer-directory input { border: 1px solid #e0e9f0; border-radius: 9px; min-height: 40px; padding: 8px 12px; }
+body .app.app .empty-overview, body .app.app .reference-empty { border: 1px dashed #d6e3ed; border-radius: 18px; padding: 60px 20px; background: #fff; text-align: center; }
+body .app.app .empty-overview h2, body .app.app .reference-empty h2 { font-size: 17px; color: #5f7f95; font-weight: 600; }
+body .app.app .empty-overview p { color: #90a1af; }
+body .app.app .monthly-comparison, body .app.app .year-comparison { padding: 0; border: 0; background: transparent; }
+body .app.app .comparison-header, body .app.app .year-comparison > header { padding: 22px; background: #fff; border: 1px solid #e1e9f1; border-radius: 15px; margin-bottom: 16px; }
+body .app.app .comparison-header h2, body .app.app .year-comparison > header h2 { font-size: 20px; color: #294d65; }
+body .app.app .comparison-filters, body .app.app .year-comparison > form { padding: 20px; gap: 16px; background: white; border: 1px solid #e1e9f0; border-radius: 14px; margin-bottom: 22px; }
+body .app.app .comparison-filters :is(input,select), body .app.app .year-comparison > form input:not([type='radio']) { border: 1px solid #dce6ef; background: #fbfdff; border-radius: 8px; padding: 9px; }
+body .app.app .comparison-filters .apply, body .app.app .year-comparison > form button { border-radius: 9px; background: #0088b2; }
+body .app.app .comparison-year > b { display: inline-block; background: #edf5fa; color: #087c9e; padding: 5px 12px; border-radius: 7px; font-size: 12px; }
+body .app.app .comparison-fill { border-radius: 7px 7px 0 0; }
+body .app.app .reference-content { font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif; }
+body .app.app app-performance-columns :is(bdi,.value,.ratio) { font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif; }
+body .app.app .reference-sheet { border: 1px solid #e2e9f1; border-radius: 18px; padding: 28px; margin-bottom: 20px; box-shadow: 0 4px 16px #25445d03; }
+body .app.app .reference-title { border-radius: 11px; background: #183d5c; padding: 16px 20px; }
+body .app.app .reference-title img { border-radius: 7px; width: 88px; height: 44px; }
+body .app.app .reference-title h1 { font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 23px; }
+body .app.app .reference-kpis > div { border: 1px solid #e2eaf2; background: #f4f7fb; border-radius: 12px; padding: 17px; gap: 11px; }
+body .app.app .reference-kpis strong { font-size: 24px; }
+body .app.app .reference-sheet h2 { font-size: 16px; border-color: #e9eff5; padding-bottom: 12px; }
+body .app.app .reference-legend i { border-radius: 2px; }
+body .app.app .reference-chart { margin-top: 26px; }
+body .app.app .heat-table { border-spacing: 5px; }
+body .app.app .heat-table td { border-radius: 5px; }
+body .app.app .top-customer { border-bottom: 1px solid #edf1f7; padding-block: 14px; }
+body .app.app .top-customer:first-child { border-radius: 9px; background: #f0f5fb; }
+body .app.app .site-footer { margin-top: 30px; padding-top: 24px; border-color: #e0e8ef; font-size: 10px; }
+body .app.app .footer-credit > span { padding-top: 11px; }
+body .app.app .footer-contact-stack img { width: 95px; height: 38px; object-fit: contain; }
+body .app.app .footer-contact { font-size: 11px; }
+body .app.app button:focus-visible, body .app.app a:focus-visible { outline: 3px solid #83cce5; outline-offset: 3px; }
+body .app.app button:disabled { cursor: not-allowed; }
+.button-spinner { width: 14px; height: 14px; border: 2px solid #ffffff70; border-top-color: white; border-radius: 50%; animation: report-spin .8s linear infinite; }
+@keyframes report-spin { to { transform: rotate(360deg); } }
+.pdf-status { position: fixed; bottom: 24px; inset-inline-start: 28px; z-index: 60; display: flex; align-items: center; gap: 10px; border: 1px solid #c6e5f1; border-radius: 10px; padding: 12px 16px; max-width: calc(100vw - 40px); box-shadow: 0 8px 24px #173b5020; background: #e8f5fb; color: #127491; font-size: 12px; }
+.pdf-status.error { background: #fff0f0; color: #b94e5d; }
+.pdf-stage { position: fixed; left: -100000px; top: 0; pointer-events: none; z-index: -1; }
+body .app.app.pdf-export { display: block !important; min-height: 0 !important; padding: 0 !important; background: white !important; }
+.pdf-export *, .pdf-export *::before, .pdf-export *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }
+body .app.app.pdf-export .content { display: block; padding: 0 !important; width: 100%; }
+body .app.app.pdf-export :is(.workspace,.reference-workspace) { display: block !important; }
+body .app.app.pdf-export :is(.canvas,.reference-content) { width: 100% !important; }
+body .app.app.pdf-export :is(.charts,.comparison-charts,.customer-detail-layout,.profit-charts) { grid-template-columns: minmax(0,1fr) !important; }
+body .app.app.pdf-export :is(.chart,.customer-wide,.pl-wide) { grid-column: 1 / -1 !important; }
+body .app.app.pdf-export :is(.chart-scroll,.table-scroll,.monthly-columns,.profit-columns,.customer-months,.comparison-bars,.pl-share-scroll,.pl-margin-columns,.stack-scroll,.heat-scroll,.column-scroll,.pl-center-list,.pl-account-list,.customer-ranking,.customer-directory-list,.customer-service-list) { max-height: none !important; overflow: visible !important; }
+body .app.app.pdf-export :is(.monthly-share-table,.pl-share-table,.heat-table,.chart-scroll > .chart) { min-width: 0 !important; width: 100% !important; }
+body .app.app.pdf-export :is(.pl-share-month-hidden,.share-month-hidden) { display: table-cell !important; }
+body .app.app.pdf-export .customer-list { max-height: none !important; overflow: visible !important; }
+body .app.app.pdf-export .customer-directory :is(input,select,label) { display: none !important; }
+body .app.app.pdf-export .customer-month { min-width: 0 !important; }
+body .app.app.pdf-export .customer-months { grid-auto-flow: row; }
+body .app.app.pdf-export .comparison-year { min-width: 0 !important; }
+body .app.app.pdf-export :is(.pl-share-table,.heat-table) th:first-child { position: static !important; width: 160px; min-width: 0; }
+body .app.app.pdf-export .pdf-column-group { margin-block: 16px 24px; }
+body .app.app.pdf-export .summary { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+body .app.app.pdf-export .summary.monthly-summary { grid-template-columns: repeat(5,minmax(0,1fr)) !important; }
+body .app.app.pdf-export .summary.customer-summary { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+body .app.app.pdf-export .canvas .summary .metric { grid-column: auto !important; }
+body .app.app.pdf-export .canvas .summary .metric strong { font-size: 23px !important; }
+body .app.app.pdf-export .canvas .summary .metric { padding: 15px; }
+body .app.app.pdf-export .canvas .report-heading { display: none; }
+body .app.app.pdf-export .canvas .report-heading { grid-template-columns: minmax(0,1fr) auto; }
+body .app.app.pdf-export .reference-kpis { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+body .app.app.pdf-export .reference-kpis.expense-kpis { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+body .app.app.pdf-export .expense-kpis > div:last-child { grid-column: auto; }
+body .app.app.pdf-export .service-share-list > div { grid-template-columns: minmax(120px,1fr) minmax(80px,2fr) 58px; }
+body .app.app.pdf-export .centre-net-list > div { grid-template-columns: minmax(120px,1fr) minmax(100px,1.8fr) 100px; }
+body .app.app.pdf-export :is(.service-share-list .rounded-track,.centre-net-track) { grid-column: auto; grid-row: auto; }
+body .app.app.pdf-export .top-customer, body .app.app.pdf-export .customer-head { display: grid; grid-template-columns: minmax(140px,1.6fr) minmax(80px,1.4fr) 90px 58px; }
+body .app.app.pdf-export .top-customer .rounded-track { grid-column: auto; grid-row: auto; }
+body .app.app.pdf-export .centre-performance-row { grid-template-columns: minmax(140px,1fr) minmax(0,2.3fr); }
+body .app.app.pdf-export .reference-sheet { border-radius: 0; border: 0; padding: 20px 0; box-shadow: none; }
+body .app.app.pdf-export .reference-sheet h2 { font-size: 16px; }
+body .app.app.pdf-export .reference-chart { margin-top: 20px; }
+body .app.app.pdf-export .reference-columns { grid-template-columns: repeat(var(--column-count),minmax(0,1fr)) !important; }
+body .app.app.pdf-export .stack-grid { grid-template-columns: repeat(var(--column-count),minmax(0,1fr)) !important; }
+body .app.app.pdf-export .reference-title { display: none; }
+.pdf-page-heading { width: 100%; min-height: 90px; display: flex; align-items: center; gap: 24px; background: white; padding: 8px 0; color: #173a50; }
+.pdf-page-heading img { width: 150px; height: 68px; object-fit: cover; }
+.pdf-page-heading > div { flex: 1; display: grid; gap: 5px; }
+.pdf-page-heading strong { font: 700 19px 'IBM Plex Sans Arabic',sans-serif; }
+.pdf-page-heading span { font: 500 16px 'IBM Plex Sans Arabic',sans-serif; color: #37738f; }
+.pdf-page-heading bdi { font: 11px 'IBM Plex Sans Arabic',sans-serif; color: #8193a4; }
+@media (max-width: 1150px) {
+  body .app.app .sidebar { width: 205px; padding-inline: 12px; }
+  body .app.app .brand-logo { width: 160px; }
+  body .app.app .content { padding: 22px; }
+  body .app.app .topbar { align-items: start; }
+  body .app.app .canvas .summary, body .app.app .canvas .summary.monthly-summary { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  body .app.app .canvas .summary.customer-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .app.app .reference-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 880px) {
+  body .app.app .sidebar { position: static; height: auto; width: 100%; padding: 16px; }
+  body .app.app .brand { flex-direction: row; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+  body .app.app .brand-logo { margin: 0; width: 130px; height: 52px; border-radius: 8px; }
+  body .app.app .brand-name { text-align: end; max-width: 170px; font-size: 11px; }
+  body .app.app .nav-label { display: none; }
+  body .app.app .additional-reports-label { display: block; margin-top: 16px; padding-top: 14px; }
+  body .app.app .nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+  body .app.app .nav.nav-primary { grid-template-columns: 1fr; }
+  body .app.app .nav-item { font-size: 10px; min-height: 55px; padding: 9px; gap: 7px; }
+  body .app.app .nav-item.active { padding-inline-start: 8px; }
+  body .app.app .nav-item.active::after { display: none; }
+  body .app.app .content { padding: 20px 16px; }
+  body .app.app .topbar { flex-wrap: wrap; gap: 14px; }
+  body .app.app .canvas .report-heading { grid-template-columns: 1fr; }
+  body .app.app .canvas .report-heading > bdi { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 7px; }
+  body .app.app .filter-content form { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .app.app .filter-content form fieldset:nth-of-type(3) { grid-column: auto; }
+}
+@media (max-width: 600px) {
+  body .app.app .nav { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .app.app .nav-item { font-size: 10px; min-height: 44px; }
+  body .app.app .topbar .title { font-size: 18px; }
+  body .app.app .topbar > div:first-child { display: none; }
+  body .app.app .topbar-actions { gap: 7px; }
+  body .app.app .topbar-actions .export-btn { margin-inline-start: auto; padding-inline: 13px; }
+  body .app.app .live-pill { font-size: 9px; }
+  body .app.app .auth-panel { grid-template-columns: 1fr; }
+  body .app.app .auth-panel.ready { grid-template-columns: 1fr; gap: 9px; }
+  .filter-toolbar { padding: 14px; }
+  .filter-toolbar-actions { width: 100%; }
+  .filter-toolbar-actions button { flex: 1; }
+  body .app.app .filter-content { padding: 16px; }
+  body .app.app .canvas .summary, body .app.app .canvas .summary.monthly-summary, body .app.app .canvas .summary.customer-summary { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  body .app.app .canvas .monthly-summary .metric:last-child { grid-column: 1 / -1; }
+  body .app.app .canvas .metric { padding: 16px 12px; }
+  body .app.app .canvas .metric strong { font-size: clamp(18px,5vw,23px); }
+  body .app.app .canvas .metric > span { font-size: 10px; }
+  body .app.app .canvas .metric small { margin-top: 9px; }
+  body .app.app .canvas .section-heading { flex-wrap: wrap; gap: 12px; }
+  body .app.app .canvas .section-heading h2 { flex-basis: 100%; font-size: 17px; }
+  body .app.app .canvas .charts { grid-template-columns: minmax(0,1fr); gap: 14px; }
+  body .app.app .canvas .chart { padding: 17px; }
+  body .app.app .canvas .section-nav { gap: 6px; }
+  body .app.app .canvas .section-nav a { padding: 8px 13px; font-size: 10px; }
+  body .app.app .reference-sheet { padding: 18px 12px; border-radius: 14px; }
+  body .app.app .reference-title { padding: 12px; gap: 10px; }
+  body .app.app .reference-title h1 { font-size: 18px; }
+  body .app.app .reference-title img { width: 65px; height: 36px; }
+  body .app.app .reference-kpis { gap: 9px; }
+  body .app.app .reference-kpis > div { padding: 13px 10px; }
+  body .app.app .reference-kpis strong { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { body .app.app *, .button-spinner { animation: none !important; transition: none !important; } }
+@media (max-width: 380px) {
+  body .app.app .canvas .summary, body .app.app .canvas .summary.monthly-summary, body .app.app .canvas .summary.customer-summary { grid-template-columns: minmax(0,1fr); }
+}
+@media print {
+  body .app.app .filter-rail, .pdf-status { display: none !important; }
+  body .app.app .canvas .summary { grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); gap: 8px; }
+  body .app.app .canvas .metric { padding: 12px; box-shadow: none; }
+  body .app.app .canvas .metric strong { font-size: 18px; }
+  body .app.app .canvas .report-heading h1 { font-size: 23px; }
+  body .app.app .canvas .chart { padding: 16px; border-radius: 10px; box-shadow: none; }
+  body .app.app .reference-sheet { border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+  body .app.app .reference-kpis { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  body .app.app .reference-kpis strong { font-size: 20px; }
+  body .app.app .reference-kpis > div { padding: 12px; }
+  body .app.app .reference-title { padding: 10px 14px; }
+  body .app.app .reference-chart { margin-top: 18px; }
+  body .app.app .site-footer { break-inside: avoid; }
+}

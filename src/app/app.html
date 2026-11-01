@@ -1,4 +1,4 @@
-<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'" [class.cost-workspace]="true">
+<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'" [class.executive-mode]="reportMode() === 'executive'">
   <aside class="sidebar">
     <div class="brand">
       <img class="brand-logo" src="logo.jpg" alt="First Premium" />
@@ -6,7 +6,17 @@
     </div>
 
     <div class="nav-label">{{ t('reportSections') }}</div>
-    <nav class="nav">
+    <nav class="nav nav-primary" [attr.aria-label]="t('executiveReport')">
+      <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'executive'" (click)="setReportMode('executive')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 21v-4m4 4v-7m4 7v-5" />
+        </svg>
+        {{ t('executiveReport') }}
+      </button>
+    </nav>
+    <div class="nav-label additional-reports-label" id="additional-reports-label">{{ t('additionalReports') }}</div>
+    <nav class="nav nav-additional" aria-labelledby="additional-reports-label">
       <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'monthly'" (click)="setReportMode('monthly')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M4 5h16v14H4z" />
@@ -28,6 +38,7 @@
         </svg>
         {{ t('costCentrePeriodical') }}
       </button>
+
     </nav>
   </aside>
 
@@ -37,14 +48,17 @@
       <strong>First Premium Support Services</strong>
     </header>
     <div class="topbar">
-      <div>
-        <div class="eyebrow-row">{{ t('salesReport') }}</div>
-        <div class="title">{{ reportTitle() }}</div>
-        <p class="subtitle">{{ reportSubtitle() }}</p>
+      <div class="page-identity">
+        <span class="page-symbol" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="9" height="9" rx="2"/><rect x="16" y="3" width="9" height="9" rx="2"/><rect x="3" y="16" width="9" height="9" rx="2"/><path d="M17 25v-5m4 5V15m4 10v-7" stroke-linecap="round"/></svg></span>
+        <div class="page-heading">
+          <div class="eyebrow-row"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m3 14 5-5 4 3 5-7m-5 0h5v5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t('salesReport') }}</div>
+          <div class="title">{{ reportTitle() }}</div>
+          @if (reportSubtitle()) { <p class="subtitle">{{ reportSubtitle() }}</p> }
+        </div>
       </div>
 
       <div class="topbar-actions">
-        <button class="light-btn" type="button" (click)="toggleLanguage()">{{ t('language') }}</button>
+        <button class="light-btn language-btn" type="button" (click)="toggleLanguage()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 7h14M5 17h14"/></svg>{{ t('language') }}</button>
         @if (hasActiveReport()) {
           <span class="live-pill">{{ sourceLabel() }}</span>
         }
@@ -52,19 +66,21 @@
           class="export-btn"
           type="button"
           (click)="exportCurrentReport()"
-          [disabled]="!hasActiveReport() || loading()"
+          [disabled]="!hasActiveReport() || loading() || exporting()"
+          [attr.aria-busy]="exporting()"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3v13m0 0-4-4m4 4 4-4M4 19h16" />
           </svg>
-          {{ t('exportReport') }}
+          @if (exporting()) { <span class="button-spinner" aria-hidden="true"></span> }
+          {{ exporting() ? (language() === 'ar' ? 'جاري التحميل' : 'Preparing PDF') : t('exportReport') }}
         </button>
       </div>
     </div>
 
     <section class="auth-panel" [class.ready]="sessionReady()">
       <div class="auth-status">
-        <span class="session-dot"></span>
+        <span class="connection-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v5m8-5v5M6 8h12v4a6 6 0 0 1-12 0V8Zm6 10v4" stroke-linecap="round" stroke-linejoin="round"/></svg><i class="session-dot"></i></span>
         <div>
           <strong>{{ t('sessionTitle') }}</strong>
           <span>{{ sessionMessage() || t('sessionMissing') }}</span>
@@ -73,15 +89,20 @@
       <p>{{ t('sessionHint') }}</p>
       <div class="auth-actions">
         <button class="light-btn" type="button" (click)="openTraacsLogin()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6m0-6L10 14M11 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           {{ t('openTraacs') }}
         </button>
         <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" [class.checking]="sessionChecking()" aria-hidden="true"><path d="m12 3 8 4v5c0 5-8 9-8 9S4 17 4 12V7l8-4Z" stroke-linejoin="round"/><path d="m8.5 11.5 2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
         </button>
       </div>
     </section>
 
-    @if (reportMode() === 'dsr') {
+    @if (exportMessage()) { <div class="pdf-status" [class.error]="exportFailed()" role="status">{{ exportMessage() }}</div> }
+    @if (reportMode() === 'executive') {
+      <app-executive-performance [options]="costCentreOptions" [language]="language()" [sessionReady]="sessionReady()" />
+    } @else if (reportMode() === 'dsr') {
       <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض تقرير DSR' : 'DSR view'">
         <button type="button" [attr.aria-pressed]="dsrView() === 'report'" (click)="dsrView.set('report')">{{ language() === 'ar' ? 'التقرير العادي' : 'Standard report' }}</button>
         <button type="button" [attr.aria-pressed]="dsrView() === 'comparison'" (click)="dsrView.set('comparison')">{{ language() === 'ar' ? 'مقارنة السنوات' : 'Compare years' }}</button>
@@ -93,7 +114,7 @@
           [options]="costCentreOptions"
           [language]="language()"
           [loading]="loading()"
-          (filtersChange)="filters.set($event)"
+          (filtersChange)="setDsrFilters($event)"
           (yearSelected)="showDsrYear($event)"
           (search)="refreshReport()"
         />
@@ -138,7 +159,7 @@
         [options]="costCentreOptions"
         [language]="language()"
         [loading]="loading()"
-        (filtersChange)="costCentreFilters.set($event)"
+        (filtersChange)="setCostCentreFilters($event)"
         (yearSelected)="showCostCentreYear($event)"
         (search)="refreshCostCentreReport()"
       />
@@ -153,9 +174,11 @@
 
     <footer class="site-footer">
       <div class="footer-credit">
-        <span>Powered by</span>
+        <div class="footer-brand">
+          <span>Powered by</span>
+          <div class="footer-logo"><img src="codit.png" alt="Codit" /></div>
+        </div>
         <div class="footer-contact-stack">
-          <img src="codit.png" alt="Codit" />
           <a class="footer-contact" href="https://wa.me/201144918857" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +20 114 491 8857">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20.5 11.8a8.5 8.5 0 0 1-12.4 7.5L3 21l1.7-5.1A8.5 8.5 0 1 1 20.5 11.8Z" />
