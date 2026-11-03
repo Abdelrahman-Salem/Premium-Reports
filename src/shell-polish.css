@@ -104,6 +104,14 @@
   body .app.app .filter-content label:has(input[type='checkbox']) { font-size: 12px; min-height: 39px; }
   body .app.app .filter-content fieldset > label:not(:has(input[type='checkbox'])) { font-size: 12px; }
   body .app.app .report-view-switch { margin-inline: 20px; }
+  body .app.app .centre-year-comparison { margin-inline: 20px; }
+  body .app.app .centre-year-comparison > header { display: flex; align-items: center; justify-content: space-between; padding: 23px 25px; border: 0; background: #193f5b; border-radius: 16px; color: #fff; }
+  body .app.app .centre-year-comparison > header h2 { font-size: 21px; color: #fff; }
+  body .app.app .centre-year-comparison > header span { color: #c0d3e1; font-size: 11px; }
+  body .app.app .centre-year-comparison > form { border-radius: 16px; }
+  body .app.app.pdf-export .centre-year-comparison { margin-inline: 0; }
+  body .app.app.pdf-export .centre-year-comparison .year-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  body .app.app.pdf-export .centre-year-comparison .year-kpi { display: flex; }
   body .app.app :is(.reference-empty, .empty-overview) { background: #fff; border: 1px dashed #c8dce9; border-radius: 25px; min-height: 240px; padding: 46px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
   body .app.app .empty-symbol { display: grid; place-items: center; width: 64px; height: 64px; color: #087c9d; background: #e5f4fa; border-radius: 21px; }
   body .app.app .empty-symbol svg { width: 32px; height: 32px; }

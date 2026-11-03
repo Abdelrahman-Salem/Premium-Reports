@@ -1,0 +1,134 @@
+/* Customer presentation reuses the executive report palette and chart components. */
+body .app.app .customer-dashboard { --orange: #1c3c6c; --teal: #4b6c9b; }
+body .app.app .customer-dashboard .summary.customer-summary { padding: 24px; border: 1px solid #e1e9f1; border-radius: 18px; background: #fff; gap: 14px; box-shadow: 0 4px 16px #25445d03; }
+body .app.app .customer-dashboard .report-heading { grid-template-columns: 92px minmax(0,1fr) auto; gap: 5px 18px; padding: 20px; margin-bottom: 6px; background: #193f5b; border-radius: 12px; }
+body .app.app .customer-dashboard .customer-report-logo { grid-column: 1; grid-row: 1 / 3; width: 92px; height: 48px; object-fit: cover; border-radius: 9px; background: #fff; }
+body .app.app .customer-dashboard .report-heading > span { grid-column: 2; grid-row: 1; font-size: 10px; color: #bfcedd; }
+body .app.app .customer-dashboard .report-heading h1 { grid-column: 2; grid-row: 2; color: #fff; font-size: 25px; line-height: 1.6; margin: 0; }
+body .app.app .customer-dashboard .report-heading > bdi { grid-column: 3; grid-row: 1 / 3; padding: 0; margin: 0; border: 0; background: none; color: #d5e0ea; font-size: 10px; }
+body .app.app .customer-dashboard .customer-summary .metric { padding: 20px 17px; background: #f3f6fb; border-color: #dfe8f3; border-radius: 13px; box-shadow: none; }
+body .app.app .customer-dashboard .customer-summary .metric::before { display: none; }
+body .app.app .customer-dashboard .customer-summary .metric > span { color: #71849c; font-size: 11px; }
+body .app.app .customer-dashboard .customer-summary .metric strong { color: #1c3c6c; font-size: clamp(21px,1.8vw,29px); font-variant-numeric: tabular-nums; }
+body .app.app .customer-dashboard .customer-summary .metric small { background: none; padding: 0; color: #8292a8; font-size: 10px; }
+body .app.app .customer-dashboard .context-line { padding: 16px 4px; gap: 12px 22px; color: #7c8da2; }
+body .app.app .customer-dashboard .context-line b { color: #31567d; }
+body .app.app .customer-dashboard .section-heading { padding-top: 12px; margin-bottom: 5px; }
+body .app.app .customer-dashboard .section-heading h2 { color: #1c3c6c; font-size: 19px; }
+body .app.app .customer-dashboard .section-heading strong { color: #1c3c6c; }
+body .app.app .customer-dashboard .chart { border-radius: 18px; border-color: #e0e8f2; padding: 24px; }
+body .app.app .customer-dashboard .chart > header { border-color: #e5ebf4; padding-bottom: 13px; margin-bottom: 18px; }
+body .app.app .customer-dashboard .chart h3 { color: #1c3c6c; font-size: 15px; }
+body .app.app .customer-dashboard .chart > header > span { background: #edf2f8; color: #70829a; }
+body .app.app .customer-dashboard .customer-ranking { gap: 3px; }
+body .app.app .customer-dashboard .customer-rank-row { grid-template-columns: minmax(190px,1.3fr) minmax(90px,1.3fr) minmax(90px,auto); gap: 16px; border: 0; padding: 15px 12px; border-radius: 10px; }
+body .app.app .customer-dashboard .customer-rank-row:first-child { background: #f0f3f9; }
+body .app.app .customer-dashboard .customer-rank-row:hover { background: #edf3fa; }
+body .app.app .customer-dashboard .customer-rank-name { font-size: 12px; gap: 10px; color: #3b5473; }
+body .app.app .customer-dashboard .customer-rank-name em { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: #4b6c9b; color: #fff; font-size: 11px; }
+body .app.app .customer-dashboard .customer-rank-row:first-child em { background: #1c3c6c; }
+body .app.app .customer-dashboard .customer-rank-track { height: 13px; border-radius: 9px; background: #e2e8f1; }
+body .app.app .customer-dashboard .customer-rank-track i { border-radius: inherit; background: #4b6c9b; }
+body .app.app .customer-dashboard .customer-rank-row:first-child .customer-rank-track i { background: #1c3c6c; }
+body .app.app .customer-dashboard .customer-rank-value { display: grid; gap: 5px; text-align: end; }
+body .app.app .customer-dashboard .customer-rank-value strong { color: #1c3c6c; font-size: 13px; }
+body .app.app .customer-dashboard .customer-rank-value small { color: #2a9d70; font-size: 10px; }
+body .app.app .customer-dashboard .customer-legend { color: #6c7991; font-size: 11px; flex-wrap: wrap; gap: 12px 22px; margin-bottom: 15px; }
+body .app.app .customer-dashboard .customer-legend i { border-radius: 3px; }
+body .app.app .customer-dashboard .revenue-key { background: #1c3c6c; }
+body .app.app .customer-dashboard .profit-key { background: #2a9d70; }
+body .app.app .customer-dashboard app-performance-columns { margin-top: 12px; }
+body .app.app .customer-dashboard app-performance-columns + app-performance-columns { padding-top: 14px; border-top: 1px solid #e9eef5; margin-top: 20px; }
+body .app.app .customer-dashboard .customer-directory label { color: #74849a; font-size: 11px; }
+body .app.app .customer-dashboard .customer-directory :is(input,select) { min-height: 42px; border-radius: 9px; border-color: #dce5ef; padding: 9px 11px; background: #fcfdff; color: #294464; font-family: inherit; }
+body .app.app .customer-dashboard .customer-list { gap: 5px; margin-top: 17px; }
+body .app.app .customer-dashboard .customer-list button { padding: 13px 11px; border: 1px solid transparent; border-inline-start: 3px solid transparent; border-radius: 10px; gap: 10px; }
+body .app.app .customer-dashboard .customer-list button.active { border-color: #dce5f1; border-inline-start-color: #1c3c6c; background: #f0f4fa; }
+body .app.app .customer-dashboard .customer-list button strong { color: #1c3c6c; }
+body .app.app .customer-dashboard .customer-selected { gap: 18px; }
+body .app.app .customer-dashboard .customer-selected-heading { padding: 22px; border: 0; border-radius: 16px; background: #193f5b; color: #fff; }
+body .app.app .customer-dashboard .customer-selected-heading :is(span,small) { color: #b9cddc; font-size: 10px; }
+body .app.app .customer-dashboard .customer-selected-heading h3 { font-size: 19px; color: #fff; line-height: 1.7; }
+body .app.app .customer-dashboard .customer-selected-heading > strong { color: #fff; font-size: 23px; }
+body .app.app .customer-dashboard .customer-selected-metrics { border: 0; gap: 10px; background: transparent; }
+body .app.app .customer-dashboard .customer-selected-metrics > div { padding: 16px 12px; gap: 10px; background: #f3f6fb; border: 1px solid #dfe8f3; border-radius: 12px; }
+body .app.app .customer-dashboard .customer-selected-metrics :is(span,small) { font-size: 10px; color: #74869d; }
+body .app.app .customer-dashboard .customer-selected-metrics strong { font-size: clamp(16px,1.6vw,23px); font-variant-numeric: tabular-nums; color: #1c3c6c; letter-spacing: -.3px; }
+body .app.app .customer-dashboard .customer-selected-charts { gap: 18px; }
+body .app.app .customer-dashboard .customer-month-documents { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 14px; border-top: 1px solid #edf1f6; margin-top: 15px; }
+body .app.app .customer-dashboard .customer-month-documents > span { display: flex; gap: 8px; align-items: center; padding: 6px 9px; background: #f2f6fa; border: 1px solid #e3ebf4; border-radius: 7px; font-size: 9px; color: #788ba1; }
+body .app.app .customer-dashboard .customer-month-documents strong { color: #49668a; font-weight: 500; }
+body .app.app.pdf-export .customer-dashboard .customer-summary .metric strong { font-size: 23px; }
+body .app.app.pdf-export .customer-dashboard .customer-selected-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+body .app.app .customer-dashboard .rounded-track { height: 15px; background: #e1e6f0; border-radius: 9px; overflow: hidden; direction: ltr; }
+body .app.app .customer-dashboard .rounded-track i { display: block; height: 100%; border-radius: inherit; background: #4b6c9b; }
+body .app.app .customer-dashboard .rounded-track .sales-fill { background: #1c3c6c; }
+body .app.app .customer-dashboard .rounded-track .income-fill { background: #2a9d70; }
+body .app.app .customer-dashboard .customer-period-row { display: grid; grid-template-columns: minmax(110px,.65fr) minmax(0,3fr); align-items: center; gap: 24px; padding: 24px 0; border-bottom: 1px solid #e7ecf3; }
+body .app.app .customer-dashboard .customer-period-row:last-child { border-bottom: 0; padding-bottom: 8px; }
+body .app.app .customer-dashboard .customer-period-label { font-size: 13px; font-weight: 600; color: #315478; }
+body .app.app .customer-dashboard .customer-period-series { display: grid; gap: 20px; }
+body .app.app .customer-dashboard .customer-period-series > div { display: grid; grid-template-columns: 95px minmax(0,1fr) 105px; gap: 14px; align-items: center; }
+body .app.app .customer-dashboard .customer-period-series > div > span { font-size: 11px; color: #71849c; }
+body .app.app .customer-dashboard .customer-period-series strong { color: #1c3c6c; font-size: 13px; font-variant-numeric: tabular-nums; text-align: end; }
+body .app.app .customer-dashboard .customer-chart-basis { margin: 20px 0 0; line-height: 1.9; font-size: 10px; color: #7b8da2; }
+body .app.app .customer-dashboard .customer-heat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 10px; color: #768aa0; margin-bottom: 20px; }
+body .app.app .customer-dashboard .customer-heat-scale { display: inline-block; width: 80px; height: 10px; border-radius: 4px; background: linear-gradient(to right,#eaf0f6,#4b6c9b,#1c3c6c); }
+body .app.app .customer-dashboard .customer-heat-scroll { overflow: auto; max-height: 530px; margin-top: 12px; scrollbar-width: thin; }
+body .app.app .customer-dashboard .customer-heat-scroll + .customer-heat-scroll { padding-top: 20px; border-top: 1px solid #e5ebf4; margin-top: 24px; }
+body .app.app .customer-dashboard .customer-heat-table { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: auto; font-size: 11px; }
+body .app.app .customer-dashboard .customer-heat-table :is(th,td) { border: 0; text-align: center; padding: 12px 9px; min-width: 76px; }
+body .app.app .customer-dashboard .customer-heat-table thead th { position: sticky; top: 0; z-index: 2; color: #4b6685; background: #edf2f8; border-radius: 6px; font-size: 10px; font-weight: 500; }
+body .app.app .customer-dashboard .customer-heat-table tr > th:first-child { position: sticky; inset-inline-start: 0; z-index: 1; width: 210px; min-width: 170px; text-align: start; background: #fff; }
+body .app.app .customer-dashboard .customer-heat-table thead tr > th:first-child { z-index: 3; background: #edf2f8; }
+body .app.app .customer-dashboard .customer-heat-table tbody td { border-radius: 5px; color: #385376; font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+body .app.app .customer-dashboard .customer-heat-table tbody td.heat-dark { color: #fff; }
+body .app.app .customer-dashboard .customer-heat-table small { display: block; color: #8193a7; font-size: 9px; margin-top: 5px; }
+body .app.app .customer-dashboard .heat-customer-select { font: inherit; text-align: start; display: block; width: 100%; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; cursor: pointer; color: #436180; line-height: 1.7; }
+body .app.app .customer-dashboard .heat-customer-select[aria-pressed='true'] { background: #eef3fa; border-color: #dbe5f0; color: #1c3c6c; }
+body .app.app .customer-dashboard .heat-customer-select:hover { background: #f2f6fa; }
+body .app.app .customer-dashboard .customer-service-contribution { display: grid; gap: 18px; }
+body .app.app .customer-dashboard .customer-service-row { display: grid; grid-template-columns: minmax(130px,1fr) minmax(80px,1.3fr) 95px; gap: 15px; align-items: center; padding: 9px 0; }
+body .app.app .customer-dashboard .customer-service-row > bdi { color: #506b8b; font-size: 11px; line-height: 1.8; }
+body .app.app .customer-dashboard .customer-service-row > strong { color: #1c3c6c; font-size: 12px; text-align: end; font-variant-numeric: tabular-nums; }
+body .app.app .customer-dashboard .customer-loss, body .app.app .customer-dashboard .customer-heat-table td.customer-loss { color: #c83f48; }
+body .app.app.pdf-export .customer-dashboard .customer-period-row { grid-template-columns: 110px minmax(0,1fr); }
+body .app.app.pdf-export .customer-dashboard .customer-period-series > div { grid-template-columns: 95px minmax(0,1fr) 105px; }
+body .app.app.pdf-export .customer-dashboard .customer-heat-table thead th { position: static; }
+body .app.app.pdf-export .customer-dashboard .customer-service-row { grid-template-columns: minmax(150px,1fr) minmax(90px,2fr) 100px; }
+@media (max-width: 1050px) {
+  body .app.app .customer-dashboard .report-heading { grid-template-columns: 80px minmax(0,1fr); }
+  body .app.app .customer-dashboard .customer-report-logo { width: 80px; height: 45px; }
+  body .app.app .customer-dashboard .report-heading > bdi { grid-column: 2; grid-row: 3; justify-self: start; }
+  body .app.app .customer-dashboard .report-heading h1 { font-size: 23px; }
+}
+@media (max-width: 700px) {
+  body .app.app .customer-dashboard .customer-rank-row { grid-template-columns: minmax(0,1fr) auto; gap: 8px 12px; padding: 14px 10px; }
+  body .app.app .customer-dashboard .customer-rank-track { grid-column: 1 / -1; grid-row: 2; }
+  body .app.app .customer-dashboard .customer-rank-name { font-size: 11px; }
+}
+@media (max-width: 600px) {
+  body .app.app .customer-dashboard .summary.customer-summary { padding: 15px; gap: 10px; }
+  body .app.app .customer-dashboard .report-heading { grid-template-columns: minmax(0,1fr); padding: 18px; gap: 8px; }
+  body .app.app .customer-dashboard .customer-report-logo { grid-column: 1; grid-row: 1; width: 88px; height: 44px; margin-bottom: 5px; }
+  body .app.app .customer-dashboard .report-heading > span { grid-column: 1; grid-row: 2; font-size: 9px; }
+  body .app.app .customer-dashboard .report-heading h1 { grid-column: 1; grid-row: 3; font-size: 21px; }
+  body .app.app .customer-dashboard .report-heading > bdi { grid-column: 1; grid-row: 4; font-size: 9px; }
+  body .app.app .customer-dashboard .customer-summary .metric { padding: 15px 11px; }
+  body .app.app .customer-dashboard .customer-summary .metric strong { font-size: 20px; }
+  body .app.app .customer-dashboard .customer-summary .metric > span { font-size: 10px; }
+  body .app.app .customer-dashboard .chart { padding: 17px; }
+  body .app.app .customer-dashboard .chart h3 { font-size: 13px; }
+  body .app.app .customer-dashboard .customer-selected-heading { padding: 19px; }
+  body .app.app .customer-dashboard .customer-selected-metrics > div { padding: 14px 10px; }
+  body .app.app .customer-dashboard .section-heading h2 { font-size: 17px; }
+  body .app.app .customer-dashboard .customer-period-row { grid-template-columns: minmax(0,1fr); gap: 16px; padding-block: 20px; }
+  body .app.app .customer-dashboard .customer-period-label { font-size: 12px; }
+  body .app.app .customer-dashboard .customer-period-series { gap: 16px; }
+  body .app.app .customer-dashboard .customer-period-series > div { grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+  body .app.app .customer-dashboard .customer-period-series .rounded-track { grid-column: 1 / -1; grid-row: 2; height: 12px; }
+  body .app.app .customer-dashboard .customer-period-series strong { font-size: 12px; }
+  body .app.app .customer-dashboard .customer-service-row { grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+  body .app.app .customer-dashboard .customer-service-row .rounded-track { grid-column: 1 / -1; grid-row: 2; }
+  body .app.app .customer-dashboard .customer-heat-table tr > th:first-child { min-width: 130px; width: 130px; }
+}

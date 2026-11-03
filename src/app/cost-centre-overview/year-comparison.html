@@ -1,6 +1,6 @@
 <section
   id="year-comparison-panel"
-  class="year-comparison"
+  class="year-comparison centre-year-comparison"
   aria-labelledby="year-comparison-title"
   [attr.aria-busy]="busy()"
 >
@@ -133,6 +133,7 @@
                       >
                         <b>{{ row[metric.key] | number: '1.0-0' }}</b>
                       </div>
+                      <span class="bar-caption">{{ text(metric.ar, metric.en) }}</span>
                     </div>
                   }
                 </div>
@@ -144,51 +145,35 @@
         </div>
       </div>
     }
-    <div class="table-scroll">
-      <table>
-        <caption>
-          {{
-            text('قيم المقارنة بالريال السعودي', 'Comparison values in SAR')
-          }}
-        </caption>
-        <thead>
-          <tr>
-            <th>{{ text('السنة / الفترة', 'Year / period') }}</th>
-            @for (metric of metrics; track metric.key) {
-              <th>{{ text(metric.ar, metric.en) }}</th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.year) {
-            <tr>
-              <th>
-                {{ row.year }}<small dir="ltr">{{ row.fromDate }} / {{ row.toDate }}</small>
-              </th>
-              @if (row.status === 'ready') {
-                @for (metric of metrics; track metric.key) {
-                  <td>
-                    <bdi [class.loss]="row[metric.key] < 0"
-                      >SAR {{ row[metric.key] | number: '1.0-0' }}</bdi
-                    >
-                  </td>
-                }
-              } @else {
-                <td colspan="3" class="unavailable">
-                  {{
-                    row.status === 'empty'
-                      ? text('لا توجد بيانات لهذه الفترة', 'No data for this period')
-                      : text(
-                          'تعذر تحميل السنة. افحص جلسة TRAACS وأعد المقارنة.',
-                          'Year could not be loaded. Check the TRAACS session and retry.'
-                        )
-                  }}
-                </td>
+    <div class="table-scroll year-summary-list" [attr.aria-label]="text('قيم المقارنة بالريال السعودي', 'Comparison values in SAR')">
+      @for (row of rows(); track row.year) {
+        <article class="year-summary" [attr.aria-labelledby]="'centre-summary-' + row.year">
+          <div class="year-summary-heading">
+            <div class="year-summary-title">
+              <span class="summary-year" [id]="'centre-summary-' + row.year">{{ row.year }}</span>
+              <div><strong>{{ text('أداء مراكز التكلفة', 'Cost centre performance') }}</strong><span>{{ text('قيم المقارنة بالريال السعودي', 'Comparison values in SAR') }}</span></div>
+            </div>
+            <bdi class="summary-dates" dir="ltr">{{ row.fromDate }} — {{ row.toDate }}</bdi>
+          </div>
+          @if (row.status === 'ready') {
+            <div class="year-kpis">
+              @for (metric of metrics; track metric.key) {
+                <div [class]="'year-kpi ' + metric.key" [class.is-loss]="row[metric.key] < 0">
+                  <span class="year-kpi-label"><i aria-hidden="true"></i>{{ text(metric.ar, metric.en) }}</span>
+                  <strong dir="ltr">{{ row[metric.key] | number: '1.0-0' }}</strong>
+                  <small>SAR</small>
+                </div>
               }
-            </tr>
+            </div>
+          } @else {
+            <p class="unavailable" role="status">
+              {{ row.status === 'empty'
+                ? text('لا توجد بيانات لهذه الفترة', 'No data for this period')
+                : text('تعذر تحميل السنة. افحص جلسة TRAACS وأعد المقارنة.', 'Year could not be loaded. Check the TRAACS session and retry.') }}
+            </p>
           }
-        </tbody>
-      </table>
+        </article>
+      }
     </div>
   }
 </section>

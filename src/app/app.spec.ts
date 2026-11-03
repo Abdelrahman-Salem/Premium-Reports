@@ -281,7 +281,8 @@ describe('App', () => {
     expect(element.querySelector('.metric.expense strong')?.textContent?.trim()).toBe('3');
     expect(element.querySelectorAll('#dsr-customers .customer-rank-row')).toHaveLength(3);
     expect(element.querySelector('#dsr-customer-detail')?.textContent).toContain('Cabin Revenue');
-    expect(element.querySelectorAll('#dsr-trend .customer-month')).toHaveLength(2);
+    expect(element.querySelectorAll('#dsr-trend .customer-period-row')).toHaveLength(1);
+    expect(element.querySelectorAll('#dsr-trend .customer-heat-table tbody tr')).toHaveLength(3);
     expect(element.querySelector('.customer-data-note')).toBeNull();
     http.verify();
   });
