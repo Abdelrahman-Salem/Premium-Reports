@@ -284,3 +284,62 @@ td bdi {
     width: 100%;
   }
 }
+
+/* The same navy, rose and green financial palette as the executive report. */
+.centre-year-comparison { font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif; }
+.centre-year-comparison .legend { padding: 18px 22px; background: #fff; border: 1px solid #e1e9f1; border-radius: 16px; color: #627b8f; font-size: 12px; gap: 12px 24px; }
+.centre-year-comparison .revenue { background: #1c3c6c; }
+.centre-year-comparison .expense { background: #ef9a9e; }
+.centre-year-comparison .net { background: #2a9d70; }
+.centre-year-comparison .negative { background: #c83f48; }
+.centre-year-comparison .chart-scroll { border: 1px solid #e1e9f1; border-radius: 18px; background: #fff; padding: 20px 12px 10px; }
+.centre-year-comparison .chart { background: #fff; }
+.centre-year-comparison .year-group { border-color: #e4ebf3; border-style: dashed; }
+.centre-year-comparison .year-band, .centre-year-comparison .year-group:nth-child(even) .year-band { background: #edf2f8; color: #1c3c6c; border-top: 0; border-radius: 10px; font-size: 19px; }
+.centre-year-comparison .bar { border-radius: 5px 5px 0 0; }
+.centre-year-comparison .bar.negative { border-radius: 0 0 5px 5px; }
+.centre-year-comparison .bar b { color: #1c3c6c; font-size: 11px; font-variant-numeric: tabular-nums; }
+.centre-year-comparison .bar.negative b { color: #c83f48; }
+.bar-caption { position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); color: #6c7991; font-size: 10px; white-space: nowrap; direction: rtl; }
+.centre-year-comparison .year-label { color: #1c3c6c; font-size: 16px; }
+.year-summary-list { display: grid; gap: 18px; overflow: visible; margin-top: 24px; }
+.year-summary { padding: 22px; background: #fff; border: 1px solid #e1e9f1; border-radius: 19px; box-shadow: 0 4px 16px #25445d03; break-inside: avoid; }
+.year-summary-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-radius: 12px; background: #193f5b; color: #fff; }
+.year-summary-title { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.summary-year { display: grid; place-items: center; min-width: 80px; min-height: 49px; border: 1px solid #ffffff27; border-radius: 10px; background: #ffffff12; font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.year-summary-title strong { display: block; font-size: 16px; font-weight: 600; }
+.year-summary-title div > span { display: block; margin-top: 5px; color: #b7ccdc; font-size: 10px; }
+.summary-dates { color: #d0deea; font-size: 11px; font-variant-numeric: tabular-nums; }
+.year-kpis { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin-top: 20px; }
+.year-kpi { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 13px; padding: 22px 20px; border: 1px solid #dfe8f3; border-radius: 13px; }
+.centre-year-comparison .year-kpi.revenue { background: #f3f6fb; }
+.centre-year-comparison .year-kpi.expense { background: #fcf5f6; border-color: #f1e0e3; }
+.centre-year-comparison .year-kpi.net { background: #f1f8f5; border-color: #dcece4; }
+.year-kpi-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #6c7991; }
+.year-kpi-label i { width: 8px; height: 8px; border-radius: 3px; background: #1c3c6c; flex: none; }
+.year-kpi.expense .year-kpi-label i { background: #ef9a9e; }
+.year-kpi.net .year-kpi-label i { background: #2a9d70; }
+.year-kpi strong { font-size: clamp(22px,2.1vw,31px); color: #1c3c6c; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
+.year-kpi.expense strong { color: #a96071; }
+.year-kpi.net strong { color: #2a9d70; }
+.year-kpi small { font-size: 10px; color: #8292a6; }
+.year-kpi.is-loss strong { color: #c83f48; }
+.year-summary .unavailable { min-width: 0; background: #fff7e8; border: 1px solid #f3e3c3; border-radius: 12px; padding: 18px; line-height: 1.8; margin: 18px 0 0; }
+@media (max-width: 600px) {
+  .year-summary { padding: 14px; border-radius: 16px; }
+  .year-summary-heading { padding: 15px; gap: 13px; }
+  .summary-year { min-width: 64px; min-height: 44px; font-size: 20px; }
+  .year-summary-title { gap: 12px; }
+  .year-summary-title strong { font-size: 14px; }
+  .summary-dates { font-size: 10px; }
+  .year-kpis { grid-template-columns: minmax(0,1fr); gap: 10px; margin-top: 14px; }
+  .year-kpi { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px 12px; padding: 16px; }
+  .year-kpi-label { grid-column: 1 / -1; font-size: 11px; }
+  .year-kpi strong { font-size: 27px; text-align: start; }
+  .centre-year-comparison .legend { padding: 15px; gap: 10px 17px; font-size: 11px; }
+}
+@media print {
+  .year-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .year-kpi { display: flex; }
+  .year-summary { box-shadow: none; }
+}

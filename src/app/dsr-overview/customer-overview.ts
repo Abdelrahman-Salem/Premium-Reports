@@ -2,11 +2,12 @@ import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ReportFilters } from '../shared/report-filters';
-import { CostCentreOption, DsrCustomerDashboardView, DsrFilters } from '../models/dsr-report.models';
+import { CostCentreOption, DsrCustomerDashboardView, DsrCustomerMonth, DsrFilters } from '../models/dsr-report.models';
+import { PerformanceColumn, PerformanceColumns } from '../executive-performance/performance-columns';
 
 @Component({
   selector: 'app-dsr-overview',
-  imports: [DecimalPipe, PercentPipe, FormsModule, ReportFilters],
+  imports: [DecimalPipe, PercentPipe, FormsModule, ReportFilters, PerformanceColumns],
   templateUrl: './customer-overview.html',
   styleUrls: ['../cost-centre-overview/cost-centre-overview.css', './customer-overview.css'],
 })
@@ -50,6 +51,32 @@ export class CustomerOverview {
   });
   protected readonly maxSelectedService = computed(() => Math.max(1, ...(this.selected()?.services ?? []).map((row) => Math.abs(row.revenue))));
   protected readonly maxSelectedMonth = computed(() => Math.max(1, ...(this.selected()?.months ?? []).map((row) => Math.abs(row.revenue))));
+  // Chart windows only project existing report values; no financial aggregation is performed here.
+  protected readonly heatMonthGroups = computed(() => this.chartGroups(this.data()?.months ?? [], 12));
+  protected readonly customerHeatRows = computed(() => (this.data()?.customers ?? []).map((customer) => ({
+    customer, months: new Map(customer.months.map((month) => [month.key, month.revenue])),
+  })));
+  protected readonly heatMaximum = computed(() => Math.max(1, ...(this.data()?.customers ?? []).flatMap((customer) =>
+    customer.months.map((month) => Math.abs(month.revenue)))));
+  protected readonly selectedChartGroups = computed(() => this.chartGroups(this.selected()?.months ?? [], 12));
+
+  protected heatColor(value: number | undefined): string {
+    if (value === undefined || value === 0) return '#f1f4f8';
+    if (value < 0) return '#f8dfe1';
+    return value >= this.heatMaximum() ? '#1c3c6c' : `rgba(75, 108, 155, ${0.1 + value / this.heatMaximum() * 0.65})`;
+  }
+
+  private chartGroups<T>(rows: readonly T[], size: number): T[][] {
+    return Array.from({ length: Math.ceil(rows.length / size) }, (_, index) => rows.slice(index * size, (index + 1) * size));
+  }
+  protected monthColumns(months: DsrCustomerMonth[], kind: 'comparison' | 'customers' | 'selected'): PerformanceColumn[] {
+    return months.flatMap((month): PerformanceColumn[] => kind === 'comparison'
+      ? [
+          { id: month.key + '-sales', label: month.label + ' · ' + this.text('المبيعات', 'Sales'), value: month.revenue, ratio: null, color: '#1c3c6c' },
+          { id: month.key + '-income', label: month.label + ' · ' + this.text('إيراد الخدمات', 'Service income'), value: month.profit, ratio: null, color: '#2a9d70' },
+        ]
+      : [{ id: month.key, label: month.label, value: kind === 'customers' ? month.customers : month.revenue, ratio: null }]);
+  }
 
   protected text(ar: string, en: string): string { return this.language() === 'ar' ? ar : en; }
   protected width(value: number, maximum: number): number { return Math.min(100, Math.abs(value) / maximum * 100); }

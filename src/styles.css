@@ -4,6 +4,7 @@
 @import '@fontsource/ibm-plex-sans-arabic/700.css';
 @import './report-theme.css';
 @import './shell-polish.css';
+@import './customer-report-theme.css';
 @page {
   size: A4 landscape;
   margin: 10mm;

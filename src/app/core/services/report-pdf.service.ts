@@ -32,7 +32,7 @@ export class ReportPdfService {
       if (!content) throw new Error('No report content to export.');
       const blocks = options.portrait
         ? Array.from(content.querySelectorAll<HTMLElement>('.reference-sheet'))
-        : Array.from(content.querySelectorAll<HTMLElement>('.summary,.context-line,.section-heading,.chart,.comparison-header,.year-comparison > header,.year-comparison > .table-scroll,.year-comparison > .legend,.customer-data-note,.comparison-period'))
+        : Array.from(content.querySelectorAll<HTMLElement>('.summary,.context-line,.section-heading,.chart,.comparison-header,.year-comparison > header,.year-comparison > .table-scroll,.year-comparison > .legend,.customer-data-note,.comparison-period,.customer-selected-heading,.customer-selected-metrics'))
           .filter((element) => !element.parentElement?.closest('.chart'));
       if (!blocks.length) throw new Error('No report blocks to export.');
 
@@ -145,7 +145,7 @@ export class ReportPdfService {
 
   private safeBreaks(block: HTMLElement): number[] {
     const top = block.getBoundingClientRect().top;
-    return [...new Set(Array.from(block.querySelectorAll<HTMLElement>('tr,.reference-chart,.centre-performance-row,.top-customer,.customer-rank-row,.account-bar,.customer-list-row,.columns,.customer-months,.pl-margin-columns,.pdf-column-group'))
+    return [...new Set(Array.from(block.querySelectorAll<HTMLElement>('tr,.reference-chart,.centre-performance-row,.top-customer,.customer-rank-row,.account-bar,.customer-list-row,.columns,.customer-months,.pl-margin-columns,.pdf-column-group,.year-summary,.reference-columns,.customer-period-row,.customer-service-row'))
       .filter((element) => element.offsetHeight)
       .map((element) => Math.ceil(element.getBoundingClientRect().bottom - top) + 2))].sort((a, b) => a - b);
   }

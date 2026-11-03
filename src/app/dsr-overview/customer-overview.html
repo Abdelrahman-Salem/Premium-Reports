@@ -5,7 +5,7 @@
   }
 </div>
 
-<div class="workspace" [attr.aria-busy]="loading()">
+<div class="workspace customer-dashboard" [attr.aria-busy]="loading()">
   <div class="canvas">
     @if (data(); as report) {
       @if (report.loadedRows < report.totalRows) {
@@ -17,7 +17,7 @@
       }
     }
     <header class="summary customer-summary">
-      <div class="report-heading"><span>TRAACS / {{ text('تحليل العملاء', 'Customer analysis') }}</span><h1>{{ text('لوحة تحليل العملاء', 'Customer Insights Dashboard') }}</h1><bdi>{{ filters().fromDate }} - {{ filters().toDate }}</bdi></div>
+      <div class="report-heading"><img class="customer-report-logo" src="logo.jpg" alt="First Premium Support Services" /><span>First Premium Support Services / TRAACS</span><h1>{{ text('لوحة تحليل العملاء', 'Customer Insights Dashboard') }}</h1><bdi dir="ltr">{{ filters().fromDate }} — {{ filters().toDate }}</bdi></div>
       <div class="metric revenue"><span>{{ text('مبيعات العملاء', 'Customer sales') }}</span><strong>{{ data()?.loadedRows ? (data()!.revenue | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
       <div class="metric net" [title]="text('إيراد الخدمات قبل المصروفات', 'Service income before expenses')"><span>{{ text('إيراد الخدمات', 'Service income') }}</span><strong>{{ data()?.loadedRows ? (data()!.profit | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
       <div class="metric expense"><span>{{ text('العملاء النشطون', 'Active customers') }}</span><strong>{{ data()?.loadedRows ? (data()!.customerCount | number) : '-' }}</strong><small>{{ text('عميل', 'customers') }}</small></div>
@@ -41,7 +41,7 @@
             <div class="customer-ranking">
               @for (customer of topCustomers(); track customer.id; let index = $index) {
                 <button type="button" class="customer-rank-row" (click)="selectedId.set(customer.id)" [attr.aria-label]="customer.name">
-                  <span class="customer-rank-name"><em>{{ index + 1 }}</em><bdi>{{ customer.name }}</bdi></span><span class="customer-rank-track"><i [class.negative-fill]="customer.revenue < 0" [style.width.%]="width(customer.revenue, maxRevenue())"></i></span><strong dir="ltr">{{ customer.revenue | number:'1.0-0' }}</strong>
+                  <span class="customer-rank-name"><em>{{ index + 1 }}</em><bdi>{{ customer.name }}</bdi></span><span class="customer-rank-track"><i [class.negative-fill]="customer.revenue < 0" [style.width.%]="width(customer.revenue, maxRevenue())"></i></span><span class="customer-rank-value"><strong dir="ltr">{{ customer.revenue | number:'1.0-0' }}</strong><small dir="ltr">{{ customer.share | percent:'1.1-1' }}</small></span>
                 </button>
               }
             </div>
@@ -53,18 +53,36 @@
           <div class="charts">
             <section class="chart customer-wide"><header><h3>{{ text('مبيعات العملاء وإيراد الخدمات شهريًا', 'Monthly customer sales and service income') }}</h3><span>{{ currency() }}</span></header>
               <div class="customer-legend"><span><i class="revenue-key"></i>{{ text('المبيعات', 'Sales') }}</span><span><i class="profit-key"></i>{{ text('إيراد الخدمات', 'Service income') }}</span></div>
-              <div class="customer-months">
+              <div class="customer-month-comparison">
                 @for (month of report.months; track month.key) {
-                  <div class="customer-month"><div class="customer-month-plot"><span class="customer-month-bar revenue-bar" [class.negative-fill]="month.revenue < 0" [style.height.%]="width(month.revenue, maxMonthValue())" [title]="month.revenue"></span><span class="customer-month-bar profit-bar" [class.negative-fill]="month.profit < 0" [style.height.%]="width(month.profit, maxMonthValue())" [title]="month.profit"></span></div><bdi>{{ month.label }}</bdi><strong dir="ltr">{{ month.revenue | number:'1.0-0' }}</strong><small>{{ text('إيراد الخدمة', 'Service income') }} {{ month.profit | number:'1.0-0' }}</small></div>
+                  <div class="customer-period-row">
+                    <bdi class="customer-period-label">{{ month.label }}</bdi>
+                    <div class="customer-period-series">
+                      <div><span>{{ text('المبيعات', 'Sales') }}</span><div class="rounded-track"><i class="sales-fill" [class.negative-fill]="month.revenue < 0" [style.width.%]="width(month.revenue, maxMonthValue())"></i></div><strong dir="ltr" [class.customer-loss]="month.revenue < 0">{{ month.revenue | number:'1.0-0' }}</strong></div>
+                      <div><span>{{ text('إيراد الخدمات', 'Service income') }}</span><div class="rounded-track"><i class="income-fill" [class.negative-fill]="month.profit < 0" [style.width.%]="width(month.profit, maxMonthValue())"></i></div><strong dir="ltr" [class.customer-loss]="month.profit < 0">{{ month.profit | number:'1.0-0' }}</strong></div>
+                    </div>
+                  </div>
                 }
               </div>
+              <p class="customer-chart-basis">{{ text('مقياس موحد لكل شهور الفترة؛ القيم السالبة تظهر بالأحمر وبإشارتها.', 'One scale across the selected months; negative values appear in red with their sign.') }}</p>
             </section>
-            <section class="chart customer-wide"><header><h3>{{ text('عدد العملاء النشطين شهريًا', 'Active customers by month') }}</h3><span>{{ text('عميل', 'Customers') }}</span></header>
-              <div class="customer-months count-months">
-                @for (month of report.months; track month.key) {
-                  <div class="customer-month"><div class="customer-month-plot"><span class="customer-month-bar count-bar" [style.height.%]="width(month.customers, maxMonthCustomers())"></span></div><bdi>{{ month.label }}</bdi><strong>{{ month.customers | number }}</strong></div>
-                }
-              </div>
+            <section class="chart customer-wide customer-heat-chart"><header><h3>{{ text('مبيعات ونشاط العملاء عبر الشهور', 'Customer sales and activity by month') }}</h3><span>{{ currency() }}</span></header>
+              <div class="customer-heat-legend"><span class="customer-heat-scale"></span><span>{{ text('كلما زاد اللون زادت المبيعات', 'Darker cells indicate higher sales') }}</span><span class="customer-loss">{{ text('الأحمر: صافي مبيعات سالب', 'Red: negative net sales') }}</span></div>
+              @for (months of heatMonthGroups(); track months[0].key) {
+                <div class="heat-scroll customer-heat-scroll" tabindex="0" [attr.aria-label]="text('خريطة مبيعات العملاء الشهرية', 'Monthly customer sales heatmap')">
+                  <table class="heat-table customer-heat-table">
+                    <thead><tr><th scope="col">{{ text('العميل', 'Customer') }}</th>@for (month of months; track month.key) { <th scope="col"><bdi>{{ month.label }}</bdi><small class="active-customer-count">{{ month.customers | number }} {{ text('عميل نشط', 'active customers') }}</small></th> }</tr></thead>
+                    <tbody>@for (row of customerHeatRows(); track row.customer.id) {
+                      <tr><th scope="row"><button type="button" class="heat-customer-select" (click)="selectedId.set(row.customer.id)" [attr.aria-pressed]="selected()?.id === row.customer.id"><bdi>{{ row.customer.name }}</bdi><small>{{ row.customer.code }}</small></button></th>
+                        @for (month of months; track month.key) { @let value = row.months.get(month.key);
+                          <td [style.background]="heatColor(value)" [class.heat-dark]="value !== undefined && value > 0 && value / heatMaximum() >= 0.55" [class.customer-loss]="value !== undefined && value < 0" dir="ltr" [title]="row.customer.name + ' · ' + month.label + ': ' + (value === undefined ? text('لا توجد حركة', 'No activity') : currency() + ' ' + (value | number:'1.2-2'))">{{ value === undefined ? '—' : (value | number:'1.0-0') }}</td>
+                        }
+                      </tr>
+                    }</tbody>
+                  </table>
+                </div>
+              }
+              <p class="customer-chart-basis">{{ text('الأرقام هي صافي مبيعات العميل في الشهر، وعدد العملاء النشطين ظاهر أعلى كل شهر. الشرطة تعني عدم وجود حركة وليست صفرًا.', 'Cells show customer net sales; active customer counts appear above each month. A dash means no activity, not a zero balance.') }}</p>
             </section>
           </div>
         </section>
@@ -86,12 +104,19 @@
                 <header class="customer-selected-heading"><div><span>{{ text('العميل المحدد', 'Selected customer') }}</span><h3><bdi>{{ customer.name }}</bdi></h3><small dir="ltr">{{ customer.code }}</small></div><strong dir="ltr">{{ customer.share | percent:'1.1-1' }} <small>{{ text('من المبيعات الموجبة', 'of positive sales') }}</small></strong></header>
                 <div class="customer-selected-metrics"><div><span>{{ text('صافي المبيعات', 'Net sales') }}</span><strong dir="ltr">{{ customer.revenue | number:'1.0-0' }}</strong><small>{{ currency() }}</small></div><div><span>{{ text('إيراد الخدمات', 'Service income') }}</span><strong dir="ltr">{{ customer.profit | number:'1.0-0' }}</strong><small>{{ currency() }}</small></div><div><span>{{ text('إيراد الخدمات / المبيعات', 'Service income / sales') }}</span><strong dir="ltr">{{ customer.margin | percent:'1.1-1' }}</strong></div><div><span>{{ text('مستندات فريدة', 'Unique documents') }}</span><strong>{{ customer.documents | number }}</strong><small>{{ customer.lines }} {{ text('سطر', 'lines') }}</small></div></div>
                 <div class="customer-selected-charts">
-                  <section class="chart"><header><h3>{{ text('مبيعات العميل حسب الخدمة', 'Customer sales by service') }}</h3><span>{{ currency() }}</span></header><div class="customer-ranking compact">
-                    @for (service of customer.services; track service.name) { <div class="customer-rank-row"><span class="customer-rank-name"><bdi>{{ service.name }}</bdi></span><span class="customer-rank-track"><i [class.negative-fill]="service.revenue < 0" [style.width.%]="width(service.revenue, maxSelectedService())"></i></span><strong dir="ltr">{{ service.revenue | number:'1.0-0' }}</strong></div> }
-                  </div></section>
-                  <section class="chart"><header><h3>{{ text('نشاط العميل الشهري', 'Customer monthly activity') }}</h3><span>{{ currency() }}</span></header><div class="customer-months">
-                    @for (month of customer.months; track month.key) { <div class="customer-month"><div class="customer-month-plot"><span class="customer-month-bar revenue-bar" [class.negative-fill]="month.revenue < 0" [style.height.%]="width(month.revenue, maxSelectedMonth())"></span></div><bdi>{{ month.label }}</bdi><strong dir="ltr">{{ month.revenue | number:'1.0-0' }}</strong><small>{{ month.documents }} {{ text('مستند', 'docs') }}</small></div> }
-                  </div></section>
+                  <section class="chart"><header><h3>{{ text('مبيعات العميل حسب الخدمة', 'Customer sales by service') }}</h3><span>{{ currency() }}</span></header>
+                    <div class="customer-service-contribution">
+                      @for (service of customer.services; track service.name) {
+                        <div class="customer-service-row"><bdi>{{ service.name }}</bdi><div class="rounded-track"><i [class.negative-fill]="service.revenue < 0" [style.width.%]="width(service.revenue, maxSelectedService())"></i></div><strong dir="ltr" [class.customer-loss]="service.revenue < 0">{{ service.revenue | number:'1.0-0' }}</strong></div>
+                      }
+                    </div>
+                  </section>
+                  <section class="chart"><header><h3>{{ text('نشاط العميل الشهري', 'Customer monthly activity') }}</h3><span>{{ currency() }}</span></header>
+                    @for (months of selectedChartGroups(); track months[0].key) {
+                      <app-performance-columns class="customer-selected-columns" [items]="monthColumns(months, 'selected')" [compact]="true" [showRatios]="false" [unit]="currency()" [label]="text('نشاط العميل الشهري', 'Customer monthly activity')" />
+                    }
+                    <div class="customer-month-documents">@for (month of customer.months; track month.key) { <span><bdi>{{ month.label }}</bdi><strong>{{ month.documents | number }} {{ text('مستند', 'docs') }}</strong></span> }</div>
+                  </section>
                 </div>
               </div>
             }
