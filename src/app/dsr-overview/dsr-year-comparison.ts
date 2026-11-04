@@ -12,7 +12,7 @@ type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; revenue: 
   selector: 'app-dsr-year-comparison',
   imports: [DecimalPipe, FormsModule],
   templateUrl: './dsr-year-comparison.html',
-  styleUrls: ['../cost-centre-overview/cost-centre-overview.css', '../monthly-sales-overview/monthly-year-comparison.css', './dsr-year-comparison.css'],
+  styleUrls: ['../cost-centre-overview/cost-centre-overview.css', '../monthly-sales-overview/monthly-year-comparison.css', '../monthly-sales-overview/financial-year-charts.css', './dsr-year-comparison.css'],
 })
 export class DsrYearComparison {
   readonly filters = input.required<DsrFilters>();
@@ -31,6 +31,7 @@ export class DsrYearComparison {
     { key: 'customers', ar: 'العملاء النشطون', en: 'Active customers', unit: '' },
     { key: 'average', ar: 'متوسط المبيعات لكل عميل', en: 'Sales per customer', unit: 'SAR' },
   ];
+  protected readonly financialMetrics = this.metrics.filter((metric) => metric.unit === 'SAR');
   protected readonly valid = computed(() => {
     const from = this.fromYear();
     const to = this.toYear();
@@ -66,11 +67,28 @@ export class DsrYearComparison {
     this.reset();
     this.mode.set(value);
   }
-  protected scale(metric: Metric): number {
-    return Math.max(1, ...this.results().filter((row) => row.status === 'ready').map((row) => Math.abs(row[metric])));
+  protected yearColor(year: number): string {
+    return ['#087f9c', '#1c3c6c', '#8965b1', '#c58b32', '#2b9274'][year % 5];
   }
-  protected height(value: number, metric: Metric): number {
-    return Math.abs(value) / this.scale(metric) * 100;
+  protected readonly chartAxis = computed(() => {
+    const values = this.results().filter((row) => row.status === 'ready').flatMap((row) => this.financialMetrics.map((metric) => row[metric.key]));
+    const positive = Math.max(0, ...values);
+    const negative = Math.max(0, ...values.map((value) => -value));
+    const range = positive + negative || 1;
+    const upper = positive || negative ? positive : 1;
+    return { range, positive: upper, zero: upper / range * 100 };
+  });
+  protected readonly chartTicks = computed(() => [0, 25, 50, 75, 100].map((position) => ({
+    position, value: this.chartAxis().positive - this.chartAxis().range * position / 100,
+  })));
+  protected chartValue(value: number): string {
+    return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value);
+  }
+  protected height(value: number): number {
+    return Math.abs(value) / this.chartAxis().range * 100;
+  }
+  protected barTop(value: number): number {
+    return this.chartAxis().zero - (value > 0 ? this.height(value) : 0);
   }
   protected compare(): void {
     if (!this.valid() || this.busy()) return;
