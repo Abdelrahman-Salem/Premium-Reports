@@ -1,6 +1,21 @@
-.comparison-fill {
-  max-width: 105px;
-}
+.customer-year-comparison .financial-metric-groups { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.customer-year-counts { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e6edf4; }
+.customer-year-counts > h4 { margin: 0 0 14px; color: #26455c; font-size: 13px; }
+.customer-year-count-grid { display: grid; grid-template-columns: repeat(var(--year-count), minmax(0, 1fr)); gap: 12px; }
+.customer-year-count { display: grid; justify-items: center; align-content: start; gap: 6px; padding: 15px 10px; border: 1px solid #e1e9f1; border-top: 3px solid var(--year-color); border-radius: 12px; background: #f7f9fc; }
+.customer-count-year { display: flex; align-items: center; gap: 7px; color: #516a7f; font-size: 12px; }
+.customer-count-year i { width: 8px; height: 8px; border-radius: 50%; background: var(--year-color); }
+.customer-year-count strong { color: var(--year-color); font-size: 25px; font-variant-numeric: tabular-nums; }
+.customer-year-count small { font-size: 10px; color: #75889b; text-align: center; }
+@media (max-width: 600px) { .customer-year-count-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+:host-context(.pdf-export) .customer-year-count-grid { grid-template-columns: repeat(var(--year-count), minmax(0, 1fr)); }
+:host-context(.pdf-export) .customer-year-comparison .comparison-header { padding: 12px 16px !important; margin-bottom: 8px !important; }
+:host-context(.pdf-export) .customer-year-comparison .comparison-header h2 { font-size: 16px !important; }
+:host-context(.pdf-export) .customer-year-counts { margin-top: 12px; padding-top: 10px; }
+:host-context(.pdf-export) .customer-year-count { padding: 8px; gap: 3px; }
+:host-context(.pdf-export) .customer-year-count strong { font-size: 20px; }
+:host-context(.pdf-export) .customer-year-comparison .comparison-track { height: 110px; }
+:host-context(.pdf-export) .customer-year-comparison .financial-axis { height: 110px; }
 
 .comparison-data-note {
   margin: 12px 0;

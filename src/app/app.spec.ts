@@ -190,7 +190,7 @@ describe('App', () => {
     http.verify();
   });
 
-  it('compares monthly sales in separate year charts without showing the standard report', () => {
+  it('compares monthly financial indicators in one grouped chart without showing the standard report', () => {
     const fixture = TestBed.createComponent(App);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
@@ -220,8 +220,9 @@ describe('App', () => {
       centerRequests[index].flush(data.centers);
     }
     fixture.detectChanges();
-    expect(element.querySelectorAll('.comparison-chart')).toHaveLength(4);
-    expect(element.querySelectorAll('.comparison-chart:first-child .comparison-year')).toHaveLength(2);
+    expect(element.querySelectorAll('.comparison-chart')).toHaveLength(1);
+    expect(element.querySelectorAll('.financial-metric-group')).toHaveLength(4);
+    expect(element.querySelectorAll('.financial-metric-group:first-child .comparison-year')).toHaveLength(2);
     expect(element.querySelector<HTMLButtonElement>('.export-btn')?.disabled).toBe(false);
     http.verify();
   });
@@ -331,9 +332,11 @@ describe('App', () => {
       }));
     }
     fixture.detectChanges();
-    expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart')).toHaveLength(4);
+    expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart')).toHaveLength(1);
+    expect(element.querySelectorAll('app-dsr-year-comparison .financial-metric-group')).toHaveLength(3);
+    expect(element.querySelectorAll('app-dsr-year-comparison .customer-year-count')).toHaveLength(2);
     expect(element.querySelector('.comparison-data-note')).toBeNull();
-    expect(element.querySelectorAll('app-dsr-year-comparison .comparison-chart:first-child .comparison-year')).toHaveLength(2);
+    expect(element.querySelectorAll('app-dsr-year-comparison .financial-metric-group:first-child .comparison-year')).toHaveLength(2);
     expect(element.querySelector<HTMLButtonElement>('.export-btn')?.disabled).toBe(false);
     http.verify();
   });
