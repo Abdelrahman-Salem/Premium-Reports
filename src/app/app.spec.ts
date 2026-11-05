@@ -69,7 +69,8 @@ describe('App', () => {
     expect(compiled.querySelector<HTMLImageElement>('.print-header img')?.getAttribute('src')).toBe('logo.jpg');
     expect(compiled.querySelectorAll('.sidebar .nav-button')).toHaveLength(4);
     expect(compiled.querySelector('.sidebar')?.textContent).not.toContain('Session');
-    expect(compiled.querySelectorAll('.auth-actions button')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.auth-actions button')).toHaveLength(1);
+    expect(compiled.querySelector('.auth-actions')?.textContent).not.toContain('فتح تسجيل دخول');
     expect(compiled.querySelector('.site-footer .footer-credit')?.textContent).toContain('Powered by');
     expect(compiled.querySelector<HTMLImageElement>('.footer-credit img')?.getAttribute('src')).toBe('codit.png');
     expect(compiled.querySelector<HTMLAnchorElement>('.footer-contact')?.getAttribute('href')).toBe('https://wa.me/201144918857');
@@ -187,6 +188,34 @@ describe('App', () => {
     const centerPayload = JSON.parse(new URLSearchParams(requests.centers.request.body).get('arrSearchValueAjxKey')!);
     expect(centerPayload.strBaseAjxKey).toBe('Base');
     expect(element.querySelector('.monthly-summary')?.textContent).toContain('125.50');
+    http.verify();
+  });
+
+  it('allows the first report while automatic authentication is still connecting', () => {
+    const fixture = TestBed.createComponent(App);
+    const http = TestBed.inject(HttpTestingController);
+    const session = http.expectOne('/api/session/status');
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('.auth-status')?.textContent).toContain('جاري الاتصال تلقائيًا');
+    element.querySelector<HTMLButtonElement>('app-monthly-sales-overview .apply')!.click();
+    flushProfitLoss(http, String(new Date().getFullYear()));
+    session.flush({ hasCookie: true, automatic: true, loginUrl: '' });
+    fixture.detectChanges();
+    expect(element.querySelector('.monthly-summary')?.textContent).toContain('125.50');
+    expect(element.querySelector('.auth-panel.ready')).not.toBeNull();
+    expect(element.querySelectorAll('.auth-actions button')).toHaveLength(1);
+    http.verify();
+  });
+
+  it('retains the manual login fallback only when the server disables automatic login', () => {
+    const fixture = TestBed.createComponent(App);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/session/status').flush({ hasCookie: false, automatic: false, loginUrl: '/login' });
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelectorAll('.auth-actions button')).toHaveLength(2);
+    expect(element.querySelector('.auth-actions')?.textContent).toContain('فتح تسجيل دخول');
     http.verify();
   });
 

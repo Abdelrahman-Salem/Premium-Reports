@@ -120,8 +120,8 @@ export class DsrReportService {
     );
   }
 
-  getSessionStatus(): Observable<{ hasCookie: boolean; loginUrl: string }> {
-    return this.http.get<{ hasCookie: boolean; loginUrl: string }>(
+  getSessionStatus(): Observable<{ hasCookie: boolean; loginUrl: string; automatic?: boolean; code?: string }> {
+    return this.http.get<{ hasCookie: boolean; loginUrl: string; automatic?: boolean; code?: string }>(
       `${this.apiOrigin}/api/session/status`,
       {
         withCredentials: true,

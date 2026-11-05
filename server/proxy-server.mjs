@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { request } from 'node:https';
+import { traacsSession } from './traacs-session.mjs';
 
 const port = Number(process.env.PORT ?? 3333);
 const targetHost = 'attar-firstpremium.traacs.io';
@@ -341,11 +342,23 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.url === '/api/session/status' && req.method === 'GET') {
+    if (traacsSession.enabled()) {
+      try {
+        await traacsSession.ensure(req);
+        res.writeHead(200, { ...traacsSession.responseHeaders(req), 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ hasCookie: true, automatic: true, loginUrl: '' }));
+      } catch (error) {
+        res.writeHead(200, { 'Cache-Control': 'no-store, private', 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ hasCookie: false, automatic: true, loginUrl: '', code: error.code ?? 'TRAACS_UNAVAILABLE' }));
+      }
+      return;
+    }
     const { cookie, source } = resolveCookieWithSource(req);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
         hasCookie: hasSessionCookie(cookie),
+        automatic: false,
         loginUrl: `${localOrigin(req)}${loginPagePath}`,
         diagnostics: buildSessionDiagnostics(req, source),
       }),
@@ -398,6 +411,22 @@ const server = createServer(async (req, res) => {
   if (!reportRoute || req.method !== 'POST') {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'Route not found.' }));
+    return;
+  }
+
+  if (traacsSession.enabled()) {
+    try {
+      const body = await collectBody(req);
+      const response = await traacsSession.report(req, reportRoute.path, reportRoute.referer, body);
+      res.writeHead(response.statusCode, {
+        ...traacsSession.responseHeaders(req),
+        'Content-Type': response.headers['content-type'] ?? 'application/json',
+      });
+      res.end(response.body);
+    } catch (error) {
+      res.writeHead(error.status ?? 502, { 'Cache-Control': 'no-store, private', 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: 'TRAACS connection is unavailable. Please retry.', code: error.code ?? 'TRAACS_UNAVAILABLE' }));
+    }
     return;
   }
 

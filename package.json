@@ -8,7 +8,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:proxy": "node --experimental-test-module-mocks --test server/proxy-routing.test.mjs"
+    "test:proxy": "node --experimental-test-module-mocks --test server/*.test.mjs"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
