@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import { mock, test } from 'node:test';
 
 const upstreamCalls = [];
+// The existing browser-cookie routes remain available when automatic login is disabled.
+process.env.TRAACS_AUTO_LOGIN = 'false';
 const page = { arrDsrTicketsPhpKey: [{ dblSellingAmtPhpKey: 42 }], intDsrDetailsTicketOffSetPhpKey: 250 };
 
 mock.module('node:https', {

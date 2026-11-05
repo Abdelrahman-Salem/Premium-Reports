@@ -1,4 +1,5 @@
 import { request } from 'node:https';
+import { traacsSession } from '../server/traacs-session.mjs';
 
 const targetHost = 'attar-firstpremium.traacs.io';
 const targetPath = '/traacs/basic_dsrdetails_dsrdetails/getdsrdetailsdetails';
@@ -393,6 +394,21 @@ async function proxyTraacsRequest(req, res, upstreamPath) {
 }
 
 async function proxyReportRequest(req, res, upstreamPath = targetPath, refererPath = reportPagePath) {
+  if (traacsSession.enabled()) {
+    try {
+      const body = await collectBody(req);
+      const response = await traacsSession.report(req, upstreamPath, refererPath, body);
+      res.writeHead(response.statusCode, {
+        ...traacsSession.responseHeaders(req),
+        'Content-Type': response.headers['content-type'] ?? 'application/json',
+      });
+      res.end(response.body);
+    } catch (error) {
+      res.setHeader('Cache-Control', 'no-store, private');
+      writeJson(res, error.status ?? 502, { message: 'TRAACS connection is unavailable. Please retry.', code: error.code ?? 'TRAACS_UNAVAILABLE' });
+    }
+    return;
+  }
   const cookie = resolveCookie(req);
 
   if (!cookie) {
@@ -462,9 +478,21 @@ export default async function handler(req, res) {
   }
 
   if (action === 'session-status' && req.method === 'GET') {
+    if (traacsSession.enabled()) {
+      try {
+        await traacsSession.ensure(req);
+        for (const [name, value] of Object.entries(traacsSession.responseHeaders(req))) res.setHeader(name, value);
+        writeJson(res, 200, { hasCookie: true, automatic: true, loginUrl: '' });
+      } catch (error) {
+        res.setHeader('Cache-Control', 'no-store, private');
+        writeJson(res, 200, { hasCookie: false, automatic: true, loginUrl: '', code: error.code ?? 'TRAACS_UNAVAILABLE' });
+      }
+      return;
+    }
     const { cookie, source } = resolveCookieWithSource(req);
     writeJson(res, 200, {
       hasCookie: hasSessionCookie(cookie),
+      automatic: false,
       loginUrl: `${localOrigin(req)}${loginPagePath}`,
       diagnostics: buildSessionDiagnostics(req, source),
     });

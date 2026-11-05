@@ -71,17 +71,17 @@ const TRANSLATIONS = {
     search: 'Search',
     exportReport: 'Download PDF',
     openTraacs: 'Open TRAACS login',
-    checkSession: 'Check session',
-    checkingSession: 'Checking',
+    checkSession: 'Reconnect',
+    checkingSession: 'Connecting automatically',
     sessionTitle: 'TRAACS access',
-    sessionHint: 'Use this panel once after login or whenever the report stops loading.',
+    sessionHint: 'The server signs in to TRAACS and renews the connection automatically.',
     sessionReady: 'TRAACS session is connected.',
-    sessionMissing: 'Open TRAACS through this dashboard and sign in once.',
+    sessionMissing: 'The automatic TRAACS connection could not be established. Please retry.',
     proxyMissing:
       'TRAACS connection is not available right now. Try again after the deployment finishes.',
-    signInFirst: 'Sign in to TRAACS first, then press Check session and search again.',
+    signInFirst: 'The TRAACS connection is not ready. Reconnect and retry the report.',
     noDataOrSession:
-      'No report data was returned. If this period should have movement, sign in to TRAACS first and search again.',
+      'No report data was returned. Check the selected period and retry the report.',
     incompleteDsr: 'Could not load all DSR detail rows. Please retry the report.',
     from: 'From',
     to: 'To',
@@ -95,7 +95,7 @@ const TRANSLATIONS = {
     sales: 'Sales',
     refunds: 'Refunds',
     loadError:
-      'Unable to load the DSR report from the live API. Open TRAACS login from this dashboard, sign in, then search again.',
+      'Unable to load the complete DSR report from TRAACS. Please retry.',
     monthlyDataError: 'Could not verify the profit and loss report totals. Please retry the report.',
     noCostCentreError: 'Select at least one cost centre before searching.',
     noReportTitle: 'Choose filters and run a search',
@@ -162,16 +162,16 @@ const TRANSLATIONS = {
     search: 'بحث',
     exportReport: 'تحميل PDF',
     openTraacs: 'فتح تسجيل دخول TRAACS',
-    checkSession: 'فحص الجلسة',
-    checkingSession: 'جاري الفحص',
+    checkSession: 'إعادة الاتصال',
+    checkingSession: 'جاري الاتصال تلقائيًا',
     sessionTitle: 'اتصال TRAACS',
-    sessionHint: 'استخدم الجزء ده بعد تسجيل الدخول أو لو التقرير وقف تحميل.',
+    sessionHint: 'يتم تسجيل الدخول إلى TRAACS وتجديد الاتصال تلقائيًا من السيرفر.',
     sessionReady: 'جلسة TRAACS متصلة.',
-    sessionMissing: 'افتح TRAACS من داخل الداشبورد وسجل الدخول مرة واحدة.',
+    sessionMissing: 'تعذر الاتصال التلقائي بـTRAACS. أعد المحاولة.',
     proxyMissing: 'اتصال TRAACS غير متاح حاليًا. جرّب مرة أخرى بعد اكتمال النشر.',
-    signInFirst: 'سجل الدخول إلى TRAACS أولًا، ثم اضغط فحص الجلسة وابحث مرة أخرى.',
+    signInFirst: 'اتصال TRAACS غير جاهز. أعد الاتصال ثم أعد عرض التقرير.',
     noDataOrSession:
-      'لم ترجع بيانات للتقرير. لو الفترة دي فيها حركة، سجل الدخول إلى TRAACS أولًا ثم ابحث مرة أخرى.',
+      'لم ترجع بيانات للتقرير. راجع الفترة المحددة ثم أعد المحاولة.',
     incompleteDsr: 'تعذر تحميل كل صفوف تفاصيل DSR. أعد عرض التقرير.',
     from: 'من',
     to: 'إلى',
@@ -185,7 +185,7 @@ const TRANSLATIONS = {
     sales: 'مبيعات',
     refunds: 'مرتجعات',
     loadError:
-      'تعذر تحميل تقرير DSR من API المباشر. افتح تسجيل دخول TRAACS من الداشبورد، سجل الدخول، ثم ابحث مرة أخرى.',
+      'تعذر تحميل تقرير العملاء كاملًا من TRAACS. أعد المحاولة.',
     monthlyDataError: 'تعذر التحقق من بيانات الأرباح والخسائر أو مطابقة إجمالياتها. أعد تحميل التقرير.',
     noCostCentreError: 'اختر مركز تكلفة واحد على الأقل قبل البحث.',
     noReportTitle: 'اختر الفلاتر واضغط بحث',
@@ -275,6 +275,7 @@ export class App {
   protected readonly hasSearched = signal(false);
   protected readonly sessionChecking = signal(false);
   protected readonly sessionReady = signal(false);
+  protected readonly automaticLogin = signal(true);
   protected readonly sessionMessage = signal<string | null>(null);
   protected readonly costCentreOptions: CostCentreOption[] = [
     { id: '1', label: '100 - Head Quarter' },
@@ -449,7 +450,7 @@ export class App {
       return;
     }
 
-    if (!this.sessionReady()) {
+    if (!this.sessionReady() && !this.automaticLogin()) {
       this.hasSearched.set(true);
       this.report.set(null);
       this.error.set(this.t('signInFirst'));
@@ -497,7 +498,7 @@ export class App {
 
   protected refreshMonthlyReport(filters: ProfitLossFilters = this.monthlyFilters()): void {
     const requestId = ++this.monthlyRequestId;
-    if (!this.sessionReady()) {
+    if (!this.sessionReady() && !this.automaticLogin()) {
       this.hasSearched.set(true);
       this.monthlyReport.set(null);
       this.error.set(this.t('signInFirst'));
@@ -552,7 +553,7 @@ export class App {
   protected refreshCostCentreReport(
     filters: CostCentrePeriodicalFilters = this.costCentreFilters(),
   ): void {
-    if (!this.sessionReady()) {
+    if (!this.sessionReady() && !this.automaticLogin()) {
       this.hasSearched.set(true);
       this.costCentreReport.set(null);
       this.error.set(this.t('signInFirst'));
@@ -596,6 +597,7 @@ export class App {
   }
 
   protected checkSession(): void {
+    if (this.sessionChecking()) return;
     this.sessionChecking.set(true);
     this.sessionMessage.set(null);
 
@@ -603,6 +605,7 @@ export class App {
       next: (status) => {
         this.sessionChecking.set(false);
         this.sessionReady.set(status.hasCookie);
+        this.automaticLogin.set(status.automatic !== false);
         this.sessionMessage.set(
           status.hasCookie ? this.t('sessionReady') : this.t('sessionMissing'),
         );

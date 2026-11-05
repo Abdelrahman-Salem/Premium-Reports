@@ -18,6 +18,7 @@ export class ExecutivePerformance {
   readonly options = input.required<CostCentreOption[]>();
   readonly language = input<'ar' | 'en'>('ar');
   readonly sessionReady = input(false);
+  readonly automaticLogin = input(false);
   private readonly service = inject(ExecutivePerformanceService);
   private subscription?: Subscription;
   readonly data = signal<ExecutiveReport | null>(null);
@@ -84,7 +85,7 @@ export class ExecutivePerformance {
   protected load(): void {
     if (!this.valid()) return;
     this.clear();
-    if (!this.sessionReady()) { this.error.set(this.text('سجّل الدخول إلى TRAACS لعرض التقرير.', 'Sign in to TRAACS to load the report.')); return; }
+    if (!this.sessionReady() && !this.automaticLogin()) { this.error.set(this.text('اتصال TRAACS غير جاهز. أعد الاتصال لعرض التقرير.', 'The TRAACS connection is not ready. Reconnect to load the report.')); return; }
     this.busy.set(true);
     const filters = structuredClone(this.filters());
     this.subscription = this.service.getReport(filters, this.options()).subscribe({
@@ -94,7 +95,7 @@ export class ExecutivePerformance {
         if (failure instanceof ExecutiveReportError && failure.reason === 'reconciliation') {
           this.error.set(this.text('إجماليات المصادر لا تتطابق للفترة والمراكز المحددة. لم يُعرض التقرير؛ راجع القيود والفلاتر في TRAACS.', 'Source totals do not reconcile for the selected period and centres. Check the postings and filters in TRAACS.'));
         } else if (failure instanceof HttpErrorResponse && [401, 403].includes(failure.status)) {
-          this.error.set(this.text('انتهت جلسة TRAACS. سجّل الدخول وأعد تحميل التقرير.', 'The TRAACS session expired. Sign in and reload the report.'));
+          this.error.set(this.text('تعذر تجديد اتصال TRAACS. أعد تحميل التقرير.', 'The TRAACS connection could not be renewed. Please retry the report.'));
         } else {
           this.error.set(this.text('تعذر التحقق من اكتمال بيانات الفترة والمراكز المحددة. أعد المحاولة بعد فحص اتصال TRAACS.', 'The selected period and centre data could not be fully verified. Check the TRAACS connection and retry.'));
         }

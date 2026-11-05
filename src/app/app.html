@@ -83,15 +83,17 @@
         <span class="connection-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v5m8-5v5M6 8h12v4a6 6 0 0 1-12 0V8Zm6 10v4" stroke-linecap="round" stroke-linejoin="round"/></svg><i class="session-dot"></i></span>
         <div>
           <strong>{{ t('sessionTitle') }}</strong>
-          <span>{{ sessionMessage() || t('sessionMissing') }}</span>
+          <span>{{ sessionChecking() ? t('checkingSession') : sessionMessage() || t('sessionMissing') }}</span>
         </div>
       </div>
       <p>{{ t('sessionHint') }}</p>
       <div class="auth-actions">
+        @if (!automaticLogin()) {
         <button class="light-btn" type="button" (click)="openTraacsLogin()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6m0-6L10 14M11 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           {{ t('openTraacs') }}
         </button>
+        }
         <button class="light-btn" type="button" (click)="checkSession()" [disabled]="sessionChecking()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" [class.checking]="sessionChecking()" aria-hidden="true"><path d="m12 3 8 4v5c0 5-8 9-8 9S4 17 4 12V7l8-4Z" stroke-linejoin="round"/><path d="m8.5 11.5 2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           {{ sessionChecking() ? t('checkingSession') : t('checkSession') }}
@@ -101,7 +103,7 @@
 
     @if (exportMessage()) { <div class="pdf-status" [class.error]="exportFailed()" role="status">{{ exportMessage() }}</div> }
     @if (reportMode() === 'executive') {
-      <app-executive-performance [options]="costCentreOptions" [language]="language()" [sessionReady]="sessionReady()" />
+      <app-executive-performance [options]="costCentreOptions" [language]="language()" [sessionReady]="sessionReady()" [automaticLogin]="automaticLogin()" />
     } @else if (reportMode() === 'dsr') {
       <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض تقرير DSR' : 'DSR view'">
         <button type="button" [attr.aria-pressed]="dsrView() === 'report'" (click)="dsrView.set('report')">{{ language() === 'ar' ? 'التقرير العادي' : 'Standard report' }}</button>
