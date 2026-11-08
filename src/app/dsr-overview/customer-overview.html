@@ -17,7 +17,7 @@
       }
     }
     <header class="summary customer-summary">
-      <div class="report-heading"><img class="customer-report-logo" src="logo.jpg" alt="First Premium Support Services" /><span>First Premium Support Services / TRAACS</span><h1>{{ text('لوحة تحليل العملاء', 'Customer Insights Dashboard') }}</h1><bdi dir="ltr">{{ filters().fromDate }} — {{ filters().toDate }}</bdi></div>
+      <div class="report-heading"><img class="customer-report-logo" src="logo.jpg" alt="First Premium Support Services" /><span>First Premium Support Services / TRAACS</span><h1>{{ text('تحليل العملاء', 'Customer Analysis') }}</h1><bdi dir="ltr">{{ filters().fromDate }} — {{ filters().toDate }}</bdi></div>
       <div class="metric revenue"><span>{{ text('مبيعات العملاء', 'Customer sales') }}</span><strong>{{ data()?.loadedRows ? (data()!.revenue | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
       <div class="metric net" [title]="text('إيراد الخدمات قبل المصروفات', 'Service income before expenses')"><span>{{ text('إيراد الخدمات', 'Service income') }}</span><strong>{{ data()?.loadedRows ? (data()!.profit | number:'1.0-0') : '-' }}</strong><small>{{ currency() }}</small></div>
       <div class="metric expense"><span>{{ text('العملاء النشطون', 'Active customers') }}</span><strong>{{ data()?.loadedRows ? (data()!.customerCount | number) : '-' }}</strong><small>{{ text('عميل', 'customers') }}</small></div>

@@ -40,8 +40,8 @@ const TRANSLATIONS = {
     salesReport: 'Sales report',
     monthlyReport: 'Sales Performance Dashboard',
     executiveReport: 'Sales Performance Summary',
-    dsrReport: 'Customer Insights Dashboard',
-    costCentrePeriodical: 'Cost Centre Performance Dashboard',
+    dsrReport: 'Customer Analysis',
+    costCentrePeriodical: 'Annual Performance',
     revenue: 'Revenue',
     grossProfit: 'Gross profit',
     netProfit: 'Net profit',
@@ -63,7 +63,7 @@ const TRANSLATIONS = {
     revenueHeatmap: 'Revenue heatmap',
     profitVsRevenue: 'Profit vs revenue',
     monthlyServiceTable: 'Monthly service table',
-    title: 'Customer Insights Dashboard',
+    title: 'Customer Analysis',
     subtitle:
       'Customer sales, service income, monthly activity, and service mix from DSR detail rows.',
     liveApi: 'Live API',
@@ -140,7 +140,7 @@ const TRANSLATIONS = {
     salesReport: 'تقرير المبيعات',
     monthlyReport: 'لوحة أداء مبيعات الخدمات',
     executiveReport: 'لوحة الأداء الشاملة',
-    dsrReport: 'لوحة تحليل العملاء',
+    dsrReport: 'تحليل العملاء',
     revenue: 'الإيراد',
     grossProfit: 'مجمل الربح',
     grossMargin: 'هامش الربح',
@@ -155,7 +155,7 @@ const TRANSLATIONS = {
     revenueHeatmap: 'خريطة الإيراد الحرارية',
     profitVsRevenue: 'الربح مقابل الإيراد',
     monthlyServiceTable: 'جدول الخدمات الشهري',
-    title: 'لوحة تحليل العملاء',
+    title: 'تحليل العملاء',
     subtitle: 'تحليل مبيعات العملاء وإيراد الخدمات ونشاطهم عبر الشهور والخدمات.',
     liveApi: 'بيانات مباشرة',
     searching: 'جاري البحث',
@@ -220,7 +220,7 @@ const TRANSLATIONS = {
     payableSummary: 'ملخص المستحقات',
     profitBreakdown: 'تفصيل الأرباح',
     normalizedResponse: 'الاستجابة المنظمة',
-    costCentrePeriodical: 'لوحة أداء مراكز التكلفة',
+    costCentrePeriodical: 'الأداء السنوي',
     netProfit: '\u0635\u0627\u0641\u064A \u0627\u0644\u0631\u0628\u062D',
     totalExpense: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641',
     activeCostCentres:
@@ -807,6 +807,7 @@ export class App {
   protected async exportCurrentReport(): Promise<void> {
     if (!this.hasActiveReport() || this.loading() || this.exporting()) return;
     const mode = this.reportMode();
+    const exportName = mode === 'dsr' ? 'Customer-Analysis' : mode === 'costCentre' ? 'Annual-Performance' : mode;
     const view = mode === 'executive' ? 'report' : mode === 'monthly' ? this.monthlyView() : mode === 'dsr' ? this.dsrView() : this.costCentreView();
     const title = this.reportTitle();
     const language = this.language();
@@ -819,7 +820,7 @@ export class App {
     try {
       await this.pdfService.download({ root: document.querySelector<HTMLElement>('app-root > .app')!, title: label,
         period, language, portrait: mode === 'executive',
-        fileName: `First-Premium-${mode}-${view}-${new Date().toISOString().slice(0,10)}.pdf`,
+        fileName: `First-Premium-${exportName}-${view}-${new Date().toISOString().slice(0,10)}.pdf`,
         progress: (done, total) => this.exportMessage.set(language === 'ar'
           ? `جاري تجهيز الرسومات ${done} / ${total}` : `Preparing charts ${done} / ${total}`),
       });

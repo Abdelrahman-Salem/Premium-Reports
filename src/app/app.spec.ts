@@ -76,17 +76,17 @@ describe('App', () => {
     expect(compiled.querySelector<HTMLAnchorElement>('.footer-contact')?.getAttribute('href')).toBe('https://wa.me/201144918857');
     compiled.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[2].click();
     fixture.detectChanges();
-    expect(compiled.querySelector('.title')?.textContent).toContain('لوحة تحليل العملاء');
+    expect(compiled.querySelector('.title')?.textContent).toContain('تحليل العملاء');
     expect(compiled.querySelector('.site-footer')).not.toBeNull();
     compiled.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[3].click();
     fixture.detectChanges();
-    expect(compiled.querySelector('.title')?.textContent).toContain('لوحة أداء مراكز التكلفة');
+    expect(compiled.querySelector('.title')?.textContent).toContain('الأداء السنوي');
     expect(compiled.querySelector('.site-footer')).not.toBeNull();
     compiled.querySelector<HTMLButtonElement>('.topbar-actions .light-btn')!.click();
     fixture.detectChanges();
-    expect(compiled.querySelector('.title')?.textContent).toContain('Cost Centre Performance Dashboard');
+    expect(compiled.querySelector('.title')?.textContent).toContain('Annual Performance');
     expect([...compiled.querySelectorAll('.sidebar .nav-button')].map((button) => button.textContent?.trim())).toEqual([
-      'Sales Performance Summary', 'Sales Performance Dashboard', 'Customer Insights Dashboard', 'Cost Centre Performance Dashboard',
+      'Sales Performance Summary', 'Sales Performance Dashboard', 'Customer Analysis', 'Annual Performance',
     ]);
   });
 
