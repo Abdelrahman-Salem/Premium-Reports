@@ -5,7 +5,7 @@
   [attr.aria-busy]="busy()"
 >
   <header>
-    <h2 id="year-comparison-title">{{ text('مقارنة أداء مراكز التكلفة بين السنوات', 'Cost centre performance by year') }}</h2>
+    <h2 id="year-comparison-title">{{ text('مقارنة الأداء السنوي', 'Annual Performance Comparison') }}</h2>
     <span
       >{{
         filters().costCenterName === 'ALL'
@@ -151,7 +151,7 @@
           <div class="year-summary-heading">
             <div class="year-summary-title">
               <span class="summary-year" [id]="'centre-summary-' + row.year">{{ row.year }}</span>
-              <div><strong>{{ text('أداء مراكز التكلفة', 'Cost centre performance') }}</strong><span>{{ text('قيم المقارنة بالريال السعودي', 'Comparison values in SAR') }}</span></div>
+              <div><strong>{{ text('الأداء السنوي', 'Annual Performance') }}</strong><span>{{ text('قيم المقارنة بالريال السعودي', 'Comparison values in SAR') }}</span></div>
             </div>
             <bdi class="summary-dates" dir="ltr">{{ row.fromDate }} — {{ row.toDate }}</bdi>
           </div>
