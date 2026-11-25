@@ -1,0 +1,129 @@
+<div class="year-strip" role="group" [attr.aria-label]="text('سنة المصروفات', 'Expense year')">
+  @for (year of years; track year) {
+    <button type="button" [class.selected]="filters().fromMonth.startsWith(year + '-') && filters().toMonth.startsWith(year + '-')"
+      [attr.aria-pressed]="filters().fromMonth.startsWith(year + '-') && filters().toMonth.startsWith(year + '-')" (click)="selectYear(year)">{{ year }}</button>
+  }
+</div>
+<div class="reference-workspace expense-workspace" [attr.aria-busy]="busy()">
+  <aside class="filter-rail">
+    <app-report-filters [language]="language()" [busy]="busy()" [valid]="valid()" [summary]="filterSummary()" (apply)="load()">
+      <form (ngSubmit)="load()">
+        <fieldset><legend>{{ text('الفترة', 'Period') }}</legend>
+          <label for="expense-from">{{ text('من شهر', 'From month') }}</label>
+          <input id="expense-from" type="month" name="fromMonth" min="1900-01" max="2100-12" [ngModel]="filters().fromMonth" (ngModelChange)="updateMonth('fromMonth', $event)" />
+          <label for="expense-to">{{ text('إلى شهر', 'To month') }}</label>
+          <input id="expense-to" type="month" name="toMonth" min="1900-01" max="2100-12" [ngModel]="filters().toMonth" (ngModelChange)="updateMonth('toMonth', $event)" />
+        </fieldset>
+        <fieldset [disabled]="filters().fromMonth.slice(0,4) !== filters().toMonth.slice(0,4)"><legend>{{ text('الأرباع السنوية', 'Quarters') }}</legend>
+          <div class="quarter-options">@for (q of [1,2,3,4]; track q) {
+            <label><input type="checkbox" [checked]="filters().quarters.includes(q)" (change)="toggleQuarter(q)" />{{ text('الربع', 'Q') }} {{ q }}</label>
+          }</div>
+          <p class="field-note">{{ text('يمكن اختيار أرباع غير متتالية داخل نفس السنة.', 'Select consecutive or nonconsecutive quarters within one year.') }}</p>
+        </fieldset>
+        <fieldset><legend>{{ text('مراكز التكلفة', 'Cost centres') }}</legend>
+          <label class="center-option"><input type="checkbox" [checked]="filters().costCenterIds.length === options().length" (change)="toggleCenter('ALL')" />{{ text('كل المراكز', 'All centres') }}</label>
+          @for (center of options(); track center.id) {
+            <label class="center-option"><input type="checkbox" [checked]="filters().costCenterIds.includes(center.id)" (change)="toggleCenter(center.id)" /><bdi>{{ center.label }}</bdi></label>
+          }
+        </fieldset>
+        @if (data()) {
+          <fieldset><legend>{{ text('نطاق تحليل البنود', 'Account analysis scope') }}</legend>
+            <label for="expense-group">{{ text('مجموعة المصروفات', 'Expense group') }}</label>
+            <select id="expense-group" name="group" [ngModel]="display().groupId" (ngModelChange)="changeDisplay('groupId', $event)">
+              <option value="">{{ text('كل المجموعات', 'All groups') }}</option>
+              @for (group of groupOptions(); track group.id) { <option [value]="group.id">{{ text(group.ar, group.en) }}</option> }
+            </select>
+            <label for="expense-account">{{ text('الحساب', 'Account') }}</label>
+            <select id="expense-account" name="account" [ngModel]="display().accountId" (ngModelChange)="changeDisplay('accountId', $event)">
+              <option value="">{{ text('كل الحسابات', 'All accounts') }}</option>
+              @for (account of accountOptions(); track account.id) { <option [value]="account.id">{{ account.name }}</option> }
+            </select>
+          </fieldset>
+        }
+        @if (!valid()) { <p class="validation">{{ text('حدد فترة صحيحة ومركزًا واحدًا على الأقل.', 'Choose a valid period and at least one centre.') }}</p> }
+      </form>
+    </app-report-filters>
+  </aside>
+  <div class="reference-content expense-content">
+    @if (error()) { <div class="report-error" role="alert">{{ error() }}</div> }
+    @if (view(); as report) {
+      <article class="reference-sheet expense-sheet expense-summary">
+        <div class="expense-report-heading"><div><span class="report-eyebrow">First Premium Support Services / TRAACS</span><h1>{{ text('تحليل المصروفات', 'Expense Analysis') }}</h1></div><span class="currency-pill">SAR</span></div>
+        <div class="expense-meta">
+          @for (period of data()!.periods; track period.fromDate) { <bdi dir="ltr">{{ period.fromDate }} — {{ period.toDate }}</bdi> }
+          <span class="verified-badge"><i></i>{{ text('الإجماليات متطابقة', 'Totals reconciled') }}</span>
+        </div>
+        <p class="expense-centres"><bdi>{{ selectionLabel() }}</bdi></p>
+        <div class="expense-kpis">
+          <div class="expense-kpi primary"><span>{{ text('إجمالي المصروفات', 'Total expenses') }}</span><strong dir="ltr">{{ report.total | number:'1.2-2' }}</strong><small>SAR</small></div>
+          <div class="expense-kpi"><span>{{ text('المتوسط الشهري', 'Monthly average') }}</span><strong dir="ltr">{{ report.average | number:'1.2-2' }}</strong><small>{{ report.months.length }} {{ text('شهر مختار، بما فيها الشهور الصفرية', 'selected months, including zero months') }}</small></div>
+          <div class="expense-kpi"><span>{{ text('أعلى شهر مصروفات', 'Highest expense month') }}</span><strong dir="ltr">{{ report.topMonths.length ? (report.topMonths[0].value | number:'1.0-0') : '—' }}</strong><small>{{ report.topMonths[0]?.label || '—' }}</small></div>
+          <div class="expense-kpi"><span>{{ text('حسابات المصروفات', 'Expense accounts') }}</span><strong>{{ activeAccounts() }}</strong><small>{{ text('حسابات لها أرصدة شهرية خلال الفترة', 'Accounts with monthly balances in the period') }}</small></div>
+        </div>
+        <div class="expense-context"><span>{{ text('نطاق العرض:', 'Display scope:') }} <strong><bdi>{{ scopeLabel() }}</bdi></strong></span><span>{{ text('وقت التحميل', 'Retrieved') }} <bdi dir="ltr">{{ data()!.receivedAt | date:'yyyy-MM-dd HH:mm' }}</bdi></span></div>
+        @if (incompleteCalendar()) { <p class="calendar-note">{{ text('الفترة تشمل الشهر الجاري أو شهورًا قادمة. الأرقام هي الأرصدة المتاحة وقت التحميل، ولا تمثل إقفال تلك الشهور.', 'This period includes the current or future months. Figures are balances available at retrieval, not a month-end close.') }}</p> }
+        @if (report.unclassifiedCount) { <p class="classification-note">{{ report.unclassifiedCount }} {{ text('حساب غير مصنف، مدرج بالكامل ضمن الإجمالي وتفاصيل المصروفات.', 'unclassified accounts are fully included in the total and expense details.') }}</p> }
+      </article>
+
+      <article class="reference-sheet expense-sheet" id="expense-groups">
+        <header class="section-header"><div><span class="section-number">01</span><h2>{{ text('ملخص مجموعات المصروفات', 'Summary Expenses') }}</h2></div><span>{{ report.groups.length }} {{ text('مجموعة', 'groups') }}</span></header>
+        <app-expense-bars [items]="groupBars()" [label]="text('المصروفات حسب المجموعة ونسبتها من الإجمالي', 'Expense groups and their share of the total')" />
+        @if (!report.accounts.length) { <p class="empty-note">{{ text('لا توجد حسابات مصروفات للنطاق المحدد.', 'No expense accounts for this selection.') }}</p> }
+        <p class="chart-note">{{ text('القيمة والنسبة من إجمالي المصروفات المعروضة. التسويات السالبة تخصم من الإجمالي.', 'Amounts and shares of displayed expenses. Negative adjustments reduce the total.') }}</p>
+      </article>
+
+      <article class="reference-sheet expense-sheet" id="expense-top-accounts">
+        <header class="section-header"><div><span class="section-number">02</span><h2>{{ text('أكبر 5 حسابات مصروفات', 'Top 5 Expenses') }}</h2></div><span>SAR</span></header>
+        <app-expense-bars [items]="report.topAccounts" [highlight]="true" [label]="text('أكبر حسابات المصروفات', 'Top expense accounts')" />
+        @if (!report.topAccounts.length) { <p class="empty-note">{{ text('لا توجد مصروفات موجبة في الفترة.', 'There are no positive expense balances in this period.') }}</p> }
+      </article>
+
+      <article class="reference-sheet expense-sheet" id="expense-monthly">
+        <header class="section-header"><div><span class="section-number">03</span><h2>{{ text('المصروفات الشهرية', 'Monthly Expenses') }}</h2></div><span>SAR</span></header>
+        @for (months of monthWindows(); track $index) {
+          <div class="expense-column-window"><app-performance-columns [items]="monthColumns(months)" [label]="text('مصروفات كل شهر ونسبته من إجمالي الفترة', 'Monthly expenses and share of period total')" /></div>
+        }
+        <p class="chart-note">{{ text('النسب من إجمالي مصروفات الفترة المختارة.', 'Shares are calculated against total expenses in the selected period.') }}</p>
+      </article>
+
+      <article class="reference-sheet expense-sheet" id="expense-top-months">
+        <header class="section-header"><div><span class="section-number">04</span><h2>{{ text('أعلى 5 شهور مصروفات', 'Top 5 Months by Expenses') }}</h2></div><span>SAR</span></header>
+        <app-expense-bars [items]="report.topMonths" [highlight]="true" [label]="text('أعلى الشهور مصروفات', 'Months with highest expenses')" />
+      </article>
+
+      <article class="reference-sheet expense-sheet" id="expense-month-details">
+        <header class="section-header"><div><span class="section-number">05</span><h2>{{ text('أكبر 5 بنود في كل شهر', 'Top 5 Expenses by Month') }}</h2></div><span>SAR</span></header>
+        <div class="expense-month-grid">
+          @for (month of report.months; track month.key) {
+            <section class="expense-month-card">
+              <header><div><bdi>{{ month.label }}</bdi>@if (monthState(month.key)) { <small>{{ monthState(month.key) }}</small> }</div><strong dir="ltr" [title]="(month.amount | number:'1.2-2') || ''">{{ month.amount | number:'1.0-0' }}</strong></header>
+              <app-expense-bars [items]="month.topAccounts" [highlight]="true" [compact]="true" [showRatios]="false" [label]="month.label" />
+              @if (!month.topAccounts.length) { <p class="empty-note">{{ text('لا توجد بنود مصروفات موجبة.', 'No positive expense items.') }}</p> }
+            </section>
+          }
+        </div>
+        <p class="chart-note">{{ text('إجمالي الشهر يشمل كل الحسابات والتسويات؛ الرسم يعرض أكبر خمسة بنود موجبة فقط.', 'Month totals include all accounts and adjustments; each chart shows the five largest positive items.') }}</p>
+      </article>
+
+      @if (!scoped()) {
+        <article class="reference-sheet expense-sheet" id="expense-centres">
+          <header class="section-header"><div><span class="section-number">06</span><h2>{{ text('المصروفات حسب مركز التكلفة', 'Expenses by Cost Centre') }}</h2></div><span>SAR</span></header>
+          <div class="expense-column-window"><app-performance-columns [items]="centreColumns()" [label]="text('مصروفات المراكز المختارة ونسبتها من الإجمالي', 'Selected centre expenses and share of the total')" /></div>
+        </article>
+      } @else { <p class="centre-scope-note">{{ text('لعرض مقارنة مصروفات المراكز، اختر كل المجموعات وكل الحسابات.', 'Select all groups and accounts to view the cost centre comparison.') }}</p> }
+
+      <article class="reference-sheet expense-sheet" id="expense-account-details">
+        <header class="section-header"><div><span class="section-number">07</span><h2>{{ text('تفاصيل مجموعات المصروفات', 'Expense Group Details') }}</h2></div></header>
+        @for (group of report.groups; track group.id) {
+          <section class="expense-group" [attr.aria-labelledby]="'expense-group-' + group.id">
+            <header class="expense-group-heading"><h3 [id]="'expense-group-' + group.id">{{ text(group.ar, group.en) }} <small>{{ group.accounts.length }} {{ text('حساب', 'accounts') }}</small></h3><strong dir="ltr">{{ group.amount | number:'1.0-0' }} <small>{{ share(group.amount) === null ? '—' : (share(group.amount) | percent:'1.1-1') }}</small></strong></header>
+            <div class="expense-group-content"><app-expense-bars [items]="groupItems(group)" [label]="text(group.ar, group.en)" /></div>
+          </section>
+        }
+        <p class="chart-note">{{ text('نسب الحسابات محسوبة من إجمالي المصروفات المعروضة، وليست من إجمالي المجموعة. مرّر على أي رقم لعرض قيمته الدقيقة.', 'Account shares use total displayed expenses, not the group total. Hover over a chart row for the exact amount.') }}</p>
+      </article>
+    } @else {
+      <div class="expense-empty" role="status"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 27h23M9 25V14m7 11V6m7 19V11" stroke-linecap="round"/></svg></span><h2>{{ busy() ? text('جاري تحميل ومراجعة المصروفات', 'Loading and verifying expenses') : text('تحليل المصروفات', 'Expense Analysis') }}</h2><p>{{ busy() ? text('نحمّل الحسابات كاملة ونطابق إجماليات كل شهر مع المراكز المختارة.', 'Fetching all account pages and reconciling monthly totals against the selected centres.') : text('حدد الفترة والمراكز لعرض التقرير.', 'Select the period and centres to load the report.') }}</p></div>
+    }
+  </div>
+</div>

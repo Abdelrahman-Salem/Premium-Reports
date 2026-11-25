@@ -27,6 +27,7 @@ export class ReportPdfService {
     options.root.parentElement!.append(stage);
     try {
       clone.querySelectorAll('.sidebar,.topbar,.auth-panel,.report-view-switch,.year-strip,.filter-rail,.section-nav,.notice,.site-footer,.print-header,.pdf-status,.comparison-filters,.year-comparison > form,.pl-share-picker,.monthly-share-picker,.customer-controls').forEach((element) => element.remove());
+      clone.querySelectorAll('.centre-scope-note,.contribution-basis-controls').forEach((element) => element.remove());
       this.expandWideCharts(clone);
       const content = clone.querySelector<HTMLElement>('.canvas,.reference-content,.monthly-comparison,.year-comparison');
       if (!content) throw new Error('No report content to export.');
@@ -88,8 +89,9 @@ export class ReportPdfService {
         const totalHeight = Math.ceil(bounds.height);
         const blockHeight = totalHeight * mmPerPixel;
         const fullPageHeight = bottomY - startY;
-        if (options.portrait && index > 0 && position > startY) nextPage();
+        if (options.portrait && !block.matches('.expense-sheet') && index > 0 && position > startY) nextPage();
         if (blockHeight <= fullPageHeight && position + blockHeight > bottomY) nextPage();
+        if (block.matches('.expense-sheet') && blockHeight > fullPageHeight && bottomY - position < 60) nextPage();
         // Keep section headings with the next chart rather than alone at the bottom of a page.
         if (block.matches('.section-heading,.comparison-header') && bottomY - position < blockHeight + 40) nextPage();
         const breaks = this.safeBreaks(block);
@@ -145,8 +147,8 @@ export class ReportPdfService {
 
   private safeBreaks(block: HTMLElement): number[] {
     const top = block.getBoundingClientRect().top;
-    return [...new Set(Array.from(block.querySelectorAll<HTMLElement>('tr,.reference-chart,.centre-performance-row,.top-customer,.customer-rank-row,.account-bar,.customer-list-row,.columns,.customer-months,.pl-margin-columns,.pdf-column-group,.year-summary,.reference-columns,.customer-period-row,.customer-service-row'))
-      .filter((element) => element.offsetHeight)
+    return [...new Set(Array.from(block.querySelectorAll<HTMLElement>('tr,.reference-chart,.centre-performance-row,.top-customer,.customer-rank-row,.account-bar,.customer-list-row,.columns,.customer-months,.pl-margin-columns,.pdf-column-group,.year-summary,.reference-columns,.customer-period-row,.customer-service-row,.expense-bar-row,.expense-month-card,.expense-group,.expense-column-window,.adjusted-service-row'))
+      .filter((element) => element.offsetHeight && !(element.matches('.expense-bar-row') && element.closest('.expense-month-card')))
       .map((element) => Math.ceil(element.getBoundingClientRect().bottom - top) + 2))].sort((a, b) => a - b);
   }
 

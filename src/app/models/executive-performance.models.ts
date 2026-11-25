@@ -14,12 +14,15 @@ export interface ExecutivePeriod {
   monthKeys: string[];
 }
 
-export interface ExecutiveReport {
+export interface FinancialReport {
   finance: ProfitLossDashboard;
-  customers: DsrCustomerDashboardView;
   periods: ExecutivePeriod[];
   centerNames: string[];
   receivedAt: Date;
+}
+
+export interface ExecutiveReport extends FinancialReport {
+  customers: DsrCustomerDashboardView;
 }
 
 export class ExecutiveReportError extends Error {

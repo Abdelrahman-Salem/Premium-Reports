@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription, catchError, forkJoin, map, of, timeout } from 'rxjs';
 import { ProfitLossReportService } from '../core/services/profit-loss-report.service';
@@ -16,6 +16,7 @@ type YearResult = { year: number; status: 'ready' | 'empty' | 'error'; sales: nu
 })
 export class MonthlyYearComparison {
   readonly filters = input.required<ProfitLossFilters>();
+  readonly filtersChange = output<ProfitLossFilters>();
   readonly language = input<'ar' | 'en'>('ar');
   private readonly service = inject(ProfitLossReportService);
   private subscription?: Subscription;
@@ -24,6 +25,7 @@ export class MonthlyYearComparison {
   protected readonly mode = signal<'period' | 'full'>('period');
   protected readonly busy = signal(false);
   protected readonly requested = signal(false);
+  protected readonly months = Array.from({ length: 12 }, (_, index) => String(index + 1));
   protected readonly results = signal<YearResult[]>([]);
   protected readonly metrics: { key: Metric; ar: string; en: string; unit: string }[] = [
     { key: 'sales', ar: 'مبيعات الخدمات', en: 'Service sales', unit: 'SAR' },
@@ -69,6 +71,9 @@ export class MonthlyYearComparison {
     this.results.set([]);
     this.requested.set(false);
     this.mode.set(value);
+  }
+  protected updateMonth(key: 'fromMonth' | 'toMonth', value: string): void {
+    this.filtersChange.emit({ ...this.filters(), [key]: value });
   }
   protected yearColor(year: number): string {
     return ['#087f9c', '#1c3c6c', '#8965b1', '#c58b32', '#2b9274'][year % 5];

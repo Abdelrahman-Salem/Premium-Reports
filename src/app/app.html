@@ -1,4 +1,4 @@
-<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'" [class.executive-mode]="reportMode() === 'executive'">
+<div class="app" [attr.dir]="direction()" [class.rtl]="language() === 'ar'" [class.executive-mode]="(reportMode() === 'executive' && executiveView() === 'report') || reportMode() === 'expense'">
   <aside class="sidebar">
     <div class="brand">
       <img class="brand-logo" src="logo.jpg" alt="First Premium" />
@@ -17,12 +17,9 @@
     </nav>
     <div class="nav-label additional-reports-label" id="additional-reports-label">{{ t('additionalReports') }}</div>
     <nav class="nav nav-additional" aria-labelledby="additional-reports-label">
-      <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'monthly'" (click)="setReportMode('monthly')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M4 5h16v14H4z" />
-          <path d="M8 3v4M16 3v4M4 10h16" />
-        </svg>
-        {{ t('monthlyReport') }}
+      <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'expense'" (click)="setReportMode('expense')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3Z"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+        {{ t('expenseReport') }}
       </button>
       <button class="nav-item nav-button" type="button" [class.active]="reportMode() === 'dsr'" (click)="setReportMode('dsr')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -38,7 +35,6 @@
         </svg>
         {{ t('costCentrePeriodical') }}
       </button>
-
     </nav>
   </aside>
 
@@ -51,7 +47,7 @@
       <div class="page-identity">
         <span class="page-symbol" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="9" height="9" rx="2"/><rect x="16" y="3" width="9" height="9" rx="2"/><rect x="3" y="16" width="9" height="9" rx="2"/><path d="M17 25v-5m4 5V15m4 10v-7" stroke-linecap="round"/></svg></span>
         <div class="page-heading">
-          <div class="eyebrow-row"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m3 14 5-5 4 3 5-7m-5 0h5v5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t('salesReport') }}</div>
+          <div class="eyebrow-row"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m3 14 5-5 4 3 5-7m-5 0h5v5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ t(reportMode() === 'expense' ? 'financialReport' : 'salesReport') }}</div>
           <div class="title">{{ reportTitle() }}</div>
           @if (reportSubtitle()) { <p class="subtitle">{{ reportSubtitle() }}</p> }
         </div>
@@ -103,7 +99,17 @@
 
     @if (exportMessage()) { <div class="pdf-status" [class.error]="exportFailed()" role="status">{{ exportMessage() }}</div> }
     @if (reportMode() === 'executive') {
-      <app-executive-performance [options]="costCentreOptions" [language]="language()" [sessionReady]="sessionReady()" [automaticLogin]="automaticLogin()" />
+      <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض لوحة الأداء الشاملة' : 'Sales performance summary view'">
+        <button type="button" [attr.aria-pressed]="executiveView() === 'report'" (click)="executiveView.set('report')">{{ language() === 'ar' ? 'التقرير العادي' : 'Standard report' }}</button>
+        <button type="button" [attr.aria-pressed]="executiveView() === 'comparison'" (click)="executiveView.set('comparison')">{{ language() === 'ar' ? 'مقارنة السنوات' : 'Compare years' }}</button>
+      </div>
+      @if (executiveView() === 'report') {
+        <app-executive-performance [options]="costCentreOptions" [language]="language()" [sessionReady]="sessionReady()" [automaticLogin]="automaticLogin()" />
+      } @else {
+        <app-monthly-year-comparison [filters]="comparisonFilters()" [language]="language()" (filtersChange)="comparisonFilters.set($event)" />
+      }
+    } @else if (reportMode() === 'expense') {
+      <app-expense-overview [options]="costCentreOptions" [language]="language()" [sessionReady]="sessionReady()" [automaticLogin]="automaticLogin()" />
     } @else if (reportMode() === 'dsr') {
       <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض تقرير DSR' : 'DSR view'">
         <button type="button" [attr.aria-pressed]="dsrView() === 'report'" (click)="dsrView.set('report')">{{ language() === 'ar' ? 'التقرير العادي' : 'Standard report' }}</button>
@@ -122,28 +128,6 @@
         />
       } @else {
         <app-dsr-year-comparison [filters]="filters()" [language]="language()" />
-      }
-    } @else if (reportMode() === 'monthly') {
-      <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض المبيعات الشهرية' : 'Monthly sales view'">
-        <button type="button" [attr.aria-pressed]="monthlyView() === 'report'" (click)="monthlyView.set('report')">
-          {{ language() === 'ar' ? 'التقرير العادي' : 'Standard report' }}
-        </button>
-        <button type="button" [attr.aria-pressed]="monthlyView() === 'comparison'" (click)="monthlyView.set('comparison')">
-          {{ language() === 'ar' ? 'مقارنة السنوات' : 'Compare years' }}
-        </button>
-      </div>
-      @if (monthlyView() === 'report') {
-        <app-monthly-sales-overview
-          [data]="monthlyDashboard()"
-          [filters]="monthlyFilters()"
-          [language]="language()"
-          [loading]="loading()"
-          (filtersChange)="setMonthlyFilters($event)"
-          (yearSelected)="showMonthlyYear($event)"
-          (search)="refreshMonthlyReport()"
-        />
-      } @else {
-        <app-monthly-year-comparison [filters]="monthlyFilters()" [language]="language()" />
       }
     } @else {
       <div class="report-view-switch" role="group" [attr.aria-label]="language() === 'ar' ? 'عرض مراكز التكلفة' : 'Cost centre view'">
@@ -170,7 +154,7 @@
       }
     }
 
-    @if (error() && ((reportMode() === 'dsr' && dsrView() === 'report') || (reportMode() === 'costCentre' && costCentreView() === 'report') || (reportMode() === 'monthly' && monthlyView() === 'report'))) {
+    @if (error() && ((reportMode() === 'dsr' && dsrView() === 'report') || (reportMode() === 'costCentre' && costCentreView() === 'report'))) {
       <div class="notice" role="status">{{ error() }}</div>
     }
 

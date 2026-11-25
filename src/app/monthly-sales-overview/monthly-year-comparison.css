@@ -38,7 +38,7 @@
   display: grid;
   gap: 5px;
 }
-.comparison-filters input[type='number'] {
+.comparison-filters input[type='number'], .comparison-filters select {
   width: 115px;
   border: 1px solid var(--border);
   padding: 8px;

@@ -1,6 +1,6 @@
 <section class="monthly-comparison financial-year-comparison" [attr.aria-busy]="busy()">
   <header class="comparison-header">
-    <div><span>TRAACS / {{ text('لوحة أداء مبيعات الخدمات', 'Sales Performance Dashboard') }}</span><h2>{{ text('مقارنة الأداء المالي بين السنوات', 'Financial performance by year') }}</h2></div>
+    <div><span>TRAACS / {{ text('لوحة الأداء الشاملة', 'Sales Performance Summary') }}</span><h2>{{ text('مقارنة الأداء المالي بين السنوات', 'Financial performance by year') }}</h2></div>
     <strong>{{ mode() === 'full' ? text('السنة كاملة', 'Full year') : text('نفس الشهور من كل سنة', 'Same months each year') }}</strong>
   </header>
   <form class="comparison-filters" (ngSubmit)="compare()">
@@ -10,6 +10,10 @@
       <label><input type="radio" name="monthlyComparisonMode" value="period" [checked]="mode() === 'period'" (change)="updateMode('period')" />{{ text('الشهور المحددة', 'Selected months') }}</label>
       <label><input type="radio" name="monthlyComparisonMode" value="full" [checked]="mode() === 'full'" (change)="updateMode('full')" />{{ text('السنة كاملة', 'Full year') }}</label>
     </fieldset>
+    @if (mode() === 'period') {
+      <label>{{ text('من شهر', 'From month') }}<select name="comparisonMonthFrom" [ngModel]="filters().fromMonth" (ngModelChange)="updateMonth('fromMonth', $event)">@for (month of months; track month) { <option [value]="month">{{ month }}</option> }</select></label>
+      <label>{{ text('إلى شهر', 'To month') }}<select name="comparisonMonthTo" [ngModel]="filters().toMonth" (ngModelChange)="updateMonth('toMonth', $event)">@for (month of months; track month) { <option [value]="month">{{ month }}</option> }</select></label>
+    }
     <button class="apply" type="submit" [disabled]="!valid() || busy()">{{ busy() ? text('جاري التحميل', 'Loading') : text('عرض المقارنة', 'Show comparison') }}</button>
   </form>
   @if (mode() === 'period') { <p class="comparison-period">{{ text('الشهور', 'Months') }} {{ filters().fromMonth }} - {{ filters().toMonth }}</p> }
