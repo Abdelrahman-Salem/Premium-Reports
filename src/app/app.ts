@@ -2,15 +2,14 @@ import { Component, HostListener, computed, inject, signal, viewChild } from '@a
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { DsrReportService } from './core/services/dsr-report.service';
-import { ProfitLossReportService } from './core/services/profit-loss-report.service';
 import { ReportPdfService } from './core/services/report-pdf.service';
 import { CostCentreOverview } from './cost-centre-overview/cost-centre-overview';
 import { YearComparison } from './cost-centre-overview/year-comparison';
-import { MonthlySalesOverview } from './monthly-sales-overview/monthly-sales-overview';
 import { MonthlyYearComparison } from './monthly-sales-overview/monthly-year-comparison';
 import { CustomerOverview } from './dsr-overview/customer-overview';
 import { DsrYearComparison } from './dsr-overview/dsr-year-comparison';
 import { ExecutivePerformance } from './executive-performance/executive-performance';
+import { ExpenseOverview } from './expense-overview/expense-overview';
 import {
   CostCentrePeriodicalDashboardView,
   CostCentrePeriodicalFilters,
@@ -23,12 +22,12 @@ import {
   MetricCard,
   MonthlySaleServiceRow,
 } from './models/dsr-report.models';
-import { ProfitLossDashboard, ProfitLossFilters } from './models/profit-loss.models';
+import { ProfitLossFilters } from './models/profit-loss.models';
 
 type Language = 'en' | 'ar';
-const defaultMonthlyYear = String(new Date().getFullYear());
-const defaultMonthlyEndMonth = String(new Date().getMonth() + 1);
-type ReportMode = 'monthly' | 'dsr' | 'costCentre' | 'executive';
+const defaultComparisonYear = String(new Date().getFullYear());
+const defaultComparisonEndMonth = String(new Date().getMonth() + 1);
+type ReportMode = 'dsr' | 'costCentre' | 'executive' | 'expense';
 type ReportSection = 'overview' | 'profit' | 'type' | 'payment' | 'payable' | 'expense' | 'raw';
 
 const TRANSLATIONS = {
@@ -38,8 +37,9 @@ const TRANSLATIONS = {
     finance: 'Finance',
     operations: 'Operations',
     salesReport: 'Sales report',
-    monthlyReport: 'Sales Performance Dashboard',
     executiveReport: 'Sales Performance Summary',
+    expenseReport: 'Expense Analysis',
+    financialReport: 'Financial report',
     dsrReport: 'Customer Analysis',
     costCentrePeriodical: 'Annual Performance',
     revenue: 'Revenue',
@@ -96,7 +96,6 @@ const TRANSLATIONS = {
     refunds: 'Refunds',
     loadError:
       'Unable to load the complete DSR report from TRAACS. Please retry.',
-    monthlyDataError: 'Could not verify the profit and loss report totals. Please retry the report.',
     noCostCentreError: 'Select at least one cost centre before searching.',
     noReportTitle: 'Choose filters and run a search',
     noReportSubtitle:
@@ -138,8 +137,9 @@ const TRANSLATIONS = {
     finance: 'المالية',
     operations: 'العمليات',
     salesReport: 'تقرير المبيعات',
-    monthlyReport: 'لوحة أداء مبيعات الخدمات',
     executiveReport: 'لوحة الأداء الشاملة',
+    expenseReport: 'تحليل المصروفات',
+    financialReport: 'تقرير مالي',
     dsrReport: 'تحليل العملاء',
     revenue: 'الإيراد',
     grossProfit: 'مجمل الربح',
@@ -186,7 +186,6 @@ const TRANSLATIONS = {
     refunds: 'مرتجعات',
     loadError:
       'تعذر تحميل تقرير العملاء كاملًا من TRAACS. أعد المحاولة.',
-    monthlyDataError: 'تعذر التحقق من بيانات الأرباح والخسائر أو مطابقة إجمالياتها. أعد تحميل التقرير.',
     noCostCentreError: 'اختر مركز تكلفة واحد على الأقل قبل البحث.',
     noReportTitle: 'اختر الفلاتر واضغط بحث',
     noReportSubtitle:
@@ -240,21 +239,21 @@ type TranslationKey = keyof typeof TRANSLATIONS.en;
 
 @Component({
   selector: 'app-root',
-  imports: [CostCentreOverview, YearComparison, MonthlySalesOverview, MonthlyYearComparison, CustomerOverview, DsrYearComparison, ExecutivePerformance],
+  imports: [CostCentreOverview, YearComparison, MonthlyYearComparison, CustomerOverview, DsrYearComparison, ExecutivePerformance, ExpenseOverview],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App {
   private readonly dsrReportService = inject(DsrReportService);
-  private readonly profitLossReportService = inject(ProfitLossReportService);
   private readonly pdfService = inject(ReportPdfService);
   protected readonly exporting = signal(false);
   protected readonly exportMessage = signal('');
   protected readonly exportFailed = signal(false);
-  private readonly monthlyComparison = viewChild(MonthlyYearComparison);
+  private readonly executiveComparison = viewChild(MonthlyYearComparison);
   private readonly dsrComparison = viewChild(DsrYearComparison);
   private readonly costCentreComparison = viewChild(YearComparison);
   private readonly executiveReport = viewChild(ExecutivePerformance);
+  private readonly expenseReport = viewChild(ExpenseOverview);
   private readonly chartColors = [
     '#2e6f73',
     '#c77b32',
@@ -266,9 +265,9 @@ export class App {
     '#1e8f6f',
   ];
 
-  protected readonly reportMode = signal<ReportMode>('monthly');
+  protected readonly reportMode = signal<ReportMode>('expense');
   protected readonly costCentreView = signal<'report' | 'comparison'>('report');
-  protected readonly monthlyView = signal<'report' | 'comparison'>('report');
+  protected readonly executiveView = signal<'report' | 'comparison'>('report');
   protected readonly dsrView = signal<'report' | 'comparison'>('report');
   protected readonly language = signal<Language>('ar');
   protected readonly costCentreOpen = signal(false);
@@ -294,11 +293,11 @@ export class App {
     showSales: true,
     showRefunds: true,
   });
-  protected readonly monthlyFilters = signal<ProfitLossFilters>({
+  protected readonly comparisonFilters = signal<ProfitLossFilters>({
     fromMonth: '1',
-    fromYear: defaultMonthlyYear,
-    toMonth: defaultMonthlyEndMonth,
-    toYear: defaultMonthlyYear,
+    fromYear: defaultComparisonYear,
+    toMonth: defaultComparisonEndMonth,
+    toYear: defaultComparisonYear,
   });
   protected readonly costCentreFilters = signal<CostCentrePeriodicalFilters>({
     fromDate: '2026-01-01',
@@ -310,8 +309,6 @@ export class App {
   });
 
   protected readonly report = signal<DsrReportResult | null>(null);
-  protected readonly monthlyReport = signal<ProfitLossDashboard | null>(null);
-  private monthlyRequestId = 0;
   protected readonly costCentreReport = signal<CostCentrePeriodicalDashboardView | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -325,9 +322,6 @@ export class App {
     const report = this.report();
     return report ? this.dsrReportService.toCustomerDashboardView(report.data) : null;
   });
-  protected readonly monthlyDashboard = computed<ProfitLossDashboard | null>(() =>
-    this.monthlyReport(),
-  );
   protected readonly costCentreDashboard = computed<CostCentrePeriodicalDashboardView | null>(() =>
     this.costCentreReport(),
   );
@@ -359,10 +353,6 @@ export class App {
   protected readonly periodLabel = computed(
     () => `${this.filters().fromDate} - ${this.filters().toDate}`,
   );
-  protected readonly monthlyPeriodLabel = computed(
-    () =>
-      `${this.monthlyFilters().fromMonth}/${this.monthlyFilters().fromYear} - ${this.monthlyFilters().toMonth}/${this.monthlyFilters().toYear}`,
-  );
   protected readonly costCentrePeriodLabel = computed(() => {
     const filters = this.costCentreFilters();
     if (filters.quarters?.length) {
@@ -372,29 +362,18 @@ export class App {
     return `${filters.fromDate} - ${filters.toDate}`;
   });
   protected readonly visiblePeriodLabel = computed(() => {
+    if (this.reportMode() === 'expense') return this.expenseReport()?.periodLabel() ?? '';
     if (this.reportMode() === 'executive') return this.executiveReport()?.periodLabel() ?? '';
-    if (this.reportMode() === 'monthly') {
-      return this.monthlyPeriodLabel();
-    }
-
     return this.reportMode() === 'costCentre' ? this.costCentrePeriodLabel() : this.periodLabel();
   });
   protected readonly reportTitle = computed(() => {
+    if (this.reportMode() === 'expense') return this.t('expenseReport');
     if (this.reportMode() === 'executive') return this.t('executiveReport');
-    if (this.reportMode() === 'monthly') {
-      return this.t('monthlyReport');
-    }
-
     return this.reportMode() === 'costCentre' ? this.t('costCentrePeriodical') : this.t('title');
   });
   protected readonly reportSubtitle = computed(() => {
+    if (this.reportMode() === 'expense') return '';
     if (this.reportMode() === 'executive') return '';
-    if (this.reportMode() === 'monthly') {
-      return this.language() === 'ar'
-        ? 'تحليل شهري لإيرادات الخدمات والربحية والحجم مع مقارنة بين الشهور والخدمات.'
-        : 'Monthly service revenue, profit, volume, service mix, and performance comparison.';
-    }
-
     if (this.reportMode() === 'costCentre') {
       return this.language() === 'ar'
         ? 'تحليل الإيرادات والمصروفات وصافي الربح حسب مركز التكلفة والحساب خلال الفترة.'
@@ -405,11 +384,9 @@ export class App {
   });
   protected readonly hasActiveReport = computed(
     () => {
-      if (this.reportMode() === 'executive') return this.executiveReport()?.printReady() ?? false;
-      if (this.reportMode() === 'monthly') {
-        return this.monthlyView() === 'comparison'
-          ? Boolean(this.monthlyComparison()?.printReady()) : Boolean(this.monthlyDashboard());
-      }
+      if (this.reportMode() === 'expense') return this.expenseReport()?.printReady() ?? false;
+      if (this.reportMode() === 'executive') return this.executiveView() === 'comparison'
+        ? Boolean(this.executiveComparison()?.printReady()) : (this.executiveReport()?.printReady() ?? false);
       if (this.reportMode() === 'dsr') {
         return this.dsrView() === 'comparison'
           ? Boolean(this.dsrComparison()?.printReady()) : Boolean(this.customerDashboard()?.loadedRows);
@@ -496,60 +473,6 @@ export class App {
     this.refreshReport(filters);
   }
 
-  protected refreshMonthlyReport(filters: ProfitLossFilters = this.monthlyFilters()): void {
-    const requestId = ++this.monthlyRequestId;
-    if (!this.sessionReady() && !this.automaticLogin()) {
-      this.hasSearched.set(true);
-      this.monthlyReport.set(null);
-      this.error.set(this.t('signInFirst'));
-      this.checkSession();
-      return;
-    }
-
-    this.hasSearched.set(true);
-    this.loading.set(true);
-    this.error.set(null);
-    this.monthlyReport.set(null);
-
-    this.profitLossReportService.getReport(filters).subscribe({
-      next: (view) => {
-        if (requestId !== this.monthlyRequestId) return;
-        if (view.months.length === 0) {
-          this.error.set(this.t('noDataOrSession'));
-          this.loading.set(false);
-          return;
-        }
-
-        this.monthlyReport.set(view);
-        this.loading.set(false);
-      },
-      error: (error: unknown) => {
-        if (requestId !== this.monthlyRequestId) return;
-        this.loading.set(false);
-        if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403)) {
-          this.sessionReady.set(false);
-          this.error.set(this.t('signInFirst'));
-          this.checkSession();
-        } else {
-          this.error.set(this.t('monthlyDataError'));
-        }
-      },
-    });
-  }
-
-  protected showMonthlyYear(filters: ProfitLossFilters): void {
-    this.monthlyFilters.set(filters);
-    this.refreshMonthlyReport(filters);
-  }
-
-  protected setMonthlyFilters(filters: ProfitLossFilters): void {
-    ++this.monthlyRequestId;
-    this.monthlyFilters.set(filters);
-    this.monthlyReport.set(null);
-    this.error.set(null);
-    this.loading.set(false);
-  }
-
   protected refreshCostCentreReport(
     filters: CostCentrePeriodicalFilters = this.costCentreFilters(),
   ): void {
@@ -624,13 +547,6 @@ export class App {
 
   protected updateFilter<K extends keyof DsrFilters>(key: K, value: DsrFilters[K]): void {
     this.filters.update((current) => ({ ...current, [key]: value }));
-  }
-
-  protected updateMonthlyFilter<K extends keyof ProfitLossFilters>(
-    key: K,
-    value: ProfitLossFilters[K],
-  ): void {
-    this.monthlyFilters.update((current) => ({ ...current, [key]: value }));
   }
 
   protected updateCostCentreFilter<K extends keyof CostCentrePeriodicalFilters>(
@@ -807,8 +723,8 @@ export class App {
   protected async exportCurrentReport(): Promise<void> {
     if (!this.hasActiveReport() || this.loading() || this.exporting()) return;
     const mode = this.reportMode();
-    const exportName = mode === 'dsr' ? 'Customer-Analysis' : mode === 'costCentre' ? 'Annual-Performance' : mode;
-    const view = mode === 'executive' ? 'report' : mode === 'monthly' ? this.monthlyView() : mode === 'dsr' ? this.dsrView() : this.costCentreView();
+    const exportName = mode === 'expense' ? 'Expense-Analysis' : mode === 'dsr' ? 'Customer-Analysis' : mode === 'costCentre' ? 'Annual-Performance' : mode;
+    const view = mode === 'executive' ? this.executiveView() : mode === 'expense' ? 'report' : mode === 'dsr' ? this.dsrView() : this.costCentreView();
     const title = this.reportTitle();
     const language = this.language();
     const period = view === 'report' ? this.visiblePeriodLabel() :
@@ -819,7 +735,7 @@ export class App {
     this.exportMessage.set(language === 'ar' ? 'جاري تجهيز ملف PDF والرسومات…' : 'Preparing your dashboard PDF…');
     try {
       await this.pdfService.download({ root: document.querySelector<HTMLElement>('app-root > .app')!, title: label,
-        period, language, portrait: mode === 'executive',
+        period, language, portrait: (mode === 'executive' && view === 'report') || mode === 'expense',
         fileName: `First-Premium-${exportName}-${view}-${new Date().toISOString().slice(0,10)}.pdf`,
         progress: (done, total) => this.exportMessage.set(language === 'ar'
           ? `جاري تجهيز الرسومات ${done} / ${total}` : `Preparing charts ${done} / ${total}`),

@@ -23,6 +23,32 @@ The first two routes map to the existing TRAACS monthly account P&L and month-an
 - Top-five customer shares: each customer's net sales divided by the top-five total, as in the PDF. The top-two concentration uses the same denominator.
 - Customer account names containing USD do not change the currency: all requests use base SAR.
 
+## Service Revenue After Specified Expenses
+
+A second horizontal chart immediately follows Revenue by Service Category. It uses the same verified, period- and centre-scoped income and expense ledgers already loaded for the report. The original category chart now displays each service's accounting income in SAR to two decimals alongside its existing percentage, on screen and in the PDF. Its calculations, P&L KPIs, net profit and financial requests are unchanged.
+
+The reference image specifies these ledger assignments:
+
+| Income service / ledger ID | Deducted expense / ledger ID |
+| --- | --- |
+| Rent & Port Cabin / 9962 | Brokerage Fees / 659 |
+| Equipment / 9933 | Vehicles Istimara renewal / Insurance / 645 |
+| Fuel / 10143 | Vehicles Fuel And Oil / Maintenance / 62 |
+| Vehicles & Driver / 9959 | Vehicles Spare Parts / 644 and Staff / Car parking inside Airport / 10160 |
+| Headset / 44 | None |
+| Other / 9971 | None |
+| Nitrogen, Tyre & Oil / 9960 | Nitrogen Tubes EXP / 671 |
+
+Each expense ledger is deducted once. IDE variants are separate ledgers and are not included in the specified assignments. Other/new income ledgers remain included without a deduction. An assigned expense without corresponding service income is retained as a negative row. Credit adjustments keep their sign.
+
+Row amounts equal service accounting income minus its assigned expenses. A two-button service-percentage selector updates ratios immediately without refetching data. Before deductions (the default) divides by original accounting income for direct comparison with the original chart; row percentages sum to the contribution margin. After deductions divides by total contribution after the specified expenses; signed row percentages then sum to 100%. The selected denominator and amount are explicitly labelled and preserved in the PDF, while the interactive buttons are omitted from export. Nonpositive selected bases show unavailable ratios. Changing basis leaves all amounts, final company profit and the accounting-income net margin unchanged. The bar scale retains original service values so the monetary reduction remains visible.
+
+The six summary cards show original income, assigned expenses, contribution after those expenses, remaining expenses, final company net profit and net margin. Remaining expenses equal total P&L expenses minus assigned expenses. Final company profit comes from the existing P&L; assigned expenses are already included there and are not subtracted from net profit again. Equivalently, final profit equals contribution after assigned expenses minus remaining expenses. No unassigned expenses are arbitrarily distributed across services. Signed values, named deductions, the fixed percentage basis and all six totals are displayed and exported. PDF page breaks recognize the service rows.
+
+The supplied 21 November 2026 snapshot independently reproduces income SAR 12,139,732.84, specified deductions SAR 3,133,062.97 and revenue after deductions SAR 9,006,669.87. Its Nitrogen row is negative SAR 36,865.35. These figures are test references, not embedded application data or a claim about later live balances.
+
+Authenticated browser verification on 24 November 2026 for January-November and all five centres separately returned income SAR 12,139,732.84, specified deductions SAR 3,269,379.45, contribution after deductions SAR 8,870,353.39 and remaining expenses SAR 6,803,334.93. Final company net profit is SAR 2,067,018.46 with a 17.03% accounting-income margin. Rent's contribution is 30.45% on the original-income basis and 41.67% on the after-deduction basis. These later expense balances differ from the older reference snapshot. Both sets of percentages and the profit-bridge values reconciled with TRAACS; switching basis made no additional report request and changed no monetary values. Arabic/English and 390px layouts and PDF export passed. The PDF retained the selected after-deduction label and percentages, all six summary cards and seven service rows, without interactive controls. The 104-test suite covers both bases, nonpositive denominators and protection against deducting assigned expenses twice.
+
 ## Reference Discrepancies
 
 The PDF's first and third pages show January-September 2026 income of approximately SAR 10,779,040 and net profit of SAR 2,252,576. These imply expenses of approximately SAR 8,526,464. The fourth page instead shows expenses of SAR 8,681,241, producing net profit of about SAR 2,097,799. The fifth-page centre profits reflect this different expense set.

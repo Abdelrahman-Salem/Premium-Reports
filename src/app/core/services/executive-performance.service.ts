@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, concatMap, defer, expand, forkJoin, from, map, reduce, retry, throwError, timeout, timer, toArray } from 'rxjs';
 import { CostCentreOption } from '../../models/dsr-report.models';
-import { ExecutiveFilters, ExecutivePeriod, ExecutiveReport, ExecutiveReportError, executivePeriods } from '../../models/executive-performance.models';
+import { ExecutiveFilters, ExecutivePeriod, ExecutiveReport, ExecutiveReportError, FinancialReport, executivePeriods } from '../../models/executive-performance.models';
 import { ProfitLossAccount, ProfitLossCenter, ProfitLossDashboard } from '../../models/profit-loss.models';
 import { DsrReportService } from './dsr-report.service';
 import { ProfitLossReportService } from './profit-loss-report.service';
@@ -22,6 +22,21 @@ export class ExecutivePerformanceService {
     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
     Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest',
   });
+
+  /** Reuse the reconciled financial sources without requesting customer/DSR rows. */
+  getFinanceReport(filters: ExecutiveFilters, options: CostCentreOption[]): Observable<FinancialReport> {
+    return defer(() => {
+      const periods = executivePeriods(filters);
+      const selection = [...new Set(filters.costCenterIds)].map((id) => options.find((option) => option.id === id));
+      if (selection.some((option) => !option)) throw new ExecutiveReportError('scope');
+      const centers = selection as CostCentreOption[];
+      return from(periods).pipe(
+        concatMap((period) => this.finance(period, centers)), toArray(),
+        map((parts) => ({ finance: this.mergeFinance(parts), periods,
+          centerNames: centers.map((center) => center.label), receivedAt: new Date() })),
+      );
+    });
+  }
 
   getReport(filters: ExecutiveFilters, options: CostCentreOption[]): Observable<ExecutiveReport> {
     return defer(() => {

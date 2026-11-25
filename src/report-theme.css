@@ -206,7 +206,7 @@ body .app.app.pdf-export .canvas .report-heading { grid-template-columns: minmax
 body .app.app.pdf-export .reference-kpis { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
 body .app.app.pdf-export .reference-kpis.expense-kpis { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
 body .app.app.pdf-export .expense-kpis > div:last-child { grid-column: auto; }
-body .app.app.pdf-export .service-share-list > div { grid-template-columns: minmax(120px,1fr) minmax(80px,2fr) 58px; }
+body .app.app.pdf-export .service-share-list > div { grid-template-columns: minmax(120px,1fr) minmax(80px,2fr) 122px 58px; }
 body .app.app.pdf-export .centre-net-list > div { grid-template-columns: minmax(120px,1fr) minmax(100px,1.8fr) 100px; }
 body .app.app.pdf-export :is(.service-share-list .rounded-track,.centre-net-track) { grid-column: auto; grid-row: auto; }
 body .app.app.pdf-export .top-customer, body .app.app.pdf-export .customer-head { display: grid; grid-template-columns: minmax(140px,1.6fr) minmax(80px,1.4fr) 90px 58px; }
@@ -218,6 +218,16 @@ body .app.app.pdf-export .reference-chart { margin-top: 20px; }
 body .app.app.pdf-export .reference-columns { grid-template-columns: repeat(var(--column-count),minmax(0,1fr)) !important; }
 body .app.app.pdf-export .stack-grid { grid-template-columns: repeat(var(--column-count),minmax(0,1fr)) !important; }
 body .app.app.pdf-export .reference-title { display: none; }
+body .app.app.pdf-export app-expense-overview .expense-kpis { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+body .app.app.pdf-export app-expense-overview .expense-kpi strong { font-size: 22px; }
+body .app.app.pdf-export .expense-month-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+body .app.app.pdf-export .expense-bars .expense-bar-row { grid-template-columns: minmax(160px,1.25fr) minmax(100px,1.5fr) 98px 52px; gap: 14px; }
+body .app.app.pdf-export .expense-bars.no-ratios .expense-bar-row { grid-template-columns: minmax(120px,1.2fr) minmax(65px,1fr) 85px; gap: 9px; }
+body .app.app.pdf-export .expense-bars .bar-label { grid-column: auto; }
+body .app.app.pdf-export .expense-bars .bar-track { grid-column: auto; }
+body .app.app app-expense-overview app-performance-columns .ratio { color: #6b6a66; }
+body .app.app app-expense-overview app-performance-columns .ratio.loss { color: #b23a3a; }
+app-expense-overview .column-scroll { direction: ltr; }
 .pdf-page-heading { width: 100%; min-height: 90px; display: flex; align-items: center; gap: 24px; background: white; padding: 8px 0; color: #173a50; }
 .pdf-page-heading img { width: 150px; height: 68px; object-fit: cover; }
 .pdf-page-heading > div { flex: 1; display: grid; gap: 5px; }

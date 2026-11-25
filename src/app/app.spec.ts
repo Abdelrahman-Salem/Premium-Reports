@@ -5,6 +5,8 @@ import { vi } from 'vitest';
 import { App } from './app';
 import { DsrReportService } from './core/services/dsr-report.service';
 import { ReportPdfService } from './core/services/report-pdf.service';
+import { ExpenseReportService } from './core/services/expense-report.service';
+import { of } from 'rxjs';
 
 function profitLossFixture(year: string) {
   const key = `${year}01`;
@@ -38,6 +40,22 @@ function flushProfitLoss(http: HttpTestingController, year: string) {
   const data = profitLossFixture(year);
   const accounts = http.expectOne('/api/reports/finance/profit-loss/monthly-accounts');
   const centers = http.expectOne('/api/reports/finance/profit-loss/monthly-centers');
+  const search = JSON.parse(new URLSearchParams(accounts.request.body).get('arrSearchValueAjxKey')!);
+  const first = Number(search.intFromYearAjxKey) * 12 + Number(search.datFromMonthAjxKey) - 1;
+  const last = Number(search.intToYearAjxKey) * 12 + Number(search.datToMonthAjxKey) - 1;
+  const keys = Array.from({ length: last - first + 1 }, (_,i) => `${Math.floor((first+i)/12)}${String((first+i)%12+1).padStart(2,'0')}`);
+  for (const response of [data.accounts,data.centers]) {
+    response.arrKeyPhpKey = keys;
+    response.arrTimePeriodePhpKey = keys.map((key) => ({ strColumnHeading: key }));
+  }
+  const expand = (rows: object[], prefix: string) => rows.forEach((row) => {
+    const record = row as Record<string,unknown>;
+    const amount = record[prefix + year + '01'];
+    delete record[prefix + year + '01'];
+    keys.forEach((key,i) => record[prefix + key] = i === 0 ? amount : 0);
+  });
+  expand([...data.accounts.arrPandLMonthWisePhpKey,...data.centers.arrPandLMonthWisePhpKey,...data.centers.arrPandLMonthWiseSumPhpKey], 'dbl_base_currency_debit_credt');
+  expand([...data.centers.arrPandLSalesPhpKey,...data.centers.arrPandLSalesSumPhpKey], 'base_dat_document');
   accounts.flush(data.accounts);
   centers.flush(data.centers);
   return { accounts, centers };
@@ -62,7 +80,7 @@ describe('App', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.title')?.textContent).toContain('لوحة أداء مبيعات الخدمات');
+    expect(compiled.querySelector('.title')?.textContent).toContain('تحليل المصروفات');
     expect(compiled.querySelector('.brand-name')?.textContent).toContain('First Premium Support Services');
     expect(compiled.querySelector<HTMLImageElement>('.brand-logo')?.getAttribute('src')).toBe('logo.jpg');
     expect(compiled.querySelector('.print-header strong')?.textContent).toBe('First Premium Support Services');
@@ -86,7 +104,7 @@ describe('App', () => {
     fixture.detectChanges();
     expect(compiled.querySelector('.title')?.textContent).toContain('Annual Performance');
     expect([...compiled.querySelectorAll('.sidebar .nav-button')].map((button) => button.textContent?.trim())).toEqual([
-      'Sales Performance Summary', 'Sales Performance Dashboard', 'Customer Analysis', 'Annual Performance',
+      'Sales Performance Summary', 'Expense Analysis', 'Customer Analysis', 'Annual Performance',
     ]);
   });
 
@@ -113,13 +131,36 @@ describe('App', () => {
     expect(element.querySelector('app-year-comparison')).toBeNull();
   });
 
-  it('loads a selected year and separates sales, P&L income, expenses, and net profit', () => {
+  it('exports the verified expense page with its own name, scope, and portrait charts', async () => {
+    const finance = { months: [{ key: '202601', label: 'Jan 2026', sales: 0, income: 0, expenses: 30.10, netProfit: -30.10, margin: 0 }],
+      incomeAccounts: [], expenseAccounts: [{ id: '55', name: 'Office Rent', amount: 30.10, months: [30.10] }], centers: [],
+      sales: 0, income: 0, expenses: 30.10, netProfit: -30.10, margin: 0, averageMonthlySales: 0, periodLabel: '' };
+    const source = TestBed.inject(ExpenseReportService);
+    vi.spyOn(source, 'getReport').mockReturnValue(of({ finance,
+      periods: [{ fromDate: '2026-01-01', toDate: '2026-01-31', monthKeys: ['202601'] }], centerNames: ['G.S.E'], receivedAt: new Date() }));
+    const download = vi.spyOn(TestBed.inject(ReportPdfService), 'download').mockResolvedValue();
+    const fixture = TestBed.createComponent(App);
+    TestBed.inject(HttpTestingController).expectOne('/api/session/status').flush({ hasCookie: true, automatic: true });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.sidebar .nav-button')[1].click(); fixture.detectChanges();
+    expect(element.querySelector('.title')?.textContent).toBe('تحليل المصروفات');
+    expect(element.querySelector<HTMLButtonElement>('.export-btn')!.disabled).toBe(true);
+    element.querySelector<HTMLButtonElement>('app-expense-overview .filter-run')!.click(); fixture.detectChanges();
+    expect(element.querySelector<HTMLButtonElement>('.export-btn')!.disabled).toBe(false);
+    element.querySelector<HTMLButtonElement>('.export-btn')!.click(); await fixture.whenStable();
+    expect(download).toHaveBeenCalledWith(expect.objectContaining({ title: 'تحليل المصروفات', portrait: true,
+      fileName: expect.stringContaining('Expense-Analysis-report-'), period: expect.stringContaining('2026-01-31') }));
+    expect(download.mock.calls[0][0].period).toContain('G.S.E');
+  });
+
+  it('loads expenses for the selected year and exports the replacement page without service sales', () => {
     const fixture = TestBed.createComponent(App);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    const button = [...element.querySelectorAll<HTMLButtonElement>('app-monthly-sales-overview .year-strip button')]
+    const button = [...element.querySelectorAll<HTMLButtonElement>('app-expense-overview .year-strip button')]
       .find((item) => item.textContent?.trim() === '2025')!;
     button.click();
     const requests = flushProfitLoss(http, '2025');
@@ -127,26 +168,15 @@ describe('App', () => {
     expect([payload.datFromMonthAjxKey, payload.intFromYearAjxKey, payload.datToMonthAjxKey, payload.intToYearAjxKey])
       .toEqual(['1', '2025', '12', '2025']);
     fixture.detectChanges();
-    expect(element.querySelector('.metric.revenue strong')?.textContent?.trim()).toBe('125.50');
-    expect(element.querySelector('.metric.income strong')?.textContent?.trim()).toBe('100.25');
-    expect(element.querySelector('.metric.expense strong')?.textContent?.trim()).toBe('30.10');
-    expect(element.querySelector('.metric.net strong')?.textContent?.trim()).toBe('70.15');
-    expect(element.querySelector('.metric.margin strong')?.textContent?.trim()).toBe('70.0%');
-    expect(element.querySelector('.metric.margin')?.textContent).toContain('من الإيراد المحاسبي');
-    expect(element.querySelectorAll('.monthly-summary .metric')).toHaveLength(5);
-    expect(element.querySelectorAll('#monthly-revenue .pl-service-columns .column')).toHaveLength(1);
-    expect(element.querySelector('#monthly-revenue')?.textContent).toContain('Cabin Revenue');
-    expect(element.querySelector('.pl-donut')).not.toBeNull();
-    expect(element.querySelectorAll('.pl-donut-legend > div')).toHaveLength(1);
-    expect(element.querySelectorAll('.pl-share-table tbody tr')).toHaveLength(1);
-    expect(element.querySelector('.pl-share-table tbody .pl-share-cell')?.textContent).toContain('100.0%');
-    expect(element.querySelectorAll('#monthly-profit .monthly-columns .column')).toHaveLength(1);
-    expect(element.querySelectorAll('.pl-margin-column')).toHaveLength(1);
-    expect(element.querySelectorAll('#monthly-expenses .chart')).toHaveLength(1);
-    expect(element.querySelector('#monthly-expenses')?.textContent).not.toContain('Rent Expense');
+    expect(element.querySelector('.expense-kpi.primary strong')?.textContent?.trim()).toBe('30.10');
+    expect(element.querySelectorAll('.expense-kpi')).toHaveLength(4);
+    expect(element.querySelectorAll('.expense-month-card')).toHaveLength(12);
+    expect(element.querySelector('#expense-account-details')?.textContent).toContain('Rent Expense');
+    expect(element.querySelector('app-monthly-sales-overview')).toBeNull();
+    expect(element.querySelector('#monthly-revenue')).toBeNull();
     const download = vi.spyOn(TestBed.inject(ReportPdfService), 'download').mockResolvedValue(undefined);
     element.querySelector<HTMLButtonElement>('.export-btn')!.click();
-    expect(download).toHaveBeenCalledWith(expect.objectContaining({ title: 'لوحة أداء مبيعات الخدمات', portrait: false, language: 'ar' }));
+    expect(download).toHaveBeenCalledWith(expect.objectContaining({ title: 'تحليل المصروفات', portrait: true, language: 'ar' }));
     http.verify();
   });
 
@@ -180,14 +210,14 @@ describe('App', () => {
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
-    expect(element.querySelector('#monthly-date-type')).toBeNull();
-    expect(element.querySelector('#monthly-currency')).toBeNull();
-    element.querySelector<HTMLButtonElement>('app-monthly-sales-overview .apply')!.click();
+    expect(element.querySelector('#expense-date-type')).toBeNull();
+    expect(element.querySelector('#expense-currency')).toBeNull();
+    element.querySelector<HTMLButtonElement>('app-expense-overview .filter-run')!.click();
     const requests = flushProfitLoss(http, String(new Date().getFullYear()));
     fixture.detectChanges();
     const centerPayload = JSON.parse(new URLSearchParams(requests.centers.request.body).get('arrSearchValueAjxKey')!);
     expect(centerPayload.strBaseAjxKey).toBe('Base');
-    expect(element.querySelector('.monthly-summary')?.textContent).toContain('125.50');
+    expect(element.querySelector('.expense-summary')?.textContent).toContain('30.10');
     http.verify();
   });
 
@@ -198,11 +228,11 @@ describe('App', () => {
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
     expect(element.querySelector('.auth-status')?.textContent).toContain('جاري الاتصال تلقائيًا');
-    element.querySelector<HTMLButtonElement>('app-monthly-sales-overview .apply')!.click();
+    element.querySelector<HTMLButtonElement>('app-expense-overview .filter-run')!.click();
     flushProfitLoss(http, String(new Date().getFullYear()));
     session.flush({ hasCookie: true, automatic: true, loginUrl: '' });
     fixture.detectChanges();
-    expect(element.querySelector('.monthly-summary')?.textContent).toContain('125.50');
+    expect(element.querySelector('.expense-summary')?.textContent).toContain('30.10');
     expect(element.querySelector('.auth-panel.ready')).not.toBeNull();
     expect(element.querySelectorAll('.auth-actions button')).toHaveLength(1);
     http.verify();
@@ -219,15 +249,22 @@ describe('App', () => {
     http.verify();
   });
 
-  it('compares monthly financial indicators in one grouped chart without showing the standard report', () => {
+  it('moves the unchanged financial year comparison to the comprehensive dashboard and exports it in landscape', async () => {
     const fixture = TestBed.createComponent(App);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/session/status').flush({ hasCookie: true, loginUrl: '' });
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('app-expense-overview')).not.toBeNull();
+    expect(element.querySelector('.report-view-switch')).toBeNull();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[0].click(); fixture.detectChanges();
+    expect(element.querySelector('app-executive-performance')).not.toBeNull();
     element.querySelectorAll<HTMLButtonElement>('.report-view-switch button')[1].click();
     fixture.detectChanges();
+    expect(element.querySelector('.title')?.textContent).toBe('لوحة الأداء الشاملة');
+    expect(element.querySelector('app-executive-performance')).toBeNull();
     expect(element.querySelector('app-monthly-sales-overview')).toBeNull();
+    expect(element.querySelector('.app.executive-mode')).toBeNull();
     element.querySelector<HTMLButtonElement>('app-monthly-year-comparison .apply')!.click();
     const accountRequests = http.match('/api/reports/finance/profit-loss/monthly-accounts');
     const centerRequests = http.match('/api/reports/finance/profit-loss/monthly-centers');
@@ -253,6 +290,35 @@ describe('App', () => {
     expect(element.querySelectorAll('.financial-metric-group')).toHaveLength(4);
     expect(element.querySelectorAll('.financial-metric-group:first-child .comparison-year')).toHaveLength(2);
     expect(element.querySelector<HTMLButtonElement>('.export-btn')?.disabled).toBe(false);
+    const download = vi.spyOn(TestBed.inject(ReportPdfService), 'download').mockResolvedValue();
+    element.querySelector<HTMLButtonElement>('.export-btn')!.click(); await fixture.whenStable();
+    expect(download).toHaveBeenCalledWith(expect.objectContaining({ title: 'لوحة الأداء الشاملة · مقارنة السنوات', portrait: false,
+      fileName: expect.stringContaining('executive-comparison-') }));
+    const fromMonth = element.querySelector<HTMLSelectElement>('select[name=comparisonMonthFrom]')!;
+    const toMonth = element.querySelector<HTMLSelectElement>('select[name=comparisonMonthTo]')!;
+    fromMonth.value = '3'; fromMonth.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges(); await fixture.whenStable();
+    toMonth.value = '9'; toMonth.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
+    expect(element.querySelector<HTMLButtonElement>('.export-btn')!.disabled).toBe(true);
+    element.querySelector<HTMLButtonElement>('app-monthly-year-comparison .apply')!.click();
+    const scopedAccounts = http.match('/api/reports/finance/profit-loss/monthly-accounts');
+    const scopedCenters = http.match('/api/reports/finance/profit-loss/monthly-centers');
+    expect(scopedAccounts).toHaveLength(2);
+    for (let index = 0; index < 2; index++) {
+      const payload = JSON.parse(new URLSearchParams(scopedAccounts[index].request.body).get('arrSearchValueAjxKey')!);
+      expect([payload.datFromMonthAjxKey, payload.datToMonthAjxKey]).toEqual(['3','9']);
+      const data = profitLossFixture(String(currentYear - 1 + index));
+      scopedAccounts[index].flush(data.accounts); scopedCenters[index].flush(data.centers);
+    }
+    fixture.detectChanges();
+    element.querySelectorAll<HTMLButtonElement>('.report-view-switch button')[0].click(); fixture.detectChanges();
+    expect(element.querySelector('app-monthly-year-comparison')).toBeNull();
+    expect(element.querySelector('app-executive-performance')).not.toBeNull();
+    element.querySelectorAll<HTMLButtonElement>('.nav-button')[1].click(); fixture.detectChanges();
+    expect(element.querySelector('app-expense-overview')).not.toBeNull();
+    expect(element.querySelector('.report-view-switch')).toBeNull();
+    expect(element.querySelector('app-monthly-year-comparison')).toBeNull();
     http.verify();
   });
 

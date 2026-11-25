@@ -8,6 +8,7 @@ import { ExecutivePerformanceService } from '../core/services/executive-performa
 import { CostCentreOption } from '../models/dsr-report.models';
 import { ExecutiveFilters, ExecutiveReport, ExecutiveReportError, executivePeriods } from '../models/executive-performance.models';
 import { ProfitLossAccount } from '../models/profit-loss.models';
+import { ContributionPercentageBasis, serviceContributions } from '../models/service-contribution.models';
 import { PerformanceColumn, PerformanceColumns } from './performance-columns';
 
 @Component({
@@ -37,6 +38,15 @@ export class ExecutivePerformance {
   });
   protected readonly services = computed(() => (this.data()?.finance.incomeAccounts ?? []).map((account, index) => ({ account, color: this.serviceColor(account.name, index) })));
   protected readonly maxServiceAmount = computed(() => Math.max(1, ...this.services().map((item) => Math.abs(item.account.amount))));
+  protected readonly contributionBasis = signal<ContributionPercentageBasis>('before');
+  protected readonly adjustedServices = computed(() => this.data() ? serviceContributions(this.data()!.finance, this.contributionBasis()) : null);
+  protected readonly adjustedAxis = computed(() => {
+    const values = this.adjustedServices()?.rows.map((row) => row.amount) ?? [];
+    const negative = Math.max(0, ...values.map((value) => -value));
+    const originalValues = this.data()?.finance.incomeAccounts.map((account) => account.amount) ?? [];
+    const range = Math.max(0, ...values, ...originalValues) + negative || 1;
+    return { range, zero: negative / range * 100, negative };
+  });
   protected readonly topCustomers = computed(() => this.data()?.customers.customers.filter((customer) => customer.revenue > 0).slice(0, 5) ?? []);
   protected readonly topTotal = computed(() => this.topCustomers().reduce((sum, customer) => sum + customer.revenue, 0));
   protected readonly topTwoShare = computed(() => this.ratio(this.topCustomers().slice(0, 2).reduce((sum, customer) => sum + customer.revenue, 0), this.topTotal()));
@@ -57,6 +67,8 @@ export class ExecutivePerformance {
   protected text(ar: string, en: string): string { return this.language() === 'ar' ? ar : en; }
   protected ratio(value: number, total: number): number | null { return total > 0 ? value / total : null; }
   protected width(value: number, total: number): number { return total > 0 ? Math.min(100, Math.abs(value) / total * 100) : 0; }
+  protected adjustedBarLeft(value: number): number { return this.adjustedAxis().zero + Math.min(0, value) / this.adjustedAxis().range * 100; }
+  protected adjustedBarWidth(value: number): number { return Math.abs(value) / this.adjustedAxis().range * 100; }
   protected short(value: number): string { return Math.abs(value) >= 1000000 ? `${(value / 1000000).toFixed(2)}M` : `${(value / 1000).toFixed(0)}K`; }
   protected updateMonth(key: 'fromMonth' | 'toMonth', value: string): void {
     this.clear(); this.filters.update((current) => ({ ...current, [key]: value, quarters: [] }));

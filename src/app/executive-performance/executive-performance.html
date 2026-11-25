@@ -73,10 +73,51 @@
         <section class="reference-chart"><h2>{{ text('مساهمة فئات الخدمات في الإيراد المحاسبي', 'Revenue by Service Category') }}</h2>
           <div class="service-share-list">@for (item of services(); track item.account.id) {
             <div><bdi>{{ serviceName(item.account.name) }}</bdi><div class="rounded-track"><i [class.loss-fill]="item.account.amount < 0" [style.width.%]="width(item.account.amount, maxServiceAmount())"></i></div>
-              <strong dir="ltr">{{ finance.income > 0 ? (item.account.amount / finance.income | percent:'1.1-1') : '-' }}</strong></div>
+              <strong class="service-income-amount" dir="ltr" [class.loss]="item.account.amount < 0">{{ item.account.amount | number:'1.2-2' }} <small>SAR</small></strong>
+              <strong class="service-income-share" dir="ltr" [class.loss]="item.account.amount < 0">{{ finance.income > 0 ? (item.account.amount / finance.income | percent:'1.1-1') : '-' }}</strong></div>
           }</div>
           <p class="metric-basis">{{ text('مساهمة أكبر ثلاث خدمات', 'Top 3 services') }}: <bdi>{{ topThreeShare() === null ? '-' : (topThreeShare() | percent:'1.1-1') }}</bdi></p>
         </section>
+        @if (adjustedServices(); as contribution) {
+          <section class="reference-chart adjusted-service-chart" id="service-income-after-expenses">
+            <h2>{{ text('صافي عائد الخدمات بعد المصروفات المحددة', 'Service Contribution after Specified Expenses') }}</h2>
+            <div class="contribution-basis-controls" role="group" [attr.aria-label]="text('أساس نسب الخدمات', 'Service percentage basis')">
+              <span>{{ text('أساس نسب الخدمات', 'Service percentage basis') }}</span>
+              <button type="button" data-basis="before" [attr.aria-pressed]="contributionBasis() === 'before'" (click)="contributionBasis.set('before')">{{ text('قبل الخصم', 'Before deductions') }}</button>
+              <button type="button" data-basis="after" [attr.aria-pressed]="contributionBasis() === 'after'" (click)="contributionBasis.set('after')">{{ text('بعد الخصم', 'After deductions') }}</button>
+            </div>
+            <p class="adjusted-service-basis">{{ text('أساس النسب:', 'Percentage base:') }} {{ contribution.percentageBasis === 'before' ? text('الإيراد المحاسبي الأصلي قبل الخصم', 'Original accounting income before deductions') : text('الصافي بعد البنود المحددة', 'Contribution after specified expenses') }} <strong dir="ltr">{{ contribution.percentageBase | number:'1.2-2' }} SAR</strong>
+              @if (contribution.percentageBase <= 0) { <span class="basis-unavailable">{{ text('النسب غير متاحة لأن الأساس المختار صفر أو سالب.', 'Percentages are unavailable because the selected base is zero or negative.') }}</span> }
+            </p>
+            <div class="adjusted-service-summary">
+              <div><span>{{ text('الإيراد قبل الخصم', 'Revenue before deductions') }}</span><strong dir="ltr">{{ contribution.income | number:'1.2-2' }} <small>SAR</small></strong></div>
+              <div><span>{{ text('المصروفات المحددة', 'Specified expenses') }}</span><strong dir="ltr">{{ contribution.deducted | number:'1.2-2' }} <small>SAR</small></strong></div>
+              <div><span>{{ text('الصافي بعد البنود المحددة', 'Contribution after specified expenses') }}</span><strong dir="ltr" [class.loss]="contribution.total < 0">{{ contribution.total | number:'1.2-2' }} <small>SAR</small></strong></div>
+              <div class="remaining-expenses"><span>{{ text('باقي المصروفات', 'Remaining expenses') }}</span><strong dir="ltr">{{ contribution.remainingExpenses | number:'1.2-2' }} <small>SAR</small></strong></div>
+              <div class="net-profit-card final-net-profit"><span>{{ text('صافي الربح النهائي', 'Final net profit') }}</span><strong dir="ltr" [class.loss]="contribution.netProfit < 0">{{ contribution.netProfit | number:'1.2-2' }} <small>SAR</small></strong></div>
+              <div class="net-profit-card final-net-margin"><span>{{ text('هامش صافي الربح من الإيراد المحاسبي', 'Net margin on accounting income') }}</span><strong dir="ltr" [class.loss]="contribution.netProfit < 0">{{ contribution.netMargin === null ? '—' : (contribution.netMargin | percent:'1.1-2') }}</strong></div>
+            </div>
+            <div class="adjusted-service-list" role="list" [attr.aria-label]="text('صافي كل خدمة بعد البنود المحددة ونسبته من الإيراد المحاسبي الأصلي', 'Each service contribution after specified expenses and its share of original accounting income')">
+              @for (row of contribution.rows; track row.id) {
+                <div class="adjusted-service-row" role="listitem" [attr.data-service-id]="row.id" [class.loss]="row.amount < 0"
+                  [title]="serviceName(row.name) + ': ' + (row.income | number:'1.2-2') + ' − ' + (row.deducted | number:'1.2-2') + ' = ' + (row.amount | number:'1.2-2') + ' SAR'">
+                  <div class="adjusted-service-label"><bdi>{{ serviceName(row.name) }}</bdi>
+                    @for (expense of row.expenses; track expense.id) {
+                      <small>{{ text('خصم:', 'Less:') }} <bdi>{{ expense.name }}</bdi> <bdi dir="ltr">({{ expense.amount | number:'1.2-2' }} SAR)</bdi></small>
+                    } @empty { <small>{{ text('لا يوجد خصم من البنود المحددة', 'No specified deduction') }}</small> }
+                  </div>
+                  <div class="adjusted-service-track" dir="ltr" aria-hidden="true">
+                    @if (adjustedAxis().negative > 0) { <span [style.left.%]="adjustedAxis().zero"></span> }
+                    <i [class.loss-fill]="row.amount < 0" [style.left.%]="adjustedBarLeft(row.amount)" [style.width.%]="adjustedBarWidth(row.amount)"></i>
+                  </div>
+                  <strong class="adjusted-service-amount" dir="ltr">{{ row.amount | number:'1.2-2' }} <small>SAR</small></strong>
+                  <strong class="adjusted-service-share" dir="ltr">{{ row.share === null ? '—' : (row.share | percent:'1.1-2') }}</strong>
+                </div>
+              }
+            </div>
+            <p class="metric-basis">{{ text('صافي الربح النهائي = الصافي بعد البنود المحددة − باقي المصروفات، لنفس الفترة والمراكز المختارة. البنود المحددة ضمن إجمالي المصروفات ومحسوبة مرة واحدة.', 'Final net profit = contribution after specified expenses − remaining expenses, for the same selected period and centres. Specified expenses are part of total expenses and are counted once.') }}</p>
+          </section>
+        }
         <section class="reference-chart"><h2>{{ text('صافي الربح حسب مركز التكلفة', 'Net Profit by Cost Centre') }}</h2>
           <div class="centre-net-list">@for (center of finance.centers; track center.id) {
             <div><bdi>{{ center.name }}</bdi><div class="centre-net-track" dir="ltr"><i [class.loss-fill]="center.netProfit < 0" [style.left.%]="center.netProfit < 0 ? 50 - width(center.netProfit, maxCentreNet()) / 2 : 50" [style.width.%]="width(center.netProfit, maxCentreNet()) / 2"></i></div>
